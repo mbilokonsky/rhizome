@@ -1,0 +1,29 @@
+{
+  "name": "rhizome-node",
+  "version": "1.0.0",
+  "description": "Rhizomatic database engine node",
+  "scripts": {
+    "start": "node --experimental-strip-types --experimental-transform-types src/main.ts",
+    "lint": "eslint",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "Unlicense",
+  "dependencies": {
+    "@types/bluebird": "^3.5.42",
+    "@types/json-logic-js": "^2.0.8",
+    "express": "^4.21.2",
+    "json-logic-js": "^2.0.5",
+    "level": "^9.0.0",
+    "zeromq": "^6.1.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "eslint-config-airbnb-base-typescript": "^1.1.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
+  }
+}
