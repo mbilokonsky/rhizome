@@ -1,4 +1,5 @@
-// The goal here is to house a collection of objects that all follow a common schema.
+// A basic collection of entities
+// This may be extended to house a collection of objects that all follow a common schema.
 // It should enable operations like removing a property removes the value from the entities in the collection
 // It could then be further extended with e.g. table semantics like filter, sort, join
 
@@ -7,6 +8,7 @@ import { deltasAccepted, publishDelta, subscribeDeltas } from "./deltas";
 import { Entity, EntityProperties, EntityPropertiesDeltaBuilder } from "./object-layer";
 import { Delta } from "./types";
 import { randomUUID } from "node:crypto";
+import {myRequestAddr} from "./peers";
 
 // type Property = {
 //   name: string,
@@ -21,25 +23,6 @@ import { randomUUID } from "node:crypto";
 //   }
 // }
 
-// class Entity {
-//   type: EntityType;
-//   properties?: object;
-//   constructor(type: EntityType) {
-//     this.type = type;
-//   }
-// }
-
-// class Collection {
-  
-  // update(entityId, properties)
-  // ...
-// }
-
-// export class Collections {
-//   collections = new Map<string, Collection>();
-// }
-
-
 export class Collection {
   entities = new Map<string, Entity>();
   eventStream = new EventEmitter();
@@ -47,9 +30,6 @@ export class Collection {
     subscribeDeltas((delta: Delta) => {
       // TODO: Make sure this is the kind of delta we're looking for
       this.applyDelta(delta);
-    });
-    this.eventStream.on('create', (entity: Entity) => {
-      console.log(`new entity!`, entity);
     });
   }
 
@@ -144,20 +124,24 @@ export class Collection {
       cb(entity);
     });
   }
+
   onUpdate(cb: (entity: Entity) => void) {
     this.eventStream.on('update', (entity: Entity) => {
       cb(entity);
     });
   }
+
   put(entityId: string | undefined, properties: object): Entity {
     const deltas: Delta[] = [];
     const entity = this.updateEntity(entityId, properties, true, deltas);
     deltas.forEach(async (delta: Delta) => {
+      delta.receivedFrom = myRequestAddr;
       deltasAccepted.push(delta);
       await publishDelta(delta);
     });
     return entity;
   }
+
   del(entityId: string) {
     const deltas: Delta[] = [];
     this.updateEntity(entityId, undefined, true, deltas);
@@ -166,9 +150,11 @@ export class Collection {
       await publishDelta(delta);
     });
   }
+
   get(id: string): Entity | undefined {
     return this.entities.get(id);
   }
+
   getIds(): string[] {
     return Array.from(this.entities.keys());
   }

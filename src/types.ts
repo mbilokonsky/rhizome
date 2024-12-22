@@ -50,12 +50,10 @@ export class PeerAddress {
     return new PeerAddress(addr, parseInt(port));
   }
   toAddrString() {
-    console.log('toAddrStr...', {addr: this.addr, port: this.port});
     return `${this.addr}:${this.port}`;
   }
   toJSON() {
-    console.log('toAddrStr...', {addr: this.addr, port: this.port});
-    return `${this.addr}:${this.port}`;
+    return this.toAddrString();
   }
 };
 
