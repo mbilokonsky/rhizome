@@ -3,6 +3,7 @@ import {REQUEST_BIND_HOST, REQUEST_BIND_PORT} from './config';
 import {publishSock, subscribeSock} from './pub-sub';
 import {Decision, Delta, PeerAddress} from './types';
 import {myRequestAddr} from './peers';
+import objectHash from 'object-hash';
 
 export const deltaStream = new EventEmitter();
 
@@ -11,12 +12,19 @@ export const deltasAccepted: Delta[] = [];
 export const deltasRejected: Delta[] = [];
 export const deltasDeferred: Delta[] = [];
 
+export const hashesReceived = new Set<string>();
+
 export function applyPolicy(delta: Delta): Decision {
   return !!delta && Decision.Accept;
 }
 
 export function receiveDelta(delta: Delta) {
-  deltasProposed.push(delta);
+  // Deduplication: if we already received this delta, disregard it
+  const hash = objectHash(delta);
+  if (!hashesReceived.has(hash)) {
+    hashesReceived.add(hash);
+    deltasProposed.push(delta);
+  }
 }
 
 export function ingestDelta(delta: Delta) {

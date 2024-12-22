@@ -60,14 +60,11 @@ class Users {
   });
 
   app.get("/deltas/count", (req: express.Request, res: express.Response) => {
-    // TODO: streaming
     res.json(deltasAccepted.length);
   });
 
   app.get("/peers", (req: express.Request, res: express.Response) => {
-    res.json(peers.map(({reqAddr, publishAddr}) => {
-      const isSeedPeer = !!SEED_PEERS.find(({addr, port}) =>
-        addr === reqAddr.addr && port === reqAddr.port);
+    res.json(peers.map(({reqAddr, publishAddr, isSelf, isSeedPeer}) => {
       const deltasAcceptedCount = deltasAccepted
         .filter((delta: Delta) => {
           return delta.receivedFrom?.addr == reqAddr.addr &&
@@ -77,6 +74,7 @@ class Users {
       const peerInfo = {
         reqAddr: reqAddr.toAddrString(),
         publishAddr: publishAddr?.toAddrString(),
+        isSelf,
         isSeedPeer,
         deltaCount: {
           accepted: deltasAcceptedCount
@@ -84,6 +82,10 @@ class Users {
       };
       return peerInfo;
     }));
+  });
+
+  app.get("/peers/count", (req: express.Request, res: express.Response) => {
+    res.json(peers.length);
   });
 
   if (HTTP_API_ENABLE) {
@@ -123,9 +125,13 @@ class Users {
 
   const result = users.getOne(taliesin.id);
   const matches: boolean = JSON.stringify(result) === JSON.stringify(taliesin);
-  console.log(`Result ${matches ? 'matches' : 'does not match'} expected.` +
-    `\n\nExpected \n${JSON.stringify(taliesin)}` +
-    `\nReceived\n${JSON.stringify(result)}`);
+  if (matches) {
+    console.log('Result matches expected: ' + JSON.stringify(taliesin));
+  } else {
+    console.log(`Result does not match expected.` +
+      `\n\nExpected \n${JSON.stringify(taliesin)}` +
+      `\nReceived\n${JSON.stringify(result)}`);
+  }
 
 })();
 

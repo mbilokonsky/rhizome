@@ -34,9 +34,14 @@ class Peer {
   reqAddr: PeerAddress;
   reqSock: RequestSocket;
   publishAddr: PeerAddress | undefined;
+  isSelf: boolean;
+  isSeedPeer: boolean;
   constructor(addr: string, port: number) {
     this.reqAddr = new PeerAddress(addr, port);
     this.reqSock = new RequestSocket(addr, port);
+    this.isSelf = addr === myRequestAddr.addr && port === myRequestAddr.port;
+    this.isSeedPeer = !!SEED_PEERS.find((seedPeer) =>
+        addr === seedPeer.addr && port === seedPeer.port);
   }
   async subscribe() {
     if (!this.publishAddr) {
@@ -61,6 +66,8 @@ class Peer {
 
 export const peers: Peer[] = [];
 
+peers.push(new Peer(myRequestAddr.addr, myRequestAddr.port));
+
 function newPeer(addr: string, port: number) {
   const peer = new Peer(addr, port);
   peers.push(peer);
@@ -77,14 +84,16 @@ export async function subscribeToSeeds() {
 
 //! TODO Expect abysmal scaling properties with this function
 export async function askAllPeersForDeltas() {
-  peers.forEach(async (peer, idx) => {
-    console.log(`Asking peer ${idx} for deltas`);
-    const deltas = await peer.askForDeltas();
-    console.log(`received ${deltas.length}`);
-    for (const delta of deltas) {
-      delta.receivedFrom = peer.reqAddr;
-      receiveDelta(delta);
-    }
-    ingestAll();
-  });
+  peers
+    .filter(({isSelf}) => !isSelf)
+    .forEach(async (peer, idx) => {
+      console.log(`Asking peer ${idx} for deltas`);
+      const deltas = await peer.askForDeltas();
+      console.log(`received ${deltas.length} deltas from ${peer.reqAddr.toAddrString()}`);
+      for (const delta of deltas) {
+        delta.receivedFrom = peer.reqAddr;
+        receiveDelta(delta);
+      }
+      ingestAll();
+    });
 }
