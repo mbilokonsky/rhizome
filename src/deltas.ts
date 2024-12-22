@@ -10,7 +10,7 @@ export const deltasRejected: Delta[] = [];
 export const deltasDeferred: Delta[] = [];
 
 export function applyPolicy(delta: Delta): Decision {
-    return !!delta && Decision.Accept;
+  return !!delta && Decision.Accept;
 }
 
 export function receiveDelta(delta: Delta) {
@@ -18,19 +18,19 @@ export function receiveDelta(delta: Delta) {
 }
 
 export function ingestDelta(delta: Delta) {
-    const decision = applyPolicy(delta);
-    switch (decision) {
-        case Decision.Accept:
-            deltasAccepted.push(delta);
-            deltaStream.emit('delta', { delta });
-            break;
-        case Decision.Reject:
-            deltasRejected.push(delta);
-            break;
-        case Decision.Defer:
-            deltasDeferred.push(delta);
-            break;
-    }
+  const decision = applyPolicy(delta);
+  switch (decision) {
+    case Decision.Accept:
+      deltasAccepted.push(delta);
+      deltaStream.emit('delta', { delta });
+      break;
+    case Decision.Reject:
+      deltasRejected.push(delta);
+      break;
+    case Decision.Defer:
+      deltasDeferred.push(delta);
+      break;
+  }
 }
 
 export function ingestNext(): boolean {

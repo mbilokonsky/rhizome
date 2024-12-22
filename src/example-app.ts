@@ -2,10 +2,11 @@
 
 import express from "express";
 import { bindPublish, } from "./pub-sub";
-import { runDeltas } from "./deltas";
-import { Entities, Entity } from "./object-layer";
+import { deltasAccepted, deltasProposed, runDeltas } from "./deltas";
+import { Entity } from "./object-layer";
+import { Collection } from "./collection-layer";
 import { bindReply, runRequestHandlers } from "./request-reply";
-import { subscribeToSeeds } from "./peers";
+import { askAllPeersForDeltas, subscribeToSeeds } from "./peers";
 import { ENABLE_HTTP_API, HTTP_API_ADDR, HTTP_API_PORT } from "./config";
 
 
@@ -25,7 +26,7 @@ type UserProperties = {
 };
 
 class Users {
-  db = new Entities();
+  db = new Collection();
   create(properties: UserProperties): Entity {
     // We provide undefined for the id, to let the database generate it
     // This call returns the id
@@ -47,10 +48,21 @@ class Users {
 }
 
 (async () => {
-  const app = express()
+  const users = new Users();
 
+  const app = express()
   app.get("/ids", (req: express.Request, res: express.Response) => {
       res.json({ ids: users.getIds()});
+  });
+
+  app.get("/deltas", (req: express.Request, res: express.Response) => {
+    // TODO: streaming
+    res.json(deltasAccepted);
+  });
+
+  app.get("/deltas/count", (req: express.Request, res: express.Response) => {
+    // TODO: streaming
+    res.json(deltasAccepted.length);
   });
 
   if (ENABLE_HTTP_API) {
@@ -63,21 +75,30 @@ class Users {
   await bindReply();
   runDeltas();
   runRequestHandlers();
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 500));
   subscribeToSeeds();
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  askAllPeersForDeltas();
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  const users = new Users();
+  setInterval(() => {
+    console.log('deltasProposed count', deltasProposed.length,
+      'deltasAccepted count', deltasAccepted.length);
+  }, 5000)
 
   const taliesin = users.upsert({
-    id: 'taliesin-1',
+    // id: 'taliesin-1',
     name: 'Taliesin',
     nameLong: 'Taliesin (Ladd)',
     age: Math.floor(Math.random() * 1000)
   });
 
-  taliesin.onUpdate((u: Entity) => {
-    console.log('User updated', u);
+  users.db.onUpdate((u: Entity) => {
+    console.log('User updated:', u);
+  });
+
+  users.db.onCreate((u: Entity) => {
+    console.log('New user!:', u);
   });
 
   // TODO: Allow configuration regarding read/write concern i.e.
