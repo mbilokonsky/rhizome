@@ -1,6 +1,6 @@
 import express from "express";
 import { runDeltas } from "./deltas";
-import {ENABLE_HTTP_API, HTTP_API_ADDR, HTTP_API_PORT} from "./config";
+import {HTTP_API_ENABLE, HTTP_API_ADDR, HTTP_API_PORT} from "./config";
 
 const app = express()
 
@@ -8,7 +8,7 @@ app.get("/", (req: express.Request, res: express.Response) => {
     res.json({ message: "Welcome to the Express + TypeScript Server!" });
 });
 
-if (ENABLE_HTTP_API) {
+if (HTTP_API_ENABLE) {
   app.listen(HTTP_API_PORT, HTTP_API_ADDR, () => {
       console.log(`HTTP API bound to http://${HTTP_API_ADDR}:${HTTP_API_PORT}`);
   });

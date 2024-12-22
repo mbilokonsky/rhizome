@@ -2,9 +2,8 @@
 // It should enable operations like removing a property removes the value from the entities in the collection
 // It could then be further extended with e.g. table semantics like filter, sort, join
 
-
 import EventEmitter from "node:events";
-import { publishDelta, subscribeDeltas } from "./deltas";
+import { deltasAccepted, publishDelta, subscribeDeltas } from "./deltas";
 import { Entity, EntityProperties, EntityPropertiesDeltaBuilder } from "./object-layer";
 import { Delta } from "./types";
 import { randomUUID } from "node:crypto";
@@ -45,10 +44,8 @@ export class Collection {
   entities = new Map<string, Entity>();
   eventStream = new EventEmitter();
   constructor() {
-    console.log('COLLECTION SUBSCRIBING TO DELTA STREAM');
     subscribeDeltas((delta: Delta) => {
       // TODO: Make sure this is the kind of delta we're looking for
-      console.log('COLLECTION RECEIVED DELTA');
       this.applyDelta(delta);
     });
     this.eventStream.on('create', (entity: Entity) => {
@@ -69,6 +66,7 @@ export class Collection {
       eventType = 'create';
     }
     const deltaBulider = new EntityPropertiesDeltaBuilder(entityId);
+    console.log('deltaBulider -->', deltaBulider.delta);
 
     if (!properties) {
       // Let's interpret this as entity deletion
@@ -157,6 +155,7 @@ export class Collection {
     const deltas: Delta[] = [];
     const entity = this.updateEntity(entityId, properties, true, deltas);
     deltas.forEach(async (delta: Delta) => {
+      deltasAccepted.push(delta);
       await publishDelta(delta);
     });
     return entity;
@@ -165,6 +164,7 @@ export class Collection {
     const deltas: Delta[] = [];
     this.updateEntity(entityId, undefined, true, deltas);
     deltas.forEach(async (delta: Delta) => {
+      deltasAccepted.push(delta);
       await publishDelta(delta);
     });
   }

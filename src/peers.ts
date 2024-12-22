@@ -1,22 +1,23 @@
-import { PUBLISH_BIND_ADDR, PUBLISH_BIND_PORT } from "./config";
-import { registerRequestHandler, PeerRequest, ResponseSocket } from "./request-reply";
-import { RequestSocket, } from "./request-reply";
-import { SEED_PEERS } from "./config";
-import {connectSubscribe} from "./pub-sub";
+import {PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from "./config";
 import {deltasAccepted, deltasProposed, ingestAll, receiveDelta} from "./deltas";
-import {Delta} from "./types";
+import {connectSubscribe} from "./pub-sub";
+import {PeerRequest, registerRequestHandler, RequestSocket, ResponseSocket} from "./request-reply";
+import {Delta, PeerAddress} from "./types";
 
 export enum PeerMethods {
   GetPublishAddress,
   AskForDeltas
 }
 
+export const myRequestAddr = new PeerAddress(REQUEST_BIND_HOST, REQUEST_BIND_PORT);
+export const myPublishAddr = new PeerAddress(PUBLISH_BIND_HOST, PUBLISH_BIND_PORT);
+
 registerRequestHandler(async (req: PeerRequest, res: ResponseSocket) => {
   console.log('inspecting peer request');
   switch (req.method) {
     case PeerMethods.GetPublishAddress: {
       console.log('it\'s a request for our publish address');
-      await res.send(publishAddr);
+      await res.send(myPublishAddr.toAddrString());
       break;
     }
     case PeerMethods.AskForDeltas: {
@@ -29,29 +30,20 @@ registerRequestHandler(async (req: PeerRequest, res: ResponseSocket) => {
   }
 });
 
-export type PeerAddress = {
-  addr: string,
-  port: number
-};
-
-const publishAddr: PeerAddress = {
-  addr: PUBLISH_BIND_ADDR,
-  port: PUBLISH_BIND_PORT
-};
-
 class Peer {
+  reqAddr: PeerAddress;
   reqSock: RequestSocket;
   publishAddr: PeerAddress | undefined;
   constructor(addr: string, port: number) {
+    this.reqAddr = new PeerAddress(addr, port);
     this.reqSock = new RequestSocket(addr, port);
   }
   async subscribe() {
     if (!this.publishAddr) {
       const res = await this.reqSock.request(PeerMethods.GetPublishAddress);
       // TODO: input validation
-      const {addr, port} = JSON.parse(res.toString());
-      this.publishAddr = {addr, port};
-      connectSubscribe(addr, port);
+      this.publishAddr = PeerAddress.fromString(res.toString());
+      connectSubscribe(this.publishAddr!);
     }
   }
   async askForDeltas(): Promise<Delta[]> {
@@ -67,12 +59,12 @@ class Peer {
   }
 }
 
-const peers: Peer[] = [];
+export const peers: Peer[] = [];
 
 function newPeer(addr: string, port: number) {
-    const peer = new Peer(addr, port);
-    peers.push(peer);
-    return peer;
+  const peer = new Peer(addr, port);
+  peers.push(peer);
+  return peer;
 }
 
 export async function subscribeToSeeds() {
@@ -90,6 +82,7 @@ export async function askAllPeersForDeltas() {
     const deltas = await peer.askForDeltas();
     console.log('received deltas:', deltas);
     for (const delta of deltas) {
+      delta.receivedFrom = peer.reqAddr;
       receiveDelta(delta);
     }
     console.log('deltasProposed count', deltasProposed.length);

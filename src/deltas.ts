@@ -1,6 +1,8 @@
 import EventEmitter from 'node:events';
-import { Delta, Decision } from './types';
-import { publishSock, subscribeSock } from './pub-sub';
+import {REQUEST_BIND_HOST, REQUEST_BIND_PORT} from './config';
+import {publishSock, subscribeSock} from './pub-sub';
+import {Decision, Delta, PeerAddress} from './types';
+import {myRequestAddr} from './peers';
 
 export const deltaStream = new EventEmitter();
 
@@ -22,7 +24,7 @@ export function ingestDelta(delta: Delta) {
   switch (decision) {
     case Decision.Accept:
       deltasAccepted.push(delta);
-      deltaStream.emit('delta', { delta });
+      deltaStream.emit('delta', {delta});
       break;
     case Decision.Reject:
       deltasRejected.push(delta);
@@ -67,7 +69,7 @@ export function subscribeDeltas(fn: (delta: Delta) => void) {
 
 export async function publishDelta(delta: Delta) {
   console.log(`Publishing delta: ${JSON.stringify(delta)}`);
-  await publishSock.send(["deltas", serializeDelta(delta)])
+  await publishSock.send(["deltas", myRequestAddr.toAddrString(), serializeDelta(delta)]);
 }
 
 function serializeDelta(delta: Delta) {
@@ -79,11 +81,12 @@ function deserializeDelta(input: string) {
 }
 
 export async function runDeltas() {
-  for await (const [topic, msg] of subscribeSock) {
+  for await (const [topic, sender, msg] of subscribeSock) {
     if (topic.toString() !== "deltas") {
       continue;
     }
     const delta = deserializeDelta(msg.toString());
+    delta.receivedFrom = PeerAddress.fromString(sender.toString());
     console.log(`Received delta: ${JSON.stringify(delta)}`);
     ingestDelta(delta);
   }

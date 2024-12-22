@@ -1,14 +1,14 @@
 // We can start to use deltas to express relational data in a given context
 
 import express from "express";
-import { bindPublish, } from "./pub-sub";
-import { deltasAccepted, deltasProposed, runDeltas } from "./deltas";
-import { Entity } from "./object-layer";
-import { Collection } from "./collection-layer";
-import { bindReply, runRequestHandlers } from "./request-reply";
-import { askAllPeersForDeltas, subscribeToSeeds } from "./peers";
-import { ENABLE_HTTP_API, HTTP_API_ADDR, HTTP_API_PORT } from "./config";
-
+import {Collection} from "./collection-layer";
+import {HTTP_API_ENABLE, HTTP_API_ADDR, HTTP_API_PORT, SEED_PEERS} from "./config";
+import {deltasAccepted, deltasProposed, runDeltas} from "./deltas";
+import {Entity} from "./object-layer";
+import {askAllPeersForDeltas, peers, subscribeToSeeds} from "./peers";
+import {bindPublish, } from "./pub-sub";
+import {bindReply, runRequestHandlers} from "./request-reply";
+import {Delta, PeerAddress} from "./types";
 
 // As an app we want to be able to write and read data.
 // The data is whatever shape we define it to be in a given context.
@@ -16,7 +16,6 @@ import { ENABLE_HTTP_API, HTTP_API_ADDR, HTTP_API_PORT } from "./config";
 // e.g. entities and their properties.
 
 // This implies at least one layer on top of the underlying primitive deltas.
-
 type UserProperties = {
   id?: string;
   name: string;
@@ -48,11 +47,13 @@ class Users {
 }
 
 (async () => {
+  console.log('1');
   const users = new Users();
+  console.log('2');
 
   const app = express()
   app.get("/ids", (req: express.Request, res: express.Response) => {
-      res.json({ ids: users.getIds()});
+    res.json({ids: users.getIds()});
   });
 
   app.get("/deltas", (req: express.Request, res: express.Response) => {
@@ -65,14 +66,39 @@ class Users {
     res.json(deltasAccepted.length);
   });
 
-  if (ENABLE_HTTP_API) {
+  app.get("/peers", (req: express.Request, res: express.Response) => {
+    res.json(peers.map(({reqAddr, publishAddr}) => {
+      const isSeedPeer = !!SEED_PEERS.find(({addr, port}) =>
+        addr === reqAddr.addr && port === reqAddr.port);
+      const deltasAcceptedCount = deltasAccepted
+        .filter((delta: Delta) => {
+          return delta.receivedFrom?.addr == reqAddr.addr &&
+          delta.receivedFrom?.port == reqAddr.port;
+        })
+        .length;
+      const peerInfo = {
+        reqAddr: reqAddr.toAddrString(),
+        publishAddr: publishAddr?.toAddrString(),
+        isSeedPeer,
+        deltaCount: {
+          accepted: deltasAcceptedCount
+        }
+      };
+      return peerInfo;
+    }));
+  });
+
+  if (HTTP_API_ENABLE) {
     app.listen(HTTP_API_PORT, HTTP_API_ADDR, () => {
-        console.log(`HTTP API bound to http://${HTTP_API_ADDR}:${HTTP_API_PORT}`);
+      console.log(`HTTP API bound to http://${HTTP_API_ADDR}:${HTTP_API_PORT}`);
     });
   }
 
+  console.log('3');
   await bindPublish();
+  console.log('3a');
   await bindReply();
+  console.log('3b');
   runDeltas();
   runRequestHandlers();
   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -81,11 +107,7 @@ class Users {
   askAllPeersForDeltas();
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  setInterval(() => {
-    console.log('deltasProposed count', deltasProposed.length,
-      'deltasAccepted count', deltasAccepted.length);
-  }, 5000)
-
+  console.log('4');
   const taliesin = users.upsert({
     // id: 'taliesin-1',
     name: 'Taliesin',

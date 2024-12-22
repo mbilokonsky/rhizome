@@ -7,7 +7,7 @@
 // - As typescript interfaces?
 // - As typescript classes?
 
-import { CREATOR, HOST } from "./config";
+import { CREATOR, HOST_ID } from "./config";
 import { Delta, PropertyTypes } from "./types";
 
 export type EntityProperties = {
@@ -31,7 +31,7 @@ export class EntityPropertiesDeltaBuilder {
   constructor(entityId: string) {
     this.delta = {
       creator: CREATOR,
-      host: HOST,
+      host: HOST_ID,
       pointers: [{
         localContext: 'id',
         target: entityId,
