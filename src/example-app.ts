@@ -47,9 +47,7 @@ class Users {
 }
 
 (async () => {
-  console.log('1');
   const users = new Users();
-  console.log('2');
 
   const app = express()
   app.get("/ids", (req: express.Request, res: express.Response) => {
@@ -94,11 +92,8 @@ class Users {
     });
   }
 
-  console.log('3');
   await bindPublish();
-  console.log('3a');
   await bindReply();
-  console.log('3b');
   runDeltas();
   runRequestHandlers();
   await new Promise((resolve) => setTimeout(resolve, 500));
@@ -107,7 +102,6 @@ class Users {
   askAllPeersForDeltas();
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  console.log('4');
   const taliesin = users.upsert({
     // id: 'taliesin-1',
     name: 'Taliesin',

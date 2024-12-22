@@ -66,7 +66,6 @@ export class Collection {
       eventType = 'create';
     }
     const deltaBulider = new EntityPropertiesDeltaBuilder(entityId);
-    console.log('deltaBulider -->', deltaBulider.delta);
 
     if (!properties) {
       // Let's interpret this as entity deletion
@@ -125,7 +124,6 @@ export class Collection {
 
   applyDelta(delta: Delta) {
     // TODO: handle delta representing entity deletion
-    console.log('applying delta:', delta);
     const idPtr = delta.pointers.find(({localContext}) => localContext === 'id');
     if (!idPtr) {
       console.error('encountered delta with no entity id', delta);

@@ -80,13 +80,11 @@ export async function askAllPeersForDeltas() {
   peers.forEach(async (peer, idx) => {
     console.log(`Asking peer ${idx} for deltas`);
     const deltas = await peer.askForDeltas();
-    console.log('received deltas:', deltas);
+    console.log(`received ${deltas.length}`);
     for (const delta of deltas) {
       delta.receivedFrom = peer.reqAddr;
       receiveDelta(delta);
     }
-    console.log('deltasProposed count', deltasProposed.length);
-    console.log('deltasAccepted count', deltasAccepted.length);
     ingestAll();
   });
 }

@@ -7,7 +7,6 @@ export const subscribeSock = new Subscriber();
 
 export async function bindPublish() {
   const addrStr = `tcp://${PUBLISH_BIND_ADDR}:${PUBLISH_BIND_PORT}`;
-    console.log('addrStr:', addrStr);
   await publishSock.bind(addrStr);
   console.log(`Publishing socket bound to ${addrStr}`);
 }
