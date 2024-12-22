@@ -1,7 +1,7 @@
 ## Setup
 
-Install nodejs
-Install [nvm](https://nvm.sh)
+- Install nodejs
+- Install [nvm](https://nvm.sh)
 
 ## Install
 
@@ -30,11 +30,13 @@ To demonstrate the example application, you can open multiple terminals. In each
     export RHIZOME_PEER_ID=peer1
     node dist/example-app.js
 
+
     export RHIZOME_REQUEST_BIND_PORT=4002
     export RHIZOME_PUBLISH_BIND_PORT=4003
     export RHIZOME_SEED_PEERS='127.0.0.1:4000, 127.0.0.1:4004'
     export RHIZOME_PEER_ID=peer2
     node dist/example-app.js
+
 
     export RHIZOME_REQUEST_BIND_PORT=4004
     export RHIZOME_PUBLISH_BIND_PORT=4005
