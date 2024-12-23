@@ -1,9 +1,8 @@
 import EventEmitter from 'node:events';
-import {REQUEST_BIND_HOST, REQUEST_BIND_PORT} from './config';
-import {publishSock, subscribeSock} from './pub-sub';
-import {Decision, Delta, PeerAddress} from './types';
-import {myRequestAddr} from './peers';
 import objectHash from 'object-hash';
+import {myRequestAddr} from './peers';
+import {publishSock, subscribeSock} from './pub-sub';
+import {Decision, Delta, PeerAddress, Properties} from './types';
 
 export const deltaStream = new EventEmitter();
 

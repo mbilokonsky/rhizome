@@ -11,16 +11,16 @@ import { CREATOR, HOST_ID } from "./config";
 import { Delta, PropertyTypes } from "./types";
 
 export type EntityProperties = {
-  [key: string]: PropertyTypes
+  [key: string]: PropertyTypes;
 };
 
 export class Entity {
   id: string;
-  properties: EntityProperties;
+  properties: EntityProperties = {};
   ahead = 0;
+
   constructor(id: string) {
     this.id = id;
-    this.properties = {};
   }
 }
 
@@ -28,6 +28,7 @@ export class Entity {
 
 export class EntityPropertiesDeltaBuilder {
   delta: Delta;
+
   constructor(entityId: string) {
     this.delta = {
       creator: CREATOR,
@@ -39,6 +40,7 @@ export class EntityPropertiesDeltaBuilder {
       }]
     };
   }
+
   add(localContext: string, target: PropertyTypes) {
     this.delta.pointers.push({localContext, target});
   }

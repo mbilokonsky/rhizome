@@ -1,14 +1,16 @@
+export type PointerTarget = string | number | undefined;
+
 export type Pointer = {
-  localContext: string,
-  target: string | number | undefined,
-  targetContext?: string
+  localContext: string;
+  target: PointerTarget;
+  targetContext?: string;
 };
 
 export type Delta = {
-  creator: string,
-  host: string,
-  pointers: Pointer[],
-  receivedFrom?: PeerAddress,
+  creator: string;
+  host: string;
+  pointers: Pointer[];
+  receivedFrom?: PeerAddress;
 }
 
 export type DeltaContext = Delta & {
@@ -29,7 +31,6 @@ export enum Decision {
   Defer
 };
 
-
 export type JSONLogic = object;
 
 export type FilterExpr = JSONLogic;
@@ -37,6 +38,8 @@ export type FilterExpr = JSONLogic;
 export type FilterGenerator = () => FilterExpr;
 
 export type PropertyTypes = string | number | undefined;
+
+export type Properties = {[key: string]: PropertyTypes};
 
 export class PeerAddress {
   addr: string;
