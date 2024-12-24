@@ -10,7 +10,8 @@ import {DeltaFilter} from "./types";
 
 type Resolver = (losslessView: LosslessViewMany) => unknown;
 
-export function firstValueFromCollapsedDelta(delta: CollapsedDelta, key: string): string | undefined {
+// Extract a particular value from a delta's pointers
+export function valueFromCollapsedDelta(delta: CollapsedDelta, key: string): string | undefined {
   const pointers = delta.pointers;
   for (const pointer of pointers || []) {
     const [[k, value]] = Object.entries(pointer);
@@ -20,6 +21,7 @@ export function firstValueFromCollapsedDelta(delta: CollapsedDelta, key: string)
   }
 }
 
+// Example function for resolving a value for an entity by taking the first value we find
 export function firstValueFromLosslessViewOne(ent: LosslessViewOne, key: string): {delta: CollapsedDelta, value: string} | undefined {
   for (const delta of ent.properties[key] || []) {
     const value = firstValueFromCollapsedDelta(delta, key);
