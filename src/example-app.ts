@@ -1,4 +1,3 @@
-import {Collection} from "./collection";
 import {HTTP_API_ENABLE} from "./config";
 import {runDeltas} from "./deltas";
 import {runHttpApi} from "./http-api";
@@ -7,6 +6,8 @@ import {askAllPeersForDeltas, subscribeToSeeds} from "./peers";
 import {bindPublish, } from "./pub-sub";
 import {bindReply, runRequestHandlers} from "./request-reply";
 import {TypedCollection} from "./typed-collection";
+import Debug from 'debug';
+const debug = Debug('example-app');
 
 // As an app we want to be able to write and read data.
 // The data is whatever shape we define it to be in a given context.
@@ -39,11 +40,11 @@ type User = {
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   users.onUpdate((u: Entity) => {
-    console.log('User updated:', u);
+    debug('User updated:', u);
   });
 
   users.onCreate((u: Entity) => {
-    console.log('New user!:', u);
+    debug('New user!:', u);
   });
 
   const taliesin = users.put(undefined, {
@@ -60,9 +61,9 @@ type User = {
   const result = users.get(taliesin.id);
   const matches: boolean = JSON.stringify(result) === JSON.stringify(taliesin);
   if (matches) {
-    console.log('Result matches expected: ' + JSON.stringify(taliesin));
+    debug('Result matches expected: ' + JSON.stringify(taliesin));
   } else {
-    console.log(`Result does not match expected.` +
+    debug(`Result does not match expected.` +
       `\n\nExpected \n${JSON.stringify(taliesin)}` +
       `\nReceived\n${JSON.stringify(result)}`);
   }

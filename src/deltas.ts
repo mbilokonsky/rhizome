@@ -2,7 +2,9 @@ import EventEmitter from 'node:events';
 import objectHash from 'object-hash';
 import {myRequestAddr} from './peers';
 import {publishSock, subscribeSock} from './pub-sub';
-import {Decision, Delta, PeerAddress, Properties} from './types';
+import {Decision, Delta, PeerAddress} from './types';
+import Debug from 'debug';
+const debug = Debug('deltas');
 
 export const deltaStream = new EventEmitter();
 
@@ -75,7 +77,7 @@ export function subscribeDeltas(fn: (delta: Delta) => void) {
 }
 
 export async function publishDelta(delta: Delta) {
-  console.log(`Publishing delta: ${JSON.stringify(delta)}`);
+  debug(`Publishing delta: ${JSON.stringify(delta)}`);
   await publishSock.send(["deltas", myRequestAddr.toAddrString(), serializeDelta(delta)]);
 }
 
@@ -94,7 +96,7 @@ export async function runDeltas() {
     }
     const delta = deserializeDelta(msg.toString());
     delta.receivedFrom = PeerAddress.fromString(sender.toString());
-    console.log(`Received delta: ${JSON.stringify(delta)}`);
+    debug(`Received delta: ${JSON.stringify(delta)}`);
     ingestDelta(delta);
   }
 }

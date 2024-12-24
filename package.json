@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Rhizomatic database engine node",
   "scripts": {
-    "start": "node --experimental-strip-types --experimental-transform-types src/main.ts",
+    "example-app": "node dist/example-app.js",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
     "lint": "eslint",
     "test": "jest"
   },

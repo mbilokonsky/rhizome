@@ -1,8 +1,10 @@
 import {PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from "./config";
-import {deltasAccepted, deltasProposed, ingestAll, receiveDelta} from "./deltas";
+import {deltasAccepted, ingestAll, receiveDelta} from "./deltas";
 import {connectSubscribe} from "./pub-sub";
 import {PeerRequest, registerRequestHandler, RequestSocket, ResponseSocket} from "./request-reply";
 import {Delta, PeerAddress} from "./types";
+import Debug from 'debug';
+const debug = Debug('peers');
 
 export enum PeerMethods {
   GetPublishAddress,
@@ -13,15 +15,15 @@ export const myRequestAddr = new PeerAddress(REQUEST_BIND_HOST, REQUEST_BIND_POR
 export const myPublishAddr = new PeerAddress(PUBLISH_BIND_HOST, PUBLISH_BIND_PORT);
 
 registerRequestHandler(async (req: PeerRequest, res: ResponseSocket) => {
-  console.log('inspecting peer request');
+  debug('inspecting peer request');
   switch (req.method) {
     case PeerMethods.GetPublishAddress: {
-      console.log('it\'s a request for our publish address');
+      debug('it\'s a request for our publish address');
       await res.send(myPublishAddr.toAddrString());
       break;
     }
     case PeerMethods.AskForDeltas: {
-      console.log('it\'s a request for deltas');
+      debug('it\'s a request for deltas');
       // TODO: stream these rather than
       // trying to write them all in one message
       await res.send(JSON.stringify(deltasAccepted));
@@ -41,7 +43,7 @@ class Peer {
     this.reqSock = new RequestSocket(addr, port);
     this.isSelf = addr === myRequestAddr.addr && port === myRequestAddr.port;
     this.isSeedPeer = !!SEED_PEERS.find((seedPeer) =>
-        addr === seedPeer.addr && port === seedPeer.port);
+      addr === seedPeer.addr && port === seedPeer.port);
   }
   async subscribe() {
     if (!this.publishAddr) {
@@ -76,7 +78,7 @@ function newPeer(addr: string, port: number) {
 
 export async function subscribeToSeeds() {
   SEED_PEERS.forEach(async ({addr, port}, idx) => {
-    console.log(`SEED PEERS[${idx}]=${addr}:${port}`);
+    debug(`SEED PEERS[${idx}]=${addr}:${port}`);
     const peer = newPeer(addr, port);
     await peer.subscribe();
   });
@@ -87,9 +89,9 @@ export async function askAllPeersForDeltas() {
   peers
     .filter(({isSelf}) => !isSelf)
     .forEach(async (peer, idx) => {
-      console.log(`Asking peer ${idx} for deltas`);
+      debug(`Asking peer ${idx} for deltas`);
       const deltas = await peer.askForDeltas();
-      console.log(`received ${deltas.length} deltas from ${peer.reqAddr.toAddrString()}`);
+      debug(`received ${deltas.length} deltas from ${peer.reqAddr.toAddrString()}`);
       for (const delta of deltas) {
         delta.receivedFrom = peer.reqAddr;
         receiveDelta(delta);

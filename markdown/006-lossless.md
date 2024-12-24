@@ -88,3 +88,4 @@ Lossy transformation:
             actors: [{role: neo, base_salary: 1000000, salary_currency: "usd"}],
         },
     }
+

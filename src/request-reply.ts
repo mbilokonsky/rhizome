@@ -2,6 +2,8 @@ import { Request, Reply, Message } from 'zeromq';
 import { REQUEST_BIND_PORT, REQUEST_BIND_ADDR} from './config';
 import { EventEmitter } from 'node:events';
 import { PeerMethods } from './peers';
+import Debug from 'debug';
+const debug = Debug('request-reply');
 
 export type PeerRequest = {
   method: PeerMethods;
@@ -15,12 +17,12 @@ const requestStream = new EventEmitter();
 export async function bindReply() {
   const addrStr = `tcp://${REQUEST_BIND_ADDR}:${REQUEST_BIND_PORT}`;
   await replySock.bind(addrStr);
-  console.log(`Reply socket bound to ${addrStr}`);
+  debug(`Reply socket bound to ${addrStr}`);
 }
 
 export async function runRequestHandlers() {
   for await (const [msg] of replySock) {
-    console.log(`Received message`, {msg: msg.toString()});
+    debug(`Received message`, {msg: msg.toString()});
     const req = peerRequestFromMsg(msg);
     requestStream.emit('request', req);
   }
@@ -32,7 +34,7 @@ function peerRequestFromMsg(msg: Message): PeerRequest | null {
     const obj = JSON.parse(msg.toString());
     req = {...obj};
   } catch(e) {
-    console.log('error receiving command', e);
+    debug('error receiving command', e);
   }
   return req;
 }
@@ -46,7 +48,7 @@ export class ResponseSocket {
     if (typeof msg === 'object') {
       msg = JSON.stringify(msg);
     }
-    console.log('sending reply', {msg});
+    debug('sending reply', {msg});
     await this.sock.send(msg);
   }
 }
@@ -63,7 +65,7 @@ export class RequestSocket {
   constructor(host: string, port: number) {
     const addrStr = `tcp://${host}:${port}`;
     this.sock.connect(addrStr);
-    console.log(`Request socket connecting to ${addrStr}`);
+    debug(`Request socket connecting to ${addrStr}`);
   }
   async request(method: PeerMethods): Promise<Message> {
     const req: PeerRequest = {
