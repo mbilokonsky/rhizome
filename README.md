@@ -1,3 +1,19 @@
+# Concepts
+
+|         | Implemented | Notes |
+| ------- | ----------- | ----- |
+| Peering | Yes | Currently using RHIZOME_SEED_PEERS, no gossip / discovery |
+| Schemas | Not really | Currently very thin layer allowing TypedCollections |
+| Relationships | No | Supporting relational algebra among domain entities |
+| Views | Yes | Currently using functions rather than JSON-Logic expressions |
+| Functions | No | Arbitrary subscribers to delta stream (that can also emit deltas?) |
+| Tests | Minimal | So far we have a few `ts-jest` tests. Need a plan for multi-node tests. |
+| Identity | No | Probably a public key / private key system |
+| Contexts | No | Each context may involve different lossy functions and delta filters |
+| HTTP API | Yes | Basic peering info and entity CRUD |
+
+# Development / Demo
+
 ## Setup
 
 Install [`nvm`](https://nvm.sh)
@@ -87,7 +103,3 @@ Query the list of deltas ingested by this node
 curl -s  http://localhost:3000/deltas | jq
 ```
 
-# Project Management
-
-- [] Item 1
-- [] Item 2

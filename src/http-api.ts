@@ -15,8 +15,10 @@ type CollectionsToServe = {
 };
 
 const docConverter = new Converter({
+  completeHTMLDocument: true,
   simpleLineBreaks: true,
-  completeHTMLDocument: true
+  tables: true,
+  tasklists: true
 });
 const htmlDocFromMarkdown = (md: string): string => docConverter.makeHtml(md);
 
