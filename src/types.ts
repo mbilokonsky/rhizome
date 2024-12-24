@@ -37,6 +37,8 @@ export type FilterExpr = JSONLogic;
 
 export type FilterGenerator = () => FilterExpr;
 
+export type DeltaFilter = (delta: Delta) => boolean;
+
 export type PropertyTypes = string | number | undefined;
 
 export type Properties = {[key: string]: PropertyTypes};

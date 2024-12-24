@@ -1,8 +1,8 @@
 import {Lossless} from '../src/lossless';
-import {Delta} from '../src/types';
+import {Delta, DeltaFilter} from '../src/types';
 
 describe('Lossless', () => {
-  it('creates a lossless view of neo in the matrix', () => {
+  it('creates a lossless view of keanu as neo in the matrix', () => {
     const delta: Delta = {
       creator: 'a',
       host: 'h',
@@ -71,6 +71,71 @@ describe('Lossless', () => {
           ],
         }],
       }
+    });
+
+
+  });
+
+  describe('can filter deltas', () => {
+    const lossless = new Lossless();
+
+    beforeAll(() => {
+      lossless.ingestDelta({
+        creator: 'A',
+        host: 'H',
+        pointers: [{
+          localContext: "1",
+          target: "ace",
+          targetContext: "value"
+        }]
+      });
+
+      lossless.ingestDelta({
+        creator: 'B',
+        host: 'H',
+        pointers: [{
+          // 10 11j 12q 13k 14a
+          localContext: "14",
+          target: "ace",
+          targetContext: "value"
+        }]
+      });
+
+      expect(lossless.view()).toEqual({
+        ace: {
+          value: [{
+            creator: 'A',
+            host: 'H',
+            pointers: [
+              {"1": "ace"},
+            ]
+          }, {
+            creator: 'B',
+            host: 'H',
+            pointers: [
+              {"14": "ace"},
+            ]
+          }],
+        }
+      });
+    });
+
+    it('filter by creator and host', () => {
+      const filter: DeltaFilter = ({creator, host}) => {
+        return creator === 'A' && host === 'H';
+      };
+
+      expect(lossless.view(filter)).toEqual({
+        ace: {
+          value: [{
+            creator: 'A',
+            host: 'H',
+            pointers: [
+              {"1": "ace"},
+            ]
+          }]
+        }
+      });
     });
   });
 });

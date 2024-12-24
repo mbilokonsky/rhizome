@@ -1,7 +1,7 @@
 // Deltas target entities.
 // We can maintain a record of all the targeted entities, and the deltas that targeted them
 
-import {Delta, PropertyTypes} from "./types";
+import {Delta, DeltaFilter, PropertyTypes} from "./types";
 
 type DomainEntityID = string;
 type PropertyID = string;
@@ -65,21 +65,27 @@ export class Lossless {
     }
   }
 
-  view() {
+  //TODO: json logic -- view(deltaFilter?: FilterExpr) {
+  view(deltaFilter?: DeltaFilter) {
     const view: {[key: DomainEntityID]: {[key: PropertyID]: CollapsedDelta[]}} = {};
     for (const ent of this.domainEntities.values()) {
-      const obj: {[key: PropertyID]: CollapsedDelta[]} = {};
-      view[ent.id] = obj;
+      // const obj: {[key: PropertyID]: CollapsedDelta[]} = {};
+      view[ent.id] = {};
       for (const prop of ent.properties.values()) {
-        obj[prop.id] = obj[prop.id] || [];
+        view[ent.id][prop.id] = view[ent.id][prop.id] || [];
         for (const delta of prop.deltas) {
+          if (deltaFilter) {
+            const include = deltaFilter(delta);
+            if (!include) continue;
+          }
           const collapsedDelta: CollapsedDelta = {
             ...delta,
-            pointers: delta.pointers.map(({localContext, target}) => ({
-              [localContext]: target
-            }))
+            pointers: delta.pointers
+              .map(({localContext, target}) => ({
+                [localContext]: target
+              }))
           };
-          obj[prop.id].push(collapsedDelta);
+          view[ent.id][prop.id].push(collapsedDelta);
         }
       }
     }
