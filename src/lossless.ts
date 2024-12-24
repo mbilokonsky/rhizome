@@ -6,10 +6,18 @@ import {Delta, DeltaFilter, PropertyTypes} from "./types";
 type DomainEntityID = string;
 type PropertyID = string;
 
-export type LosslessView = {[key: string]: {[key: string]: Delta[]}};
 export type CollapsedPointer = {[key: string]: PropertyTypes};
 export type CollapsedDelta = Omit<Delta, 'pointers'> & {
   pointers: CollapsedPointer[];
+};
+export type LosslessViewOne = {
+  referencedAs: string[];
+  properties: {
+    [key: PropertyID]: CollapsedDelta[]
+  }
+};
+export type LosslessViewMany = {
+  [key: DomainEntityID]: LosslessViewOne;
 };
 
 class DomainEntityMap extends Map<DomainEntityID, DomainEntity> {};
@@ -66,26 +74,34 @@ export class Lossless {
   }
 
   //TODO: json logic -- view(deltaFilter?: FilterExpr) {
-  view(deltaFilter?: DeltaFilter) {
-    const view: {[key: DomainEntityID]: {[key: PropertyID]: CollapsedDelta[]}} = {};
+  view(deltaFilter?: DeltaFilter): LosslessViewMany {
+    const view: LosslessViewMany = {};
     for (const ent of this.domainEntities.values()) {
-      // const obj: {[key: PropertyID]: CollapsedDelta[]} = {};
-      view[ent.id] = {};
+      const referencedAs = new Set<string>();
+      view[ent.id] = {
+        referencedAs: [],
+        properties: {}
+      };
       for (const prop of ent.properties.values()) {
-        view[ent.id][prop.id] = view[ent.id][prop.id] || [];
+        view[ent.id].properties[prop.id] = view[ent.id].properties[prop.id] || [];
         for (const delta of prop.deltas) {
           if (deltaFilter) {
             const include = deltaFilter(delta);
             if (!include) continue;
           }
+          const pointers: CollapsedPointer[] = [];
+          for (const {localContext, target} of delta.pointers) {
+            pointers.push({[localContext]: target});
+            if (target === ent.id) {
+              referencedAs.add(localContext);
+            }
+          }
           const collapsedDelta: CollapsedDelta = {
             ...delta,
-            pointers: delta.pointers
-              .map(({localContext, target}) => ({
-                [localContext]: target
-              }))
+            pointers
           };
-          view[ent.id][prop.id].push(collapsedDelta);
+          view[ent.id].referencedAs = Array.from(referencedAs.values());
+          view[ent.id].properties[prop.id].push(collapsedDelta);
         }
       }
     }

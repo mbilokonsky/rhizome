@@ -33,47 +33,54 @@ describe('Lossless', () => {
 
     expect(lossless.view()).toEqual({
       keanu: {
-        roles: [{
-          creator: "a",
-          host: "h",
-          pointers: [
-            {actor: "keanu"},
-            {role: "neo"},
-            {film: "the_matrix"},
-            {base_salary: 1000000},
-            {salary_currency: "usd"},
-          ],
-        }],
+        referencedAs: ["actor"],
+        properties: {
+          roles: [{
+            creator: "a",
+            host: "h",
+            pointers: [
+              {actor: "keanu"},
+              {role: "neo"},
+              {film: "the_matrix"},
+              {base_salary: 1000000},
+              {salary_currency: "usd"},
+            ],
+          }],
+        },
       },
       neo: {
-        actor: [{
-          creator: "a",
-          host: "h",
-          pointers: [
-            {actor: "keanu"},
-            {role: "neo"},
-            {film: "the_matrix"},
-            {base_salary: 1000000},
-            {salary_currency: "usd"},
-          ],
-        }],
+        referencedAs: ["role"],
+        properties: {
+          actor: [{
+            creator: "a",
+            host: "h",
+            pointers: [
+              {actor: "keanu"},
+              {role: "neo"},
+              {film: "the_matrix"},
+              {base_salary: 1000000},
+              {salary_currency: "usd"},
+            ],
+          }],
+        },
       },
       the_matrix: {
-        cast: [{
-          creator: "a",
-          host: "h",
-          pointers: [
-            {actor: "keanu"},
-            {role: "neo"},
-            {film: "the_matrix"},
-            {base_salary: 1000000},
-            {salary_currency: "usd"},
-          ],
-        }],
-      }
+        referencedAs: ["film"],
+        properties: {
+          cast: [{
+            creator: "a",
+            host: "h",
+            pointers: [
+              {actor: "keanu"},
+              {role: "neo"},
+              {film: "the_matrix"},
+              {base_salary: 1000000},
+              {salary_currency: "usd"},
+            ],
+          }],
+        },
+      },
     });
-
-
   });
 
   describe('can filter deltas', () => {
@@ -103,19 +110,22 @@ describe('Lossless', () => {
 
       expect(lossless.view()).toEqual({
         ace: {
-          value: [{
-            creator: 'A',
-            host: 'H',
-            pointers: [
-              {"1": "ace"},
-            ]
-          }, {
-            creator: 'B',
-            host: 'H',
-            pointers: [
-              {"14": "ace"},
-            ]
-          }],
+          referencedAs: ["1", "14"],
+          properties: {
+            value: [{
+              creator: 'A',
+              host: 'H',
+              pointers: [
+                {"1": "ace"},
+              ]
+            }, {
+              creator: 'B',
+              host: 'H',
+              pointers: [
+                {"14": "ace"},
+              ]
+            }],
+          }
         }
       });
     });
@@ -127,13 +137,16 @@ describe('Lossless', () => {
 
       expect(lossless.view(filter)).toEqual({
         ace: {
-          value: [{
-            creator: 'A',
-            host: 'H',
-            pointers: [
-              {"1": "ace"},
-            ]
-          }]
+          referencedAs: ["1"],
+          properties: {
+            value: [{
+              creator: 'A',
+              host: 'H',
+              pointers: [
+                {"1": "ace"},
+              ]
+            }]
+          }
         }
       });
     });
