@@ -1,6 +1,6 @@
 import Debug from "debug";
 import {Lossless, LosslessViewMany} from "../src/lossless";
-import {Lossy, firstValueFromLosslessViewOne, firstValueFromCollapsedDelta} from "../src/lossy";
+import {Lossy, firstValueFromLosslessViewOne, valueFromCollapsedDelta} from "../src/lossy";
 const debug = Debug('test:lossy');
 
 describe('Lossy', () => {
@@ -53,7 +53,7 @@ describe('Lossy', () => {
             const {delta, value: actor} = firstValueFromLosslessViewOne(ent, "actor") ?? {};
             if (!delta) continue; // TODO: panic
             if (!actor) continue; // TODO: panic
-            const film = firstValueFromCollapsedDelta(delta, "film");
+            const film = valueFromCollapsedDelta(delta, "film");
             debug(`role ${id}`, {actor, film});
             if (!film) continue; // TODO: panic
             roles.push({

@@ -24,7 +24,7 @@ export function valueFromCollapsedDelta(delta: CollapsedDelta, key: string): str
 // Example function for resolving a value for an entity by taking the first value we find
 export function firstValueFromLosslessViewOne(ent: LosslessViewOne, key: string): {delta: CollapsedDelta, value: string} | undefined {
   for (const delta of ent.properties[key] || []) {
-    const value = firstValueFromCollapsedDelta(delta, key);
+    const value = valueFromCollapsedDelta(delta, key);
     if (value) return {delta, value};
   }
 }
