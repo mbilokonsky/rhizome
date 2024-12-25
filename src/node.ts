@@ -6,7 +6,6 @@ import {Peers} from './peers';
 import {PubSub} from './pub-sub';
 import {RequestReply} from './request-reply';
 import {PeerAddress} from './types';
-import {Collection} from './collection';
 const debug = Debug('rhizome-node');
 
 export type RhizomeNodeConfig = {
@@ -52,8 +51,14 @@ export class RhizomeNode {
       ...config
     };
     debug('config', this.config);
-    this.myRequestAddr = new PeerAddress(this.config.requestBindHost, this.config.requestBindPort);
-    this.myPublishAddr = new PeerAddress(this.config.publishBindHost, this.config.publishBindPort);
+    this.myRequestAddr = new PeerAddress(
+      this.config.requestBindHost,
+      this.config.requestBindPort
+    );
+    this.myPublishAddr = new PeerAddress(
+      this.config.publishBindHost,
+      this.config.publishBindPort
+    );
     this.pubSub = new PubSub(this);
     this.requestReply = new RequestReply(this);
     this.httpApi = new HttpApi(this);
