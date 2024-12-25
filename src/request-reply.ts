@@ -1,8 +1,9 @@
-import { Request, Reply, Message } from 'zeromq';
-import { REQUEST_BIND_PORT, REQUEST_BIND_ADDR} from './config';
-import { EventEmitter } from 'node:events';
-import { PeerMethods } from './peers';
+import {Request, Reply, Message} from 'zeromq';
+import {EventEmitter} from 'node:events';
+import {PeerMethods} from './peers';
 import Debug from 'debug';
+import {RhizomeNode} from './node';
+import {PeerAddress} from './types';
 const debug = Debug('request-reply');
 
 export type PeerRequest = {
@@ -11,32 +12,28 @@ export type PeerRequest = {
 
 export type RequestHandler = (req: PeerRequest, res: ResponseSocket) => void;
 
-export const replySock = new Reply();
-const requestStream = new EventEmitter();
+// TODO: Retain handle to request socket for each peer, so we only need to open once
+export class RequestSocket {
+  sock = new Request();
 
-export async function bindReply() {
-  const addrStr = `tcp://${REQUEST_BIND_ADDR}:${REQUEST_BIND_PORT}`;
-  await replySock.bind(addrStr);
-  debug(`Reply socket bound to ${addrStr}`);
-}
-
-export async function runRequestHandlers() {
-  for await (const [msg] of replySock) {
-    debug(`Received message`, {msg: msg.toString()});
-    const req = peerRequestFromMsg(msg);
-    requestStream.emit('request', req);
+  constructor(addr: PeerAddress) {
+    const addrStr = `tcp://${addr.addr}:${addr.port}`;
+    this.sock.connect(addrStr);
+    debug(`Request socket connecting to ${addrStr}`);
   }
-}
 
-function peerRequestFromMsg(msg: Message): PeerRequest | null {
-  let req: PeerRequest | null = null;
-  try {
-    const obj = JSON.parse(msg.toString());
-    req = {...obj};
-  } catch(e) {
-    debug('error receiving command', e);
+  async request(method: PeerMethods): Promise<Message> {
+    const req: PeerRequest = {
+      method
+    };
+    await this.sock.send(JSON.stringify(req));
+    // Wait for a response.
+    // TODO: Timeout
+    // TODO: Retry
+    // this.sock.receiveTimeout = ...
+    const [res] = await this.sock.receive();
+    return res;
   }
-  return req;
 }
 
 export class ResponseSocket {
@@ -53,30 +50,54 @@ export class ResponseSocket {
   }
 }
 
-export function registerRequestHandler(handler: RequestHandler) {
-  requestStream.on('request', (req) => {
-    const res = new ResponseSocket(replySock);
-    handler(req, res);
-  });
+function peerRequestFromMsg(msg: Message): PeerRequest | null {
+  let req: PeerRequest | null = null;
+  try {
+    const obj = JSON.parse(msg.toString());
+    req = {...obj};
+  } catch (e) {
+    debug('error receiving command', e);
+  }
+  return req;
 }
 
-export class RequestSocket {
-  sock = new Request();
-  constructor(host: string, port: number) {
-    const addrStr = `tcp://${host}:${port}`;
-    this.sock.connect(addrStr);
-    debug(`Request socket connecting to ${addrStr}`);
+export class RequestReply {
+  rhizomeNode: RhizomeNode;
+  replySock = new Reply();
+  requestStream = new EventEmitter();
+  requestBindAddrStr: string;
+
+  constructor(rhizomeNode: RhizomeNode) {
+    this.rhizomeNode = rhizomeNode;
+    const {requestBindAddr, requestBindPort} = this.rhizomeNode.config;
+    this.requestBindAddrStr = `tcp://${requestBindAddr}:${requestBindPort}`;
   }
-  async request(method: PeerMethods): Promise<Message> {
-    const req: PeerRequest = {
-      method
-    };
-    await this.sock.send(JSON.stringify(req));
-    // Wait for a response.
-    // TODO: Timeout
-    // TODO: Retry
-    // this.sock.receiveTimeout = ...
-    const [res] = await this.sock.receive();
-    return res;
+
+  // Listen for incoming requests
+  async start() {
+
+    await this.replySock.bind(this.requestBindAddrStr);
+    debug(`Reply socket bound to ${this.requestBindAddrStr}`);
+
+    for await (const [msg] of this.replySock) {
+      debug(`Received message`, {msg: msg.toString()});
+      const req = peerRequestFromMsg(msg);
+      this.requestStream.emit('request', req);
+    }
+  }
+
+  // Add a top level handler for incoming requests.
+  // Each handler will get a copy of every message.
+  registerRequestHandler(handler: RequestHandler) {
+    this.requestStream.on('request', (req) => {
+      const res = new ResponseSocket(this.replySock);
+      handler(req, res);
+    });
+  }
+
+  async stop() {
+    await this.replySock.unbind(this.requestBindAddrStr);
+    this.replySock.close();
+    this.replySock = new Reply();
   }
 }

@@ -3,12 +3,11 @@
 // It should enable operations like removing a property removes the value from the entities in the collection
 // It could then be further extended with e.g. table semantics like filter, sort, join
 
+import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
-import { deltasAccepted, publishDelta, subscribeDeltas } from "./deltas";
-import { Entity, EntityProperties, EntityPropertiesDeltaBuilder } from "./object-layer";
-import { Delta } from "./types";
-import { randomUUID } from "node:crypto";
-import {myRequestAddr} from "./peers";
+import {RhizomeNode} from "./node";
+import {Entity, EntityProperties, EntityPropertiesDeltaBuilder} from "./object-layer";
+import {Delta} from "./types";
 
 // type Property = {
 //   name: string,
@@ -24,13 +23,24 @@ import {myRequestAddr} from "./peers";
 // }
 
 export class Collection {
+  rhizomeNode?: RhizomeNode;
+  name: string;
   entities = new Map<string, Entity>();
   eventStream = new EventEmitter();
-  constructor() {
-    subscribeDeltas((delta: Delta) => {
+
+  constructor(name: string) {
+    this.name = name;
+  }
+
+  rhizomeConnect(rhizomeNode: RhizomeNode) {
+    this.rhizomeNode = rhizomeNode;
+
+    rhizomeNode.deltaStream.subscribeDeltas((delta: Delta) => {
       // TODO: Make sure this is the kind of delta we're looking for
       this.applyDelta(delta);
     });
+
+    rhizomeNode.httpApi.serveCollection(this);
   }
 
   // Applies the javascript rules for updating object values,
@@ -45,7 +55,7 @@ export class Collection {
       entity.id = entityId;
       eventType = 'create';
     }
-    const deltaBulider = new EntityPropertiesDeltaBuilder(entityId);
+    const deltaBulider = new EntityPropertiesDeltaBuilder(this.rhizomeNode!, entityId);
 
     if (!properties) {
       // Let's interpret this as entity deletion
@@ -80,7 +90,7 @@ export class Collection {
       //* specific deltas removed. We could use it to extract a measurement
       //* of the effects of some deltas' inclusion or exclusion, the
       //* evaluation of which may lend evidence to some possible arguments.
-     
+
       this.entities.set(entityId, entity);
       if (anyChanged) {
         deltas?.push(deltaBulider.delta);
@@ -135,9 +145,9 @@ export class Collection {
     const deltas: Delta[] = [];
     const entity = this.updateEntity(entityId, properties, true, deltas);
     deltas.forEach(async (delta: Delta) => {
-      delta.receivedFrom = myRequestAddr;
-      deltasAccepted.push(delta);
-      await publishDelta(delta);
+      delta.receivedFrom = this.rhizomeNode!.myRequestAddr;
+      this.rhizomeNode!.deltaStream.deltasAccepted.push(delta);
+      await this.rhizomeNode!.deltaStream.publishDelta(delta);
     });
     return entity;
   }
@@ -146,8 +156,8 @@ export class Collection {
     const deltas: Delta[] = [];
     this.updateEntity(entityId, undefined, true, deltas);
     deltas.forEach(async (delta: Delta) => {
-      deltasAccepted.push(delta);
-      await publishDelta(delta);
+      this.rhizomeNode!.deltaStream.deltasAccepted.push(delta);
+      await this.rhizomeNode!.deltaStream.publishDelta(delta);
     });
   }
 

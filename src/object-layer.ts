@@ -1,14 +1,14 @@
 // The goal here is to provide a translation for
 // entities and their properties
 // to and from (sequences of) deltas.
- 
+
 // How can our caller define the entities and their properties?
 // - As typescript types?
 // - As typescript interfaces?
 // - As typescript classes?
 
-import { CREATOR, HOST_ID } from "./config";
-import { Delta, PropertyTypes } from "./types";
+import {RhizomeNode} from "./node";
+import {Delta, PropertyTypes} from "./types";
 
 export type EntityProperties = {
   [key: string]: PropertyTypes;
@@ -29,10 +29,10 @@ export class Entity {
 export class EntityPropertiesDeltaBuilder {
   delta: Delta;
 
-  constructor(entityId: string) {
+  constructor(rhizomeNode: RhizomeNode, entityId: string) {
     this.delta = {
-      creator: CREATOR,
-      host: HOST_ID,
+      creator: rhizomeNode.config.creator,
+      host: rhizomeNode.config.peerId,
       pointers: [{
         localContext: 'id',
         target: entityId,

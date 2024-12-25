@@ -1,12 +1,7 @@
-import {HTTP_API_ENABLE} from "./config";
-import {runDeltas} from "./deltas";
-import {runHttpApi} from "./http-api";
-import {Entity} from "./object-layer";
-import {askAllPeersForDeltas, subscribeToSeeds} from "./peers";
-import {bindPublish, } from "./pub-sub";
-import {bindReply, runRequestHandlers} from "./request-reply";
-import {TypedCollection} from "./typed-collection";
 import Debug from 'debug';
+import {RhizomeNode} from "./node";
+import {Entity} from "./object-layer";
+import {TypedCollection} from "./typed-collection";
 const debug = Debug('example-app');
 
 // As an app we want to be able to write and read data.
@@ -23,21 +18,9 @@ type User = {
 };
 
 (async () => {
-  const users = new TypedCollection<User>();
-
-  await bindPublish();
-  await bindReply();
-  if (HTTP_API_ENABLE) {
-    runHttpApi({users});
-  }
-
-  runDeltas();
-  runRequestHandlers();
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  subscribeToSeeds();
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  askAllPeersForDeltas();
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const rhizomeNode = new RhizomeNode();
+  const users = new TypedCollection<User>("users");
+  users.rhizomeConnect(rhizomeNode);
 
   users.onUpdate((u: Entity) => {
     debug('User updated:', u);
@@ -46,6 +29,9 @@ type User = {
   users.onCreate((u: Entity) => {
     debug('New user!:', u);
   });
+
+
+  await rhizomeNode.start()
 
   const taliesin = users.put(undefined, {
     // id: 'taliesin-1',

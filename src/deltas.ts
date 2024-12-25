@@ -1,103 +1,94 @@
+import Debug from 'debug';
 import EventEmitter from 'node:events';
 import objectHash from 'object-hash';
-import {myRequestAddr} from './peers';
-import {publishSock, subscribeSock} from './pub-sub';
-import {Decision, Delta, PeerAddress} from './types';
-import Debug from 'debug';
+import {RhizomeNode} from './node';
+import {Decision, Delta} from './types';
 const debug = Debug('deltas');
 
-export const deltaStream = new EventEmitter();
+export class DeltaStream {
+  rhizomeNode: RhizomeNode;
+  deltaStream = new EventEmitter();
+  deltasProposed: Delta[] = [];
+  deltasAccepted: Delta[] = [];
+  deltasRejected: Delta[] = [];
+  deltasDeferred: Delta[] = [];
+  hashesReceived = new Set<string>();
 
-export const deltasProposed: Delta[] = [];
-export const deltasAccepted: Delta[] = [];
-export const deltasRejected: Delta[] = [];
-export const deltasDeferred: Delta[] = [];
-
-export const hashesReceived = new Set<string>();
-
-export function applyPolicy(delta: Delta): Decision {
-  return !!delta && Decision.Accept;
-}
-
-export function receiveDelta(delta: Delta) {
-  // Deduplication: if we already received this delta, disregard it
-  const hash = objectHash(delta);
-  if (!hashesReceived.has(hash)) {
-    hashesReceived.add(hash);
-    deltasProposed.push(delta);
+  constructor(rhizomeNode: RhizomeNode) {
+    this.rhizomeNode = rhizomeNode;
   }
-}
 
-export function ingestDelta(delta: Delta) {
-  const decision = applyPolicy(delta);
-  switch (decision) {
-    case Decision.Accept:
-      deltasAccepted.push(delta);
-      deltaStream.emit('delta', {delta});
-      break;
-    case Decision.Reject:
-      deltasRejected.push(delta);
-      break;
-    case Decision.Defer:
-      deltasDeferred.push(delta);
-      break;
+  applyPolicy(delta: Delta): Decision {
+    return !!delta && Decision.Accept;
   }
-}
 
-export function ingestNext(): boolean {
-  const delta = deltasProposed.shift();
-  if (!delta) {
-    return false;
-  }
-  ingestDelta(delta);
-  return true;
-}
-
-export function ingestAll() {
-  while (ingestNext());
-}
-
-export function ingestNextDeferred(): boolean {
-  const delta = deltasDeferred.shift();
-  if (!delta) {
-    return false;
-  }
-  ingestDelta(delta);
-  return true;
-}
-
-export function ingestAllDeferred() {
-  while (ingestNextDeferred());
-}
-
-export function subscribeDeltas(fn: (delta: Delta) => void) {
-  deltaStream.on('delta', ({delta}) => {
-    fn(delta);
-  });
-}
-
-export async function publishDelta(delta: Delta) {
-  debug(`Publishing delta: ${JSON.stringify(delta)}`);
-  await publishSock.send(["deltas", myRequestAddr.toAddrString(), serializeDelta(delta)]);
-}
-
-function serializeDelta(delta: Delta) {
-  return JSON.stringify(delta);
-}
-
-function deserializeDelta(input: string) {
-  return JSON.parse(input);
-}
-
-export async function runDeltas() {
-  for await (const [topic, sender, msg] of subscribeSock) {
-    if (topic.toString() !== "deltas") {
-      continue;
+  receiveDelta(delta: Delta) {
+    // Deduplication: if we already received this delta, disregard it
+    const hash = objectHash(delta);
+    if (!this.hashesReceived.has(hash)) {
+      this.hashesReceived.add(hash);
+      this.deltasProposed.push(delta);
     }
-    const delta = deserializeDelta(msg.toString());
-    delta.receivedFrom = PeerAddress.fromString(sender.toString());
-    debug(`Received delta: ${JSON.stringify(delta)}`);
-    ingestDelta(delta);
+  }
+
+  ingestDelta(delta: Delta) {
+    const decision = this.applyPolicy(delta);
+    switch (decision) {
+      case Decision.Accept:
+        this.deltasAccepted.push(delta);
+        this.deltaStream.emit('delta', {delta});
+        break;
+      case Decision.Reject:
+        this.deltasRejected.push(delta);
+        break;
+      case Decision.Defer:
+        this.deltasDeferred.push(delta);
+        break;
+    }
+  }
+
+  ingestNext(): boolean {
+    const delta = this.deltasProposed.shift();
+    if (!delta) {
+      return false;
+    }
+    this.ingestDelta(delta);
+    return true;
+  }
+
+  ingestAll() {
+    while (this.ingestNext());
+  }
+
+  ingestNextDeferred(): boolean {
+    const delta = this.deltasDeferred.shift();
+    if (!delta) {
+      return false;
+    }
+    this.ingestDelta(delta);
+    return true;
+  }
+
+  ingestAllDeferred() {
+    while (this.ingestNextDeferred());
+  }
+
+  subscribeDeltas(fn: (delta: Delta) => void) {
+    this.deltaStream.on('delta', ({delta}) => {
+      fn(delta);
+    });
+  }
+
+  async publishDelta(delta: Delta) {
+    debug(`Publishing delta: ${JSON.stringify(delta)}`);
+    await this.rhizomeNode.pubSub.publish("deltas", this.serializeDelta(delta));
+  }
+
+  serializeDelta(delta: Delta) {
+    return JSON.stringify(delta);
+  }
+
+  deserializeDelta(input: string) {
+    return JSON.parse(input);
   }
 }
-

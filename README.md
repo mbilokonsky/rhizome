@@ -35,7 +35,8 @@ Then if their clocks drift relative to ours, we can seek consensus among a broad
 But at that point just run ntpd. Can still do consensus to verify
 but probably no need to implement custom time synchronization protocol.
 
-Wait NTP is centralized isn't it, not peer to peer...
+Apparently PTP, Precision Time Protocol, is a thing.
+PTP affords for a layer of user defined priority for best clock selection.
 
 ## Peering
 
@@ -118,7 +119,7 @@ To demonstrate the example application, you can open multiple terminals, and in 
 export DEBUG="*,-express"
 export RHIZOME_REQUEST_BIND_PORT=4000
 export RHIZOME_PUBLISH_BIND_PORT=4001
-export RHIZOME_SEED_PEERS='127.0.0.1:4002, 127.0.0.1:4004'
+export RHIZOME_SEED_PEERS='localhost:4002, localhost:4004'
 export RHIZOME_HTTP_API_PORT=3000
 export RHIZOME_PEER_ID=peer1
 npm run example-app
@@ -128,7 +129,7 @@ npm run example-app
 export DEBUG="*,-express"
 export RHIZOME_REQUEST_BIND_PORT=4002
 export RHIZOME_PUBLISH_BIND_PORT=4003
-export RHIZOME_SEED_PEERS='127.0.0.1:4000, 127.0.0.1:4004'
+export RHIZOME_SEED_PEERS='localhost:4000, localhost:4004'
 export RHIZOME_HTTP_API_PORT=3001
 export RHIZOME_PEER_ID=peer2
 npm run example-app
@@ -138,7 +139,7 @@ npm run example-app
 export DEBUG="*,-express"
 export RHIZOME_REQUEST_BIND_PORT=4004
 export RHIZOME_PUBLISH_BIND_PORT=4005
-export RHIZOME_SEED_PEERS='127.0.0.1:4000, 127.0.0.1:4002'
+export RHIZOME_SEED_PEERS='localhost:4000, localhost:4002'
 export RHIZOME_HTTP_API_PORT=3002
 export RHIZOME_PEER_ID=peer3
 npm run example-app

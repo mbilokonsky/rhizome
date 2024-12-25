@@ -1,23 +1,79 @@
-import {Publisher, Subscriber} from 'zeromq';
-import {PUBLISH_BIND_ADDR, PUBLISH_BIND_PORT} from './config';
-import {PeerAddress} from './types';
 import Debug from 'debug';
+import {Message, Publisher, Subscriber} from 'zeromq';
+import {RhizomeNode} from './node';
+import {PeerAddress} from './types';
 const debug = Debug('pub-sub');
 
-export const publishSock = new Publisher();
-export const subscribeSock = new Subscriber();
+export type SubscribedMessageHandler = (sender: PeerAddress, msg: Message) => void;
 
-export async function bindPublish() {
-  const addrStr = `tcp://${PUBLISH_BIND_ADDR}:${PUBLISH_BIND_PORT}`;
-  await publishSock.bind(addrStr);
-  debug(`Publishing socket bound to ${addrStr}`);
+// TODO: Allow subscribing to multiple topics on one socket
+export class Subscription {
+  sock = new Subscriber();
+  topic: string;
+  publishAddr: PeerAddress;
+  publishAddrStr: string;
+  cb: SubscribedMessageHandler;
+
+  constructor(publishAddr: PeerAddress, topic: string, cb: SubscribedMessageHandler) {
+    this.cb = cb;
+    this.topic = topic;
+    this.publishAddr = publishAddr;
+    this.publishAddrStr = `tcp://${this.publishAddr.toAddrString()}`;
+  }
+
+  async start() {
+    this.sock.connect(this.publishAddrStr);
+    this.sock.subscribe(this.topic);
+    debug(`Subscribing to ${this.topic} topic on ${this.publishAddrStr}`);
+
+    for await (const [, sender, msg] of this.sock) {
+      const senderAddr = PeerAddress.fromString(sender.toString());
+      this.cb(senderAddr, msg);
+    }
+  }
 }
 
-export function connectSubscribe(publishAddr: PeerAddress) {
-  // TODO: peer discovery
-  const addrStr = `tcp://${publishAddr.toAddrString()}`;
-  debug('connectSubscribe', {addrStr});
-  subscribeSock.connect(addrStr);
-  subscribeSock.subscribe("deltas");
-  debug(`Subscribing to ${addrStr}`);
+export class PubSub {
+  rhizomeNode: RhizomeNode;
+  publishSock: Publisher;
+  publishAddrStr: string;
+  subscriptions: Subscription[] = [];
+
+  constructor(rhizomeNode: RhizomeNode) {
+    this.rhizomeNode = rhizomeNode;
+    this.publishSock = new Publisher();
+
+    const {publishBindAddr, publishBindPort} = this.rhizomeNode.config;
+    this.publishAddrStr = `tcp://${publishBindAddr}:${publishBindPort}`;
+  }
+
+  async start() {
+    await this.publishSock.bind(this.publishAddrStr);
+    debug(`Publishing socket bound to ${this.publishAddrStr}`);
+  }
+
+  async publish(topic: string, msg: string) {
+    await this.publishSock.send([
+      topic,
+      this.rhizomeNode.myRequestAddr.toAddrString(),
+      msg
+    ]);
+  }
+
+  subscribe(publishAddr: PeerAddress, topic: string, cb: SubscribedMessageHandler): Subscription {
+    const subscription = new Subscription(publishAddr, topic, cb);
+    this.subscriptions.push(subscription);
+    return subscription;
+  }
+
+  async stop() {
+    await this.publishSock.unbind(this.publishAddrStr);
+    this.publishSock.close();
+    this.publishSock = new Publisher();
+
+    for (const subscription of this.subscriptions) {
+      subscription.sock.close();
+      debug('subscription socket is closed?', subscription.sock.closed);
+    }
+  }
 }

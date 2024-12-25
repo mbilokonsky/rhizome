@@ -1,18 +1,14 @@
 import Debug from "debug";
 import express from "express";
+import {FSWatcher} from "fs";
 import {readdirSync, readFileSync, watch} from "fs";
+import {Server} from "http";
 import path, {join} from "path";
 import {Converter} from "showdown";
 import {Collection} from "./collection";
-import {HTTP_API_ADDR, HTTP_API_PORT} from "./config";
-import {deltasAccepted} from "./deltas";
-import {peers} from "./peers";
+import {RhizomeNode} from "./node";
 import {Delta} from "./types";
 const debug = Debug('http-api');
-
-type CollectionsToServe = {
-  [key: string]: Collection;
-};
 
 const docConverter = new Converter({
   completeHTMLDocument: true,
@@ -20,6 +16,7 @@ const docConverter = new Converter({
   tables: true,
   tasklists: true
 });
+
 const htmlDocFromMarkdown = (md: string): string => docConverter.makeHtml(md);
 
 type mdFileInfo = {
@@ -31,6 +28,8 @@ type mdFileInfo = {
 class MDFiles {
   files = new Map<string, mdFileInfo>();
   readme?: mdFileInfo;
+  dirWatcher?: FSWatcher;
+  readmeWatcher?: FSWatcher;
 
   readFile(name: string) {
     const md = readFileSync(join('./markdown', `${name}.md`)).toString();
@@ -66,7 +65,7 @@ class MDFiles {
   }
 
   watchDir() {
-    watch('./markdown', null, (eventType, filename) => {
+    this.dirWatcher = watch('./markdown', null, (eventType, filename) => {
       if (!filename) return;
       if (!filename.endsWith(".md")) return;
 
@@ -91,7 +90,7 @@ class MDFiles {
   }
 
   watchReadme() {
-    watch('./README.md', null, (eventType, filename) => {
+   this.readmeWatcher = watch('./README.md', null, (eventType, filename) => {
       if (!filename) return;
 
       switch (eventType) {
@@ -104,127 +103,143 @@ class MDFiles {
       }
     });
   }
+
+  close() {
+    this.dirWatcher?.close();
+    this.readmeWatcher?.close();
+  }
 }
 
-export function runHttpApi(collections?: CollectionsToServe) {
-  const app = express();
-  app.use(express.json());
+export class HttpApi {
+  rhizomeNode: RhizomeNode;
+  app = express();
+  mdFiles = new MDFiles();
+  server?: Server;
 
-  // Get list of markdown files
-  const mdFiles = new MDFiles();
-  mdFiles.readDir();
-  mdFiles.readReadme();
-  mdFiles.watchDir();
-  mdFiles.watchReadme();
+  constructor(rhizomeNode: RhizomeNode) {
+    this.rhizomeNode = rhizomeNode;
+    this.app.use(express.json());
+  }
 
-  // Serve README
-  app.get('/html/README', (_req: express.Request, res: express.Response) => {
-    const html = mdFiles.getReadmeHTML();
-    res.setHeader('content-type', 'text/html').send(html);
-  });
+  start() {
+    // Scan and watch for markdown files
+    this.mdFiles.readDir();
+    this.mdFiles.readReadme();
+    this.mdFiles.watchDir();
+    this.mdFiles.watchReadme();
 
-  // Serve markdown files as html
-  app.get('/html/:name', (req: express.Request, res: express.Response) => {
-    let html = mdFiles.getHtml(req.params.name);
-    if (!html) {
-      res.status(404);
-      html = htmlDocFromMarkdown('# 404\n\n## [Index](/html)');
-    }
-    res.setHeader('content-type', 'text/html');
-    res.send(html);
-  });
-
-  // Serve index
-  {
-    let md = `# Files\n\n`;
-    md += `[README](/html/README)\n\n`;
-    for (const name of mdFiles.list()) {
-      md += `- [${name}](./${name})\n`;
-    }
-    const html = htmlDocFromMarkdown(md);
-
-    app.get('/html', (_req: express.Request, res: express.Response) => {
+    // Serve README
+    this.app.get('/html/README', (_req: express.Request, res: express.Response) => {
+      const html = this.mdFiles.getReadmeHTML();
       res.setHeader('content-type', 'text/html').send(html);
+    });
+
+    // Serve markdown files as html
+    this.app.get('/html/:name', (req: express.Request, res: express.Response) => {
+      let html = this.mdFiles.getHtml(req.params.name);
+      if (!html) {
+        res.status(404);
+        html = htmlDocFromMarkdown('# 404\n\n## [Index](/html)');
+      }
+      res.setHeader('content-type', 'text/html');
+      res.send(html);
+    });
+
+    // Serve index
+    {
+      let md = `# Files\n\n`;
+      md += `[README](/html/README)\n\n`;
+      for (const name of this.mdFiles.list()) {
+        md += `- [${name}](./${name})\n`;
+      }
+      const html = htmlDocFromMarkdown(md);
+
+      this.app.get('/html', (_req: express.Request, res: express.Response) => {
+        res.setHeader('content-type', 'text/html').send(html);
+      });
+    }
+
+    // Serve list of all deltas accepted
+    // TODO: This won't scale well
+    this.app.get("/deltas", (_req: express.Request, res: express.Response) => {
+      res.json(this.rhizomeNode.deltaStream.deltasAccepted);
+    });
+
+    // Get the number of deltas ingested by this node
+    this.app.get("/deltas/count", (_req: express.Request, res: express.Response) => {
+      res.json(this.rhizomeNode.deltaStream.deltasAccepted.length);
+    });
+
+    // Get the list of peers seen by this node (including itself)
+    this.app.get("/peers", (_req: express.Request, res: express.Response) => {
+      res.json(this.rhizomeNode.peers.peers.map(({reqAddr, publishAddr, isSelf, isSeedPeer}) => {
+        const deltasAcceptedCount = this.rhizomeNode.deltaStream.deltasAccepted
+          .filter((delta: Delta) => {
+            return delta.receivedFrom?.addr == reqAddr.addr &&
+              delta.receivedFrom?.port == reqAddr.port;
+          })
+          .length;
+        const peerInfo = {
+          reqAddr: reqAddr.toAddrString(),
+          publishAddr: publishAddr?.toAddrString(),
+          isSelf,
+          isSeedPeer,
+          deltaCount: {
+            accepted: deltasAcceptedCount
+          }
+        };
+        return peerInfo;
+      }));
+    });
+
+    // Get the number of peers seen by this node (including itself)
+    this.app.get("/peers/count", (_req: express.Request, res: express.Response) => {
+      res.json(this.rhizomeNode.peers.peers.length);
+    });
+
+    const {httpAddr, httpPort} = this.rhizomeNode.config;
+    this.server = this.app.listen(httpPort, httpAddr, () => {
+      debug(`HTTP API bound to ${httpAddr}:${httpPort}`);
     });
   }
 
-  // Set up API routes
+  serveCollection(collection: Collection) {
+    const {name} = collection;
 
-  if (collections) {
-    for (const [name, collection] of Object.entries(collections)) {
-      debug(`collection: ${name}`);
+    // Get the ID of all domain entities
+    this.app.get(`/${name}/ids`, (_req: express.Request, res: express.Response) => {
+      res.json({ids: collection.getIds()});
+    });
 
-      // Get the ID of all domain entities
-      app.get(`/${name}/ids`, (_req: express.Request, res: express.Response) => {
-        res.json({ids: collection.getIds()});
-      });
+    // Get a single domain entity by ID
+    this.app.get(`/${name}/:id`, (req: express.Request, res: express.Response) => {
+      const {params: {id}} = req;
+      const ent = collection.get(id);
+      res.json(ent);
+    });
 
-      // Get a single domain entity by ID
-      app.get(`/${name}/:id`, (req: express.Request, res: express.Response) => {
-        const {params: {id}} = req;
-        const ent = collection.get(id);
-        res.json(ent);
-      });
+    // Add a new domain entity
+    // TODO: schema validation
+    this.app.put(`/${name}`, (req: express.Request, res: express.Response) => {
+      const {body: properties} = req;
+      const ent = collection.put(properties.id, properties);
+      res.json(ent);
+    });
 
-      // Add a new domain entity
-      // TODO: schema validation
-      app.put(`/${name}`, (req: express.Request, res: express.Response) => {
-        const {body: properties} = req;
-        const ent = collection.put(properties.id, properties);
-        res.json(ent);
-      });
-
-      // Update a domain entity
-      app.put(`/${name}/:id`, (req: express.Request, res: express.Response) => {
-        const {body: properties, params: {id}} = req;
-        if (properties.id && properties.id !== id) {
-          res.status(400).json({error: "ID Mismatch", param: id, property: properties.id});
-          return;
-        }
-        const ent = collection.put(id, properties);
-        res.json(ent);
-      });
-    }
+    // Update a domain entity
+    this.app.put(`/${name}/:id`, (req: express.Request, res: express.Response) => {
+      const {body: properties, params: {id}} = req;
+      if (properties.id && properties.id !== id) {
+        res.status(400).json({error: "ID Mismatch", param: id, property: properties.id});
+        return;
+      }
+      const ent = collection.put(id, properties);
+      res.json(ent);
+    });
   }
 
-  app.get("/deltas", (_req: express.Request, res: express.Response) => {
-    // TODO: streaming
-    res.json(deltasAccepted);
-  });
-
-  // Get the number of deltas ingested by this node
-  app.get("/deltas/count", (_req: express.Request, res: express.Response) => {
-    res.json(deltasAccepted.length);
-  });
-
-  // Get the list of peers seen by this node (including itself)
-  app.get("/peers", (_req: express.Request, res: express.Response) => {
-    res.json(peers.map(({reqAddr, publishAddr, isSelf, isSeedPeer}) => {
-      const deltasAcceptedCount = deltasAccepted
-        .filter((delta: Delta) => {
-          return delta.receivedFrom?.addr == reqAddr.addr &&
-            delta.receivedFrom?.port == reqAddr.port;
-        })
-        .length;
-      const peerInfo = {
-        reqAddr: reqAddr.toAddrString(),
-        publishAddr: publishAddr?.toAddrString(),
-        isSelf,
-        isSeedPeer,
-        deltaCount: {
-          accepted: deltasAcceptedCount
-        }
-      };
-      return peerInfo;
-    }));
-  });
-
-  // Get the number of peers seen by this node (including itself)
-  app.get("/peers/count", (_req: express.Request, res: express.Response) => {
-    res.json(peers.length);
-  });
-
-  app.listen(HTTP_API_PORT, HTTP_API_ADDR, () => {
-    debug(`HTTP API bound to http://${HTTP_API_ADDR}:${HTTP_API_PORT}`);
-  });
+  async stop() {
+    this.server?.close();
+    this.mdFiles.close();
+  }
 }

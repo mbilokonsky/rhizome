@@ -1,0 +1,82 @@
+import Debug from 'debug';
+import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config';
+import {DeltaStream} from './deltas';
+import {HttpApi} from './http-api';
+import {Peers} from './peers';
+import {PubSub} from './pub-sub';
+import {RequestReply} from './request-reply';
+import {PeerAddress} from './types';
+import {Collection} from './collection';
+const debug = Debug('rhizome-node');
+
+export type RhizomeNodeConfig = {
+  requestBindAddr: string;
+  requestBindHost: string;
+  requestBindPort: number;
+  publishBindAddr: string;
+  publishBindHost: string;
+  publishBindPort: number;
+  httpAddr: string;
+  httpPort: number;
+  httpEnable: boolean;
+  seedPeers: PeerAddress[];
+  peerId: string;
+  creator: string; // TODO each host should be able to support multiple users
+};
+
+// So that we can run more than one instance in the same process (for testing)
+export class RhizomeNode {
+  config: RhizomeNodeConfig;
+  pubSub: PubSub;
+  requestReply: RequestReply;
+  httpApi: HttpApi;
+  deltaStream: DeltaStream;
+  peers: Peers;
+  myRequestAddr: PeerAddress;
+  myPublishAddr: PeerAddress;
+
+  constructor(config?: Partial<RhizomeNodeConfig>) {
+    this.config = {
+      requestBindAddr: REQUEST_BIND_ADDR,
+      requestBindHost: REQUEST_BIND_HOST,
+      requestBindPort: REQUEST_BIND_PORT,
+      publishBindAddr: PUBLISH_BIND_ADDR,
+      publishBindHost: PUBLISH_BIND_HOST,
+      publishBindPort: PUBLISH_BIND_PORT,
+      httpAddr: HTTP_API_ADDR,
+      httpPort: HTTP_API_PORT,
+      httpEnable: HTTP_API_ENABLE,
+      seedPeers: SEED_PEERS,
+      peerId: PEER_ID,
+      creator: CREATOR,
+      ...config
+    };
+    debug('config', this.config);
+    this.myRequestAddr = new PeerAddress(this.config.requestBindHost, this.config.requestBindPort);
+    this.myPublishAddr = new PeerAddress(this.config.publishBindHost, this.config.publishBindPort);
+    this.pubSub = new PubSub(this);
+    this.requestReply = new RequestReply(this);
+    this.httpApi = new HttpApi(this);
+    this.deltaStream = new DeltaStream(this);
+    this.peers = new Peers(this);
+  }
+
+  async start() {
+    this.pubSub.start();
+    this.requestReply.start();
+    if (this.config.httpEnable) {
+      this.httpApi.start();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    this.peers.subscribeToSeeds();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    this.peers.askAllPeersForDeltas();
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  async stop() {
+    await this.pubSub.stop();
+    await this.requestReply.stop();
+    await this.httpApi.stop();
+  }
+}
