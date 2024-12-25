@@ -16,7 +16,7 @@ type CollectionsToServe = {
 
 const docConverter = new Converter({
   completeHTMLDocument: true,
-  simpleLineBreaks: true,
+  // simpleLineBreaks: true,
   tables: true,
   tasklists: true
 });
@@ -89,7 +89,7 @@ class MDFiles {
       }
     });
   }
-  
+
   watchReadme() {
     watch('./README.md', null, (eventType, filename) => {
       if (!filename) return;
@@ -159,11 +159,18 @@ export function runHttpApi(collections?: CollectionsToServe) {
         res.json({ids: collection.getIds()});
       });
 
+      // Get a single domain entity by ID
+      app.get(`/${name}/:id`, (req: express.Request, res: express.Response) => {
+        const {params: {id}} = req;
+        const ent = collection.get(id);
+        res.json(ent);
+      });
+
       // Add a new domain entity
       // TODO: schema validation
       app.put(`/${name}`, (req: express.Request, res: express.Response) => {
         const {body: properties} = req;
-        const ent = collection.put(undefined, properties);
+        const ent = collection.put(properties.id, properties);
         res.json(ent);
       });
 

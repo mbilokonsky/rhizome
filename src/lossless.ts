@@ -107,4 +107,6 @@ export class Lossless {
     }
     return view;
   }
+
+  // TODO: point-in-time queries
 }

@@ -5,12 +5,77 @@
 | Peering       | Yes         | Currently using `RHIZOME_SEED_PEERS`, no gossip / discovery              |
 | Schemas       | Not really  | Currently very thin layer allowing TypedCollections                      |
 | Relationships | No          | Supporting relational algebra among domain entities                      |
-| Views         | Yes         | Currently using functions rather than JSON-Logic expressions             |
+| Views         | Yes         | Lossless: Map the `targetContext`s as properties of domain entities.     |
+|               |             | Lossy: Use a delta filter and a resolver function to produce a view.     |
+|               |             | Currently using functions rather than JSON-Logic expressions.            |
 | Functions     | No          | Arbitrary subscribers to delta stream (that can also emit deltas?)       |
 | Tests         | Minimal     | So far we have a few `ts-jest` tests. Need a plan for multi-node tests.  |
 | Identity      | No          | Probably a public key / private key system                               |
 | Contexts      | No          | Each context may involve different lossy functions and delta filters     |
 | HTTP API      | Yes         | Basic peering info and entity CRUD                                       |
+
+If we express views and filter rules as JSON-Logic, we can easily include them in records.
+
+## Clocks?
+
+Do we want to involve a time synchronization protocol? e.g. ntpd
+
+If not, what's the best we could do?
+
+Maybe just expect nodes to record relative times, and 
+patch together a sequence based on the relative times.
+This adds complexity and still has limited precision.
+
+We could just let the clocks drift and so on, and make inferences at
+query resolution time.
+
+We could do some extra work and keep track of what time our peers think it is.
+Then if their clocks drift relative to ours, we can seek consensus among a broader range of peers.
+
+But at that point just run ntpd. Can still do consensus to verify
+but probably no need to implement custom time synchronization protocol.
+
+Wait NTP is centralized isn't it, not peer to peer...
+
+## Peering
+
+### ZeroMQ
+Currently we're handling networking with ZeroMQ pub/sub over TCP transport.
+
+* ZeroMQ supports encryption, with public/private key pairs.
+* A subscriber needs to know the public key of the publisher in order to connect.
+* We're aiming for symmetry, so we'll need a strategy to establish these reciprocal relationships.
+
+### GossipSub
+One option is to replace ZeroMQ with GossipSub, 
+which may function better in an open network envoronment.
+
+Considerations with GossipSub may include
+* topics -- namespacing
+* peer discovery
+
+### TincVPN
+Another layer which is available would be [Tinc VPN](https://tinc-vpn.org). 
+
+Tinc...
+* is a daemon
+* creates a mesh VPN 
+* uses tap/tun network devices
+* network can run in router, switch, or hub mode
+* performs UDP hole punching
+* forwards packets among peers
+* performs spanning tree routing
+* participants only see messages if they've added the sender's public key to their configuration
+
+Ideally at least one node in a given network 
+needs to listen on a public interface address.
+
+[Tinc configuration docs](https://tinc-vpn.org/documentation/Main-configuration-variables.html)
+provide some insight into its functioning.
+
+Considerations imposed by Tinc would include
+* IP addressing
+* public key management
 
 # Development / Demo
 

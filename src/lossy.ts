@@ -41,3 +41,17 @@ export class Lossy {
   }
 }
 
+// Generate a rule
+// Apply the rule -- When?
+//  - Maybe we shard a set of deltas and map/reduce the results --
+//    We are trying to implement CRDT, so the results 
+//    must be composable to preserve that feature.
+//    That also seems to imply we want to stick with
+//    the lossless view until the delta set is chosen
+//  - So, in general on a set of deltas
+//    at times which seem opportune
+//    the results of which can be recorded
+//    and indexed such that the results can be reused
+//    i.e. you want to compute the result of a set which
+//    contains a prior one
+
