@@ -1,30 +1,10 @@
-import Debug from 'debug';
-import {RhizomeNode, RhizomeNodeConfig} from "../src/node";
-import {TypedCollection} from '../src/typed-collection';
-const debug = Debug('test:run');
-
-type User = {
-  id?: string;
-  name: string;
-  nameLong?: string;
-  email?: string;
-  age: number;
-};
-
-class App extends RhizomeNode {
-  constructor(config?: Partial<RhizomeNodeConfig>) {
-    super(config);
-    const users = new TypedCollection<User>("users");
-    users.rhizomeConnect(this);
-  }
-}
+import {App} from "../../util/app";
 
 describe('Run', () => {
   let app: App;
 
   beforeAll(async () => {
     app = new App({
-      // TODO expose more conveniently as test config options
       httpPort: 5000,
       httpEnable: true,
       requestBindPort: 5001,
@@ -34,12 +14,12 @@ describe('Run', () => {
   });
 
   afterAll(async () => {
-    debug('attempting to stop app');
     await app.stop();
   });
 
   it('can put a new user', async () => {
-    const res = await fetch('http://localhost:5000/users', {
+    const {httpAddr, httpPort} = app.config;
+    const res = await fetch(`http://${httpAddr}:${httpPort}/users`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
