@@ -37,7 +37,7 @@ describe('Run', () => {
       }
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const res2 = await fetch(`${apps[0].apiUrl}/users`, {
       method: 'PUT',
