@@ -13,4 +13,4 @@ done
 
 dest="./markdown/coverage_report.md"
 
-npm run test -- --coverage 2>&1 | tee "$dest"
+npm run test -- --coverage 2>&1 | tee | sed 's/\s*$//' > "$dest"
