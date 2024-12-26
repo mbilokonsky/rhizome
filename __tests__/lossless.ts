@@ -135,7 +135,22 @@ describe('Lossless', () => {
         return creator === 'A' && host === 'H';
       };
 
-      expect(lossless.view(filter)).toEqual({
+      expect(lossless.view(undefined, filter)).toEqual({
+        ace: {
+          referencedAs: ["1"],
+          properties: {
+            value: [{
+              creator: 'A',
+              host: 'H',
+              pointers: [
+                {"1": "ace"},
+              ]
+            }]
+          }
+        }
+      });
+
+      expect(lossless.view(["ace"], filter)).toEqual({
         ace: {
           referencedAs: ["1"],
           properties: {

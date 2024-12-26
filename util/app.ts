@@ -25,7 +25,7 @@ export class App extends RhizomeNode {
       ...config,
     });
 
-    const users = new TypedCollection<User>("users");
+    const users = new TypedCollection<User>("user");
     users.rhizomeConnect(this);
 
     const {httpAddr, httpPort} = this.config;

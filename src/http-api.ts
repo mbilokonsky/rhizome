@@ -24,42 +24,7 @@ export class HttpApi {
   }
 
   start() {
-    // Scan and watch for markdown files
-    this.mdFiles.readDir();
-    this.mdFiles.readReadme();
-    this.mdFiles.watchDir();
-    this.mdFiles.watchReadme();
-
-    // Serve README
-    this.router.get('/html/README', (_req: express.Request, res: express.Response) => {
-      const html = this.mdFiles.getReadmeHTML();
-      res.setHeader('content-type', 'text/html').send(html);
-    });
-
-    // Serve markdown files as html
-    this.router.get('/html/:name', (req: express.Request, res: express.Response) => {
-      let html = this.mdFiles.getHtml(req.params.name);
-      if (!html) {
-        res.status(404);
-        html = htmlDocFromMarkdown('# 404\n\n## [Index](/html)');
-      }
-      res.setHeader('content-type', 'text/html');
-      res.send(html);
-    });
-
-    // Serve index
-    {
-      let md = `# Files\n\n`;
-      md += `[README](/html/README)\n\n`;
-      for (const name of this.mdFiles.list()) {
-        md += `- [${name}](./${name})\n`;
-      }
-      const html = htmlDocFromMarkdown(md);
-
-      this.router.get('/html', (_req: express.Request, res: express.Response) => {
-        res.setHeader('content-type', 'text/html').send(html);
-      });
-    }
+    // --------------- deltas ----------------
 
     // Serve list of all deltas accepted
     // TODO: This won't scale well
@@ -71,6 +36,8 @@ export class HttpApi {
     this.router.get("/deltas/count", (_req: express.Request, res: express.Response) => {
       res.json(this.rhizomeNode.deltaStream.deltasAccepted.length);
     });
+
+    // --------------- peers ----------------
 
     // Get the list of peers seen by this node (including itself)
     this.router.get("/peers", (_req: express.Request, res: express.Response) => {
@@ -98,6 +65,43 @@ export class HttpApi {
     this.router.get("/peers/count", (_req: express.Request, res: express.Response) => {
       res.json(this.rhizomeNode.peers.peers.length);
     });
+
+    // ----------------- html ---------------------
+
+    // Scan and watch for markdown files
+    this.mdFiles.readDir();
+    this.mdFiles.readReadme();
+    this.mdFiles.watchDir();
+    this.mdFiles.watchReadme();
+
+    // Serve README
+    this.router.get('/html/README', (_req: express.Request, res: express.Response) => {
+      const html = this.mdFiles.getReadmeHTML();
+      res.setHeader('content-type', 'text/html').send(html);
+    });
+
+    // Serve markdown files as html
+    this.router.get('/html/:name', (req: express.Request, res: express.Response) => {
+      const {name} = req.params;
+      let html = this.mdFiles.getHtml(name);
+      if (!html) {
+        res.status(404);
+        html = htmlDocFromMarkdown(`# 404 Not Found: ${name}\n\n ## [Index](/html)`);
+      }
+      res.setHeader('content-type', 'text/html');
+      res.send(html);
+    });
+
+    // Serve index
+    {
+      const html = this.mdFiles.generateIndex();
+
+      this.router.get('/html', (_req: express.Request, res: express.Response) => {
+        res.setHeader('content-type', 'text/html').send(html);
+      });
+    }
+
+    // ------------------- server ---------------------
 
     const {httpAddr, httpPort} = this.rhizomeNode.config;
     this.server = this.app.listen({

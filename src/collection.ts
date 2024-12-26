@@ -3,44 +3,45 @@
 // It should enable operations like removing a property removes the value from the entities in the collection
 // It could then be further extended with e.g. table semantics like filter, sort, join
 
+import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
+import {Entity} from "./entity";
+import {Lossless, LosslessViewMany} from "./lossless";
+import {firstValueFromLosslessViewOne, Lossy, LossyViewMany, LossyViewOne} from "./lossy";
 import {RhizomeNode} from "./node";
-import {Entity, EntityProperties, EntityPropertiesDeltaBuilder} from "./object-layer";
 import {Delta} from "./types";
-
-// type Property = {
-//   name: string,
-//   type: number | string;
-// }
-
-// class EntityType {
-//   name: string;
-//   properties?: Property[];
-//   constructor(name: string) {
-//     this.name = name;
-//   }
-// }
+const debug = Debug('collection');
 
 export class Collection {
   rhizomeNode?: RhizomeNode;
   name: string;
   entities = new Map<string, Entity>();
   eventStream = new EventEmitter();
+  lossless = new Lossless(); // TODO: Really just need one global Lossless instance
 
   constructor(name: string) {
     this.name = name;
   }
+
+  // Instead of trying to update our final view of the entity with every incoming delta,
+  // let's try this: 
+  // - keep a lossless view (of everything)
+  // - build a lossy view when needed
+  // This approach is simplistic, but can then be optimized and enhanced.
 
   rhizomeConnect(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
 
     rhizomeNode.deltaStream.subscribeDeltas((delta: Delta) => {
       // TODO: Make sure this is the kind of delta we're looking for
-      this.applyDelta(delta);
+      debug(`collection ${this.name} received delta ${JSON.stringify(delta)}`);
+      this.lossless.ingestDelta(delta);
     });
 
     rhizomeNode.httpApi.serveCollection(this);
+
+    debug(`connected ${this.name} to rhizome`);
   }
 
   // Applies the javascript rules for updating object values,
@@ -55,7 +56,6 @@ export class Collection {
       entity.id = entityId;
       eventType = 'create';
     }
-    const deltaBulider = new EntityPropertiesDeltaBuilder(this.rhizomeNode!, entityId);
 
     if (!properties) {
       // Let's interpret this as entity deletion
@@ -74,69 +74,50 @@ export class Collection {
         }
         if (local && changed) {
           // If this is a change, let's generate a delta
-          deltaBulider.add(key, value);
+          if (!this.rhizomeNode) throw new Error(`${this.name} collection not connected to rhizome`);
+          const delta: Delta = {
+            creator: this.rhizomeNode.config.creator,
+            host: this.rhizomeNode.config.peerId,
+            pointers: [{
+              localContext: this.name,
+              target: entityId,
+              targetContext: key
+            }, {
+              localContext: key,
+              target: value
+            }]
+          };
+          deltas?.push(delta);
+
           // We append to the array the caller may provide
           // We can update this count as we receive network confirmation for deltas
           entity.ahead += 1;
         }
         anyChanged = anyChanged || changed;
       });
-      // We've noted that we may be ahead of the server, let's update our
-      // local image of this entity.
-      //* In principle, this system can recreate past or alternative states.
-      //* At worst, by replaying all the deltas up to a particular point.
-      //* Some sort of checkpointing strategy would probably be helpful.
-      //* Furthermore, if we can implement reversible transformations,
-      //* it would then be efficient to calculate the state of the system with 
-      //* specific deltas removed. We could use it to extract a measurement
-      //* of the effects of some deltas' inclusion or exclusion, the
-      //* evaluation of which may lend evidence to some possible arguments.
 
       this.entities.set(entityId, entity);
+
       if (anyChanged) {
-        deltas?.push(deltaBulider.delta);
         eventType = eventType || 'update';
       }
     }
     if (eventType) {
+      // TODO: Reconcile this with lossy view approach
       this.eventStream.emit(eventType, entity);
     }
     return entity;
   }
-  // We can update our local image of the entity, but we should annotate it
-  // to indicate that we have not yet received any confirmation of this delta
-  // having been propagated.
-  // Later when we receive deltas regarding this entity we can detect when
-  // we have received back an image that matches our target.
-
-  // So we need a function to generate one or more deltas for each call to put/
-  // maybe we stage them and wait for a call to commit() that initiates the
-  // assembly and transmission of one or more deltas
-
-  applyDelta(delta: Delta) {
-    // TODO: handle delta representing entity deletion
-    const idPtr = delta.pointers.find(({localContext}) => localContext === 'id');
-    if (!idPtr) {
-      console.error('encountered delta with no entity id', delta);
-      return;
-    }
-    const properties: EntityProperties = {};
-    delta.pointers.filter(({localContext}) => localContext !== 'id')
-      .forEach(({localContext: key, target: value}) => {
-        properties[key] = value;
-      }, {});
-    const entityId = idPtr.target as string;
-    // TODO: Handle the scenario where this update has been superceded by a newer one locally
-    this.updateEntity(entityId, properties);
-  }
 
   onCreate(cb: (entity: Entity) => void) {
+    // TODO: Reconcile this with lossy view approach
     this.eventStream.on('create', (entity: Entity) => {
       cb(entity);
     });
   }
 
   onUpdate(cb: (entity: Entity) => void) {
+    // TODO: Reconcile this with lossy view approach
     this.eventStream.on('update', (entity: Entity) => {
       cb(entity);
     });
@@ -145,25 +126,46 @@ export class Collection {
   put(entityId: string | undefined, properties: object): Entity {
     const deltas: Delta[] = [];
     const entity = this.updateEntity(entityId, properties, true, deltas);
+
+    debug(`put ${entityId} generated deltas:`, JSON.stringify(deltas));
+
+    // updateEntity may have generated some deltas for us to store and publish
     deltas.forEach(async (delta: Delta) => {
+
+      // record this delta just as if we had received it from a peer
       delta.receivedFrom = this.rhizomeNode!.myRequestAddr;
       this.rhizomeNode!.deltaStream.deltasAccepted.push(delta);
+
+      // publish the delta to our subscribed peers
       await this.rhizomeNode!.deltaStream.publishDelta(delta);
+      debug(`published delta ${JSON.stringify(delta)}`);
+
+      // ingest the delta as though we had received it from a peer
+      this.lossless.ingestDelta(delta);
     });
     return entity;
   }
 
-  del(entityId: string) {
-    const deltas: Delta[] = [];
-    this.updateEntity(entityId, undefined, true, deltas);
-    deltas.forEach(async (delta: Delta) => {
-      this.rhizomeNode!.deltaStream.deltasAccepted.push(delta);
-      await this.rhizomeNode!.deltaStream.publishDelta(delta);
-    });
-  }
-
-  get(id: string): Entity | undefined {
-    return this.entities.get(id);
+  get(id: string): LossyViewOne | undefined {
+    // Now with lossy view approach, instead of just returning what we already have,
+    // let's compute our view now.
+    // return this.entities.get(id);
+    const lossy = new Lossy(this.lossless);
+    const resolver = (losslessView: LosslessViewMany) => {
+      const lossyView: LossyViewMany = {};
+      debug('lossless view', JSON.stringify(losslessView));
+      for (const [id, ent] of Object.entries(losslessView)) {
+        lossyView[id] = {id, properties: {}};
+        for (const key of Object.keys(ent.properties)) {
+          const {value} = firstValueFromLosslessViewOne(ent, key) || {};
+          debug(`[ ${key} ] = ${value}`);
+          lossyView[id].properties[key] = value;
+        }
+      }
+      return lossyView;
+    };
+    const res = lossy.resolve(resolver, [id]) as LossyViewMany;;
+    return res[id];
   }
 
   getIds(): string[] {

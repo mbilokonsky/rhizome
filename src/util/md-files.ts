@@ -11,7 +11,10 @@ const docConverter = new Converter({
   tasklists: true
 });
 
-export const htmlDocFromMarkdown = (md: string): string => docConverter.makeHtml(md);
+export type Markdown = string;
+export type Html = string;
+
+export const htmlDocFromMarkdown = (md: Markdown): Html => docConverter.makeHtml(md);
 
 type mdFileInfo = {
   name: string,
@@ -27,7 +30,15 @@ export class MDFiles {
 
   readFile(name: string) {
     const md = readFileSync(join('./markdown', `${name}.md`)).toString();
-    const html = htmlDocFromMarkdown(md);
+    let m = "";
+
+    // Add title and render the markdown
+    m += `# File: [${name}](/html/${name})\n\n---\n\n${md}`;
+
+    // Add footer with the nav menu
+    m += `\n\n---\n\n${this.generateIndex()}`;
+
+    const html = htmlDocFromMarkdown(m);
     this.files.set(name, {name, md, html});
   }
 
@@ -47,6 +58,15 @@ export class MDFiles {
 
   list(): string[] {
     return Array.from(this.files.keys());
+  }
+
+  generateIndex(): Markdown {
+    let md = `# [Index](/html)\n\n`;
+    md += `[README](/html/README)\n\n`;
+    for (const name of this.list()) {
+      md += `- [${name}](/html/${name})\n`;
+    }
+    return htmlDocFromMarkdown(md);
   }
 
   readDir() {

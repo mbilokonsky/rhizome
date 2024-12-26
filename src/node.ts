@@ -67,15 +67,28 @@ export class RhizomeNode {
   }
 
   async start() {
+    // Start ZeroMQ publish and reply sockets
     this.pubSub.start();
     this.requestReply.start();
+
+    // Start HTTP server
     if (this.config.httpEnable) {
       this.httpApi.start();
     }
+
+    // Wait a short time for sockets to initialize
     await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Subscribe to seed peers
     this.peers.subscribeToSeeds();
+
+    // Wait a short time for sockets to initialize
     await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Ask all peers for all deltas
     this.peers.askAllPeersForDeltas();
+
+    // Wait to receive all deltas
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 

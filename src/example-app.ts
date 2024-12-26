@@ -1,6 +1,6 @@
 import Debug from 'debug';
 import {RhizomeNode} from "./node";
-import {Entity} from "./object-layer";
+import {Entity} from "./entity";
 import {TypedCollection} from "./typed-collection";
 const debug = Debug('example-app');
 

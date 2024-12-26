@@ -28,7 +28,7 @@ describe('Run', () => {
     debug('apps[0].apiUrl', apps[0].apiUrl);
     debug('apps[1].apiUrl', apps[1].apiUrl);
 
-    const res = await fetch(`${apps[0].apiUrl}/users`, {
+    const res = await fetch(`${apps[0].apiUrl}/user`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -50,7 +50,7 @@ describe('Run', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const res2 = await fetch(`${apps[1].apiUrl}/users/peon-1`);
+    const res2 = await fetch(`${apps[1].apiUrl}/user/peon-1`);
     const data2 = await res2.json();
     debug('data2', data2);
     expect(data2).toMatchObject({

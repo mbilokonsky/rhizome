@@ -17,9 +17,8 @@ describe('Run', () => {
     await app.stop();
   });
 
-  it('can put a new user', async () => {
-    const {httpAddr, httpPort} = app.config;
-    const res = await fetch(`http://${httpAddr}:${httpPort}/users`, {
+  it('can put a new user and fetch it', async () => {
+    const res = await fetch(`${app.apiUrl}/user`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -38,5 +37,18 @@ describe('Run', () => {
         age: 263
       }
     });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const res2 = await fetch(`${app.apiUrl}/user/peon-1`);
+    const data2 = await res2.json();
+    expect(data2).toMatchObject({
+      id: "peon-1",
+      properties: {
+        name: "Peon",
+        age: 263
+      }
+    });
+
   });
 });

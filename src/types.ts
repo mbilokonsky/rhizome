@@ -41,7 +41,10 @@ export type DeltaFilter = (delta: Delta) => boolean;
 
 export type PropertyTypes = string | number | undefined;
 
-export type Properties = {[key: string]: PropertyTypes};
+export type DomainEntityID = string;
+export type PropertyID = string;
+
+export type Properties = {[key: PropertyID]: PropertyTypes};
 
 export class PeerAddress {
   addr: string;

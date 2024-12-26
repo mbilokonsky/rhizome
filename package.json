@@ -7,7 +7,8 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "./scripts/coverage.sh"
   },
   "jest": {
     "testEnvironment": "node",
