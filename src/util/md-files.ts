@@ -6,7 +6,7 @@ const debug = Debug('md-files');
 
 const docConverter = new Converter({
   completeHTMLDocument: true,
-  // simpleLineBreaks: true,
+  simpleLineBreaks: false,
   tables: true,
   tasklists: true
 });
@@ -27,6 +27,7 @@ export class MDFiles {
   readme?: mdFileInfo;
   dirWatcher?: FSWatcher;
   readmeWatcher?: FSWatcher;
+  latestIndexHtml?: Html;
 
   readFile(name: string) {
     const md = readFileSync(join('./markdown', `${name}.md`)).toString();
@@ -67,6 +68,13 @@ export class MDFiles {
       md += `- [${name}](/html/${name})\n`;
     }
     return htmlDocFromMarkdown(md);
+  }
+
+  get indexHtml(): Html {
+    if (!this.latestIndexHtml) {
+      this.latestIndexHtml = this.generateIndex();
+    }
+    return this.latestIndexHtml;
   }
 
   readDir() {

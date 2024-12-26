@@ -24,42 +24,56 @@ describe('Run', () => {
     await Promise.all(apps.map((app) => app.stop()));
   });
 
-  it('can create a record on node 0 and read it on node 1', async () => {
+  it('can create a record on app0 and read it on app1', async () => {
     debug('apps[0].apiUrl', apps[0].apiUrl);
     debug('apps[1].apiUrl', apps[1].apiUrl);
 
-    const res = await fetch(`${apps[0].apiUrl}/user`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
+    // Create a new record on app0
+    {
+      const res = await fetch(`${apps[0].apiUrl}/user`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          id: "peon-1",
+          properties: {
+            name: "Peon",
+            age: 741
+          }
+        })
+      });
+      const data = await res.json();
+      expect(data).toMatchObject({
         id: "peon-1",
         properties: {
           name: "Peon",
-          age: 263
+          age: 741
         }
-      })
-    });
-    const data = await res.json();
-    expect(data).toMatchObject({
-      id: "peon-1",
-      properties: {
-        name: "Peon",
-        age: 263
-      }
-    });
+      });
+    }
 
+    // TODO remove delay
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const res2 = await fetch(`${apps[1].apiUrl}/user/peon-1`);
-    const data2 = await res2.json();
-    debug('data2', data2);
-    expect(data2).toMatchObject({
-      id: "peon-1",
-      properties: {
-        name: "Peon",
-        age: 263
-      }
-    });
+    // Read from app1
+    {
+      const res = await fetch(`${apps[1].apiUrl}/user/peon-1`);
+      const data = await res.json();
+      debug('data', data);
+      expect(data).toMatchObject({
+        id: "peon-1",
+        properties: {
+          name: "Peon",
+          age: 741
+        }
+      });
+    }
+
+    // Verify our record is also in the index
+    for (const app of apps) {
+      const res = await fetch(`${app.apiUrl}/user/ids`);
+      const data = await res.json();
+      expect(data).toMatchObject({ids: ["peon-1"]});
+    }
 
   });
 });

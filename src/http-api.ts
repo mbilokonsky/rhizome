@@ -97,7 +97,7 @@ export class HttpApi {
       const html = this.mdFiles.generateIndex();
 
       this.router.get('/html', (_req: express.Request, res: express.Response) => {
-        res.setHeader('content-type', 'text/html').send(html);
+        res.setHeader('content-type', 'text/html').send(this.mdFiles.indexHtml);
       });
     }
 

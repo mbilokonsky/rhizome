@@ -169,6 +169,7 @@ export class Collection {
   }
 
   getIds(): string[] {
-    return Array.from(this.entities.keys());
+    // return Array.from(this.entities.keys());
+    return Array.from(this.lossless.domainEntities.keys());
   }
 }

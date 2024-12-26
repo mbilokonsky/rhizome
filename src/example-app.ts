@@ -19,7 +19,7 @@ type User = {
 
 (async () => {
   const rhizomeNode = new RhizomeNode();
-  const users = new TypedCollection<User>("users");
+  const users = new TypedCollection<User>("user");
   users.rhizomeConnect(rhizomeNode);
 
   users.onUpdate((u: Entity) => {

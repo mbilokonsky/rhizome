@@ -118,6 +118,36 @@ Query the list of deltas ingested by this node
 curl -s  http://localhost:3000/deltas | jq
 ```
 
+The example creates a `new TypedCollection<User>("user")` and calls `connectRhizome` to join it with the network.
+The collection is synchronized across the cluster and optionally CRUD type operations are served via HTTP.
+
+Query the list of User IDs
+```bash
+curl -s http://localhost:3000/user/ids
+```
+
+Query the list of User IDs
+```bash
+curl -s http://localhost:3000/user/ids
+```
+
+Read a User by ID
+```bash
+curl -s http://localhost:3000/user/taliesin-1
+```
+
+Create a User
+```bash
+cat <<EOF >/tmp/user.json
+{"id": "optional-id", 
+ "properties": {
+  "name": "required",
+  "nameLong": "optional",
+  "email": "optional"}}
+EOF
+curl -s -X PUT -H 'content-type:application/json' -d @/tmp/user.json http://localhost:3000/user | jq
+```
+
 # More About Concepts
 
 ## Clocks?
