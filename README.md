@@ -9,7 +9,7 @@
 |               |             | Lossy: Use a delta filter and a resolver function to produce a view.     |
 |               |             | Currently using functions rather than JSON-Logic expressions.            |
 | Functions     | No          | Arbitrary subscribers to delta stream (that can also emit deltas?)       |
-| Tests         | Minimal     | So far we have a few `ts-jest` tests. Need a plan for multi-node tests.  |
+| Tests         | Yes         | We are set up to run unit tests and multi-node tests                     |
 | Identity      | No          | Probably a public key / private key system                               |
 | Contexts      | No          | Each context may involve different lossy functions and delta filters     |
 | HTTP API      | Yes         | Basic peering info and entity CRUD                                       |
