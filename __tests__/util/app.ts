@@ -1,5 +1,5 @@
-import {RhizomeNode, RhizomeNodeConfig} from "../src/node";
-import {TypedCollection} from "../src/typed-collection";
+import {RhizomeNode, RhizomeNodeConfig} from "../../src/node";
+import {TypedCollection} from "../../src/typed-collection";
 
 type User = {
   id?: string;
@@ -28,7 +28,8 @@ export class App extends RhizomeNode {
     const users = new TypedCollection<User>("users");
     users.rhizomeConnect(this);
 
-    this.apiUrl = `http://${this.config.httpAddr}:${this.config.httpPort}`;
+    const {httpAddr, httpPort} = this.config;
+    this.apiUrl = `http://${httpAddr}:${httpPort}`;
   }
 }
 

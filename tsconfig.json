@@ -6,9 +6,6 @@
     "moduleResolution": "Node",
     "sourceMap": true,
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    },
     "outDir": "dist",
     "importsNotUsedAsValues": "remove",
     "strict": true,

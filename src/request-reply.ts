@@ -1,13 +1,13 @@
 import {Request, Reply, Message} from 'zeromq';
 import {EventEmitter} from 'node:events';
-import {PeerMethods} from './peers';
+import {RequestMethods} from './peers';
 import Debug from 'debug';
 import {RhizomeNode} from './node';
 import {PeerAddress} from './types';
 const debug = Debug('request-reply');
 
 export type PeerRequest = {
-  method: PeerMethods;
+  method: RequestMethods;
 };
 
 export type RequestHandler = (req: PeerRequest, res: ResponseSocket) => void;
@@ -22,7 +22,7 @@ export class RequestSocket {
     debug(`Request socket connecting to ${addrStr}`);
   }
 
-  async request(method: PeerMethods): Promise<Message> {
+  async request(method: RequestMethods): Promise<Message> {
     const req: PeerRequest = {
       method
     };

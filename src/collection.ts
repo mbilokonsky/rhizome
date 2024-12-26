@@ -66,6 +66,7 @@ export class Collection {
     } else {
       let anyChanged = false;
       Object.entries(properties).forEach(([key, value]) => {
+        if (key === 'id') return;
         let changed = false;
         if (entity.properties && entity.properties[key] !== value) {
           entity.properties[key] = value;

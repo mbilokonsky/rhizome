@@ -7,7 +7,7 @@ import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply";
 import {Delta, PeerAddress} from "./types";
 const debug = Debug('peers');
 
-export enum PeerMethods {
+export enum RequestMethods {
   GetPublishAddress,
   AskForDeltas
 }
@@ -28,7 +28,7 @@ class Peer {
     this.isSeedPeer = !!SEED_PEERS.find((seedPeer) => reqAddr.isEqual(seedPeer));
   }
 
-  async request(method: PeerMethods): Promise<Message> {
+  async request(method: RequestMethods): Promise<Message> {
     if (!this.reqSock) {
       this.reqSock = new RequestSocket(this.reqAddr);
     }
@@ -38,7 +38,7 @@ class Peer {
   async subscribeDeltas() {
     if (!this.publishAddr) {
       debug(`requesting publish addr from peer ${this.reqAddr.toAddrString()}`);
-      const res = await this.request(PeerMethods.GetPublishAddress);
+      const res = await this.request(RequestMethods.GetPublishAddress);
       this.publishAddr = PeerAddress.fromString(res.toString());
       debug(`received publish addr ${this.publishAddr.toAddrString()} from peer ${this.reqAddr.toAddrString()}`);
     }
@@ -63,7 +63,7 @@ class Peer {
     // Third pass should find a way to reduce the number of deltas transmitted.
 
     // TODO: requestTimeout
-    const res = await this.request(PeerMethods.AskForDeltas);
+    const res = await this.request(RequestMethods.AskForDeltas);
     const deltas = JSON.parse(res.toString());
     return deltas;
   }
@@ -82,12 +82,12 @@ export class Peers {
     this.rhizomeNode.requestReply.registerRequestHandler(async (req: PeerRequest, res: ResponseSocket) => {
       debug('inspecting peer request');
       switch (req.method) {
-        case PeerMethods.GetPublishAddress: {
+        case RequestMethods.GetPublishAddress: {
           debug('it\'s a request for our publish address');
           await res.send(this.rhizomeNode.myPublishAddr.toAddrString());
           break;
         }
-        case PeerMethods.AskForDeltas: {
+        case RequestMethods.AskForDeltas: {
           debug('it\'s a request for deltas');
           // TODO: stream these rather than
           // trying to write them all in one message

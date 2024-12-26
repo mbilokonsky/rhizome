@@ -26,7 +26,8 @@
     "level": "^9.0.0",
     "object-hash": "^3.0.0",
     "showdown": "^2.1.0",
-    "zeromq": "^6.1.2"
+    "zeromq": "^6.1.2",
+    "util": "./util/"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
