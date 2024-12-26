@@ -1,4 +1,4 @@
-import {App} from "../util/app";
+import {App} from "../../util/app";
 
 describe('Run', () => {
   let app: App;

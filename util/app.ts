@@ -1,5 +1,5 @@
-import {RhizomeNode, RhizomeNodeConfig} from "../../src/node";
-import {TypedCollection} from "../../src/typed-collection";
+import {RhizomeNode, RhizomeNodeConfig} from "../src/node";
+import {TypedCollection} from "../src/typed-collection";
 
 type User = {
   id?: string;
