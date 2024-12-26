@@ -58,7 +58,7 @@ npm run test
 ## Run test coverage report
 
 ```bash
-npm run test:coverage
+npm run coverage
 ```
 
 ## Run multiple live nodes locally as separate processes
