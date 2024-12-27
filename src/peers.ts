@@ -4,7 +4,8 @@ import {SEED_PEERS} from "./config";
 import {RhizomeNode} from "./node";
 import {Subscription} from './pub-sub';
 import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply";
-import {Delta, PeerAddress} from "./types";
+import {PeerAddress} from "./types";
+import {Delta} from "./delta";
 const debug = Debug('peers');
 
 export enum RequestMethods {

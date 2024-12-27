@@ -1,29 +1,12 @@
-import Debug from "debug";
-import express, {Express, Router} from "express";
-import {Server} from "http";
-import {Collection} from "./collection";
-import {RhizomeNode} from "./node";
-import {Delta} from "./types";
-import {htmlDocFromMarkdown, MDFiles} from "./util/md-files";
-const debug = Debug('http-api');
+import express, {Router} from "express";
+import {Collection} from "src/collection";
+import {Delta} from "src/delta";
+import {RhizomeNode} from "src/node";
 
 export class HttpApi {
-  rhizomeNode: RhizomeNode;
-  app: Express;
-  router: Router;
-  mdFiles = new MDFiles();
-  server?: Server;
+  router = Router();
 
-  constructor(rhizomeNode: RhizomeNode) {
-    this.rhizomeNode = rhizomeNode;
-    this.app = express();
-    this.router = Router();
-
-    this.app.use(express.json());
-    this.app.use(this.router);
-  }
-
-  start() {
+  constructor(readonly rhizomeNode: RhizomeNode) {
     // --------------- deltas ----------------
 
     // Serve list of all deltas accepted
@@ -65,48 +48,6 @@ export class HttpApi {
     this.router.get("/peers/count", (_req: express.Request, res: express.Response) => {
       res.json(this.rhizomeNode.peers.peers.length);
     });
-
-    // ----------------- html ---------------------
-
-    // Scan and watch for markdown files
-    this.mdFiles.readDir();
-    this.mdFiles.readReadme();
-    this.mdFiles.watchDir();
-    this.mdFiles.watchReadme();
-
-    // Serve README
-    this.router.get('/html/README', (_req: express.Request, res: express.Response) => {
-      const html = this.mdFiles.getReadmeHTML();
-      res.setHeader('content-type', 'text/html').send(html);
-    });
-
-    // Serve markdown files as html
-    this.router.get('/html/:name', (req: express.Request, res: express.Response) => {
-      const {name} = req.params;
-      let html = this.mdFiles.getHtml(name);
-      if (!html) {
-        res.status(404);
-        html = htmlDocFromMarkdown(`# 404 Not Found: ${name}\n\n ## [Index](/html)`);
-      }
-      res.setHeader('content-type', 'text/html');
-      res.send(html);
-    });
-
-    // Serve index
-    this.router.get('/html', (_req: express.Request, res: express.Response) => {
-      res.setHeader('content-type', 'text/html').send(this.mdFiles.indexHtml);
-    });
-
-    // ------------------- server ---------------------
-
-    const {httpAddr, httpPort} = this.rhizomeNode.config;
-    this.server = this.app.listen({
-      port: httpPort,
-      host: httpAddr,
-      exclusive: true
-    }, () => {
-      debug(`HTTP API bound to ${httpAddr}:${httpPort}`);
-    });
   }
 
   serveCollection(collection: Collection) {
@@ -130,26 +71,21 @@ export class HttpApi {
 
     // Add a new domain entity
     // TODO: schema validation
-    this.router.put(`/${name}`, (req: express.Request, res: express.Response) => {
+    this.router.put(`/${name}`, async (req: express.Request, res: express.Response) => {
       const {body: {id, properties}} = req;
-      const ent = collection.put(id, properties);
+      const ent = await collection.put(id, properties);
       res.json(ent);
     });
 
     // Update a domain entity
-    this.router.put(`/${name}/:id`, (req: express.Request, res: express.Response) => {
+    this.router.put(`/${name}/:id`, async (req: express.Request, res: express.Response) => {
       const {body: properties, params: {id}} = req;
       if (properties.id && properties.id !== id) {
         res.status(400).json({error: "ID Mismatch", param: id, property: properties.id});
         return;
       }
-      const ent = collection.put(id, properties);
+      const ent = await collection.put(id, properties);
       res.json(ent);
     });
-  }
-
-  async stop() {
-    this.server?.close();
-    this.mdFiles.close();
   }
 }

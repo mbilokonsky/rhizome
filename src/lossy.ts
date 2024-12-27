@@ -7,22 +7,26 @@
 
 import Debug from 'debug';
 import {CollapsedDelta, Lossless, LosslessViewMany, LosslessViewOne} from "./lossless";
-import {DeltaFilter, DomainEntityID, Properties} from "./types";
+import {DomainEntityID, Properties} from "./types";
+import {DeltaFilter} from "./delta";
 const debug = Debug('lossy');
 
-export type LossyViewOne = {
+export type LossyViewOne<T = Properties> = {
   id: DomainEntityID;
-  properties: Properties;
+  properties: T;
 };
 
 export type LossyViewMany = {
   [key: DomainEntityID]: LossyViewOne;
 };
 
-type Resolver = (losslessView: LosslessViewMany) => LossyViewMany | unknown;
+type Resolver<T = LosslessViewMany> = (losslessView: LosslessViewMany) => T;
 
 // Extract a particular value from a delta's pointers
-export function valueFromCollapsedDelta(delta: CollapsedDelta, key: string): string | number | undefined {
+export function valueFromCollapsedDelta(
+  delta: CollapsedDelta,
+  key: string
+): string | number | undefined {
   for (const pointer of delta.pointers) {
     for (const [k, value] of Object.entries(pointer)) {
       if (k === key && (typeof value === "string" || typeof value === "number")) {
@@ -33,7 +37,13 @@ export function valueFromCollapsedDelta(delta: CollapsedDelta, key: string): str
 }
 
 // Example function for resolving a value for an entity by taking the first value we find
-export function firstValueFromLosslessViewOne(ent: LosslessViewOne, key: string): {delta: CollapsedDelta, value: string | number} | undefined {
+export function firstValueFromLosslessViewOne(
+  ent: LosslessViewOne,
+  key: string
+): {
+  delta: CollapsedDelta,
+  value: string | number
+} | undefined {
   debug(`trying to get value for ${key} from ${JSON.stringify(ent.properties[key])}`);
   for (const delta of ent.properties[key] || []) {
     const value = valueFromCollapsedDelta(delta, key);
@@ -48,8 +58,13 @@ export class Lossy {
     this.lossless = lossless;
   }
 
-  resolve(fn: Resolver, entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter) {
-    return fn(this.lossless.view(entityIds, deltaFilter));
+  // Using the lossless view of some given domain entities,
+  // apply a filter to the deltas composing that lossless view,
+  // and then apply a supplied resolver function which receives
+  // the filtered lossless view as input.
+  resolve<T>(fn: Resolver<T>, entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter) {
+    const losslessView = this.lossless.view(entityIds, deltaFilter);
+    return fn(losslessView);
   }
 }
 

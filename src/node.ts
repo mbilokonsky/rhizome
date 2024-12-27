@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config';
 import {DeltaStream} from './deltas';
-import {HttpApi} from './http-api';
+import {HttpServer} from './http';
 import {Peers} from './peers';
 import {PubSub} from './pub-sub';
 import {RequestReply} from './request-reply';
@@ -28,7 +28,7 @@ export class RhizomeNode {
   config: RhizomeNodeConfig;
   pubSub: PubSub;
   requestReply: RequestReply;
-  httpApi: HttpApi;
+  httpServer: HttpServer;
   deltaStream: DeltaStream;
   peers: Peers;
   myRequestAddr: PeerAddress;
@@ -61,7 +61,7 @@ export class RhizomeNode {
     );
     this.pubSub = new PubSub(this);
     this.requestReply = new RequestReply(this);
-    this.httpApi = new HttpApi(this);
+    this.httpServer = new HttpServer(this);
     this.deltaStream = new DeltaStream(this);
     this.peers = new Peers(this);
   }
@@ -73,7 +73,7 @@ export class RhizomeNode {
 
     // Start HTTP server
     if (this.config.httpEnable) {
-      this.httpApi.start();
+      this.httpServer.start();
     }
 
     // Wait a short time for sockets to initialize
@@ -95,6 +95,6 @@ export class RhizomeNode {
   async stop() {
     await this.pubSub.stop();
     await this.requestReply.stop();
-    await this.httpApi.stop();
+    await this.httpServer.stop();
   }
 }

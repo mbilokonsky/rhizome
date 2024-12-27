@@ -1,13 +1,10 @@
-import { Collection } from './collection';
-import {Entity, EntityProperties} from './entity';
+import {Collection} from './collection';
+import {EntityProperties} from './entity';
 import {LossyViewOne} from './lossy';
+import {DomainEntityID} from './types';
 
 export class TypedCollection<T extends EntityProperties> extends Collection {
-  put(id: string | undefined, properties: T): Entity {
+  async put(id: DomainEntityID | undefined, properties: T): Promise<LossyViewOne> {
     return super.put(id, properties);
-  }
-
-  get(id: string): LossyViewOne | undefined {
-    return super.get(id);
   }
 }

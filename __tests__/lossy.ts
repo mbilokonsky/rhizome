@@ -1,6 +1,6 @@
+import {Delta, PointerTarget} from "../src/delta";
 import {Lossless, LosslessViewMany} from "../src/lossless";
 import {Lossy, firstValueFromLosslessViewOne, valueFromCollapsedDelta} from "../src/lossy";
-import {PointerTarget} from "../src/types";
 
 describe('Lossy', () => {
   describe('se a provided function to resolve entity views', () => {
@@ -8,7 +8,7 @@ describe('Lossy', () => {
     const lossy = new Lossy(lossless);
 
     beforeAll(() => {
-      lossless.ingestDelta({
+      lossless.ingestDelta(new Delta({
         creator: 'a',
         host: 'h',
         pointers: [{
@@ -30,7 +30,7 @@ describe('Lossy', () => {
           localContext: "salary_currency",
           target: "usd"
         }]
-      });
+      }));
     });
 
     it('example summary', () => {
@@ -63,7 +63,7 @@ describe('Lossy', () => {
         return {roles};
       }
 
-      const result = lossy.resolve(resolver);
+      const result = lossy.resolve<Summary>(resolver);
       expect(result).toEqual({
         roles: [{
           film: "the_matrix",

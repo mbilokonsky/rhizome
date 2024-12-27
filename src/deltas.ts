@@ -1,9 +1,15 @@
 import Debug from 'debug';
 import EventEmitter from 'node:events';
 import objectHash from 'object-hash';
+import {Delta} from './delta';
 import {RhizomeNode} from './node';
-import {Decision, Delta} from './types';
 const debug = Debug('deltas');
+
+enum Decision {
+  Accept,
+  Reject,
+  Defer
+};
 
 export class DeltaStream {
   rhizomeNode: RhizomeNode;

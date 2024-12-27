@@ -1,20 +1,20 @@
 {
   "name": "rhizome-node",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Rhizomatic database engine node",
   "scripts": {
-    "example-app": "node dist/example-app.js",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "lint": "eslint",
     "test": "jest",
-    "coverage": "./scripts/coverage.sh"
+    "coverage": "./scripts/coverage.sh",
+    "example-app": "node dist/examples/app.js"
   },
   "jest": {
     "testEnvironment": "node",
     "preset": "ts-jest"
   },
-  "author": "",
+  "author": "Taliesin (Ladd) <ladd@dgov.io>",
   "license": "Unlicense",
   "dependencies": {
     "@types/bluebird": "^3.5.42",

@@ -52,7 +52,7 @@ npm run build:watch
 ## Run tests
 
 ```bash
-npm run test
+npm test
 ```
 
 ## Run test coverage report
@@ -100,22 +100,22 @@ In a separate terminal, you can use `curl` to interact with an instance.
 
 Query the number of peers seen by a given node (including itself)
 ```bash
-curl -s  http://localhost:3000/peers/count | jq
+curl -s  http://localhost:3000/api/peers/count | jq
 ```
 
 Query the list of peers seen by a given node (including itself)
 ```bash
-curl -s  http://localhost:3000/peers | jq
+curl -s  http://localhost:3000/api/peers | jq
 ```
 
 Query the number of deltas ingested by this node
 ```bash
-curl -s  http://localhost:3000/deltas/count | jq
+curl -s  http://localhost:3000/api/deltas/count | jq
 ```
 
 Query the list of deltas ingested by this node
 ```bash
-curl -s  http://localhost:3000/deltas | jq
+curl -s  http://localhost:3000/api/deltas | jq
 ```
 
 The example creates a `new TypedCollection<User>("user")` and calls `connectRhizome` to join it with the network.
@@ -123,17 +123,17 @@ The collection is synchronized across the cluster and optionally CRUD type opera
 
 Query the list of User IDs
 ```bash
-curl -s http://localhost:3000/user/ids
+curl -s http://localhost:3000/api/user/ids
 ```
 
 Query the list of User IDs
 ```bash
-curl -s http://localhost:3000/user/ids
+curl -s http://localhost:3000/api/user/ids
 ```
 
 Read a User by ID
 ```bash
-curl -s http://localhost:3000/user/taliesin-1
+curl -s http://localhost:3000/api/user/taliesin-1
 ```
 
 Create a User
@@ -145,7 +145,7 @@ cat <<EOF >/tmp/user.json
   "nameLong": "optional",
   "email": "optional"}}
 EOF
-curl -s -X PUT -H 'content-type:application/json' -d @/tmp/user.json http://localhost:3000/user | jq
+curl -s -X PUT -H 'content-type:application/json' -d @/tmp/user.json http://localhost:3000/api/user | jq
 ```
 
 # More About Concepts

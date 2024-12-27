@@ -29,7 +29,7 @@ export class App extends RhizomeNode {
     users.rhizomeConnect(this);
 
     const {httpAddr, httpPort} = this.config;
-    this.apiUrl = `http://${httpAddr}:${httpPort}`;
+    this.apiUrl = `http://${httpAddr}:${httpPort}/api`;
   }
 }
 

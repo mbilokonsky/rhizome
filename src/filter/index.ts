@@ -1,5 +1,9 @@
 import { add_operation, apply } from 'json-logic-js';
-import { Delta, DeltaContext } from '../types';
+import { Delta } from '../delta';
+
+type DeltaContext = Delta & {
+  creatorAddress: string;
+};
 
 add_operation('in', (needle, haystack) => {
   return [...haystack].includes(needle);

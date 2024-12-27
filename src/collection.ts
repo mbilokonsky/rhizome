@@ -6,11 +6,12 @@
 import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
-import {Entity} from "./entity";
+import {Delta, DeltaID} from "./delta";
+import {Entity, EntityProperties} from "./entity";
 import {Lossless, LosslessViewMany} from "./lossless";
 import {firstValueFromLosslessViewOne, Lossy, LossyViewMany, LossyViewOne} from "./lossy";
 import {RhizomeNode} from "./node";
-import {Delta} from "./types";
+import {DomainEntityID} from "./types";
 const debug = Debug('collection');
 
 export class Collection {
@@ -19,9 +20,18 @@ export class Collection {
   entities = new Map<string, Entity>();
   eventStream = new EventEmitter();
   lossless = new Lossless(); // TODO: Really just need one global Lossless instance
+  lossy: Lossy;
 
   constructor(name: string) {
     this.name = name;
+    this.lossy = new Lossy(this.lossless);
+  }
+
+  ingestDelta(delta: Delta) {
+    const updated = this.lossless.ingestDelta(delta);
+
+    this.eventStream.emit('ingested', delta);
+    this.eventStream.emit('updated', updated);
   }
 
   // Instead of trying to update our final view of the entity with every incoming delta,
@@ -36,98 +46,120 @@ export class Collection {
     rhizomeNode.deltaStream.subscribeDeltas((delta: Delta) => {
       // TODO: Make sure this is the kind of delta we're looking for
       debug(`collection ${this.name} received delta ${JSON.stringify(delta)}`);
-      this.lossless.ingestDelta(delta);
+      this.ingestDelta(delta);
     });
 
-    rhizomeNode.httpApi.serveCollection(this);
+    rhizomeNode.httpServer.httpApi.serveCollection(this);
 
     debug(`connected ${this.name} to rhizome`);
   }
 
-  // Applies the javascript rules for updating object values,
-  // e.g. set to `undefined` to delete a property
-  updateEntity(entityId?: string, properties?: object, local = false, deltas?: Delta[]): Entity {
-    let entity: Entity | undefined;
-    let eventType: 'create' | 'update' | 'delete' | undefined;
-    entityId = entityId ?? randomUUID();
-    entity = this.entities.get(entityId);
-    if (!entity) {
-      entity = new Entity(entityId);
-      entity.id = entityId;
-      eventType = 'create';
-    }
-
-    if (!properties) {
-      // Let's interpret this as entity deletion
-      this.entities.delete(entityId);
-      // TODO: prepare and publish a delta
-      // TODO: execute hooks
-      eventType = 'delete';
-    } else {
-      let anyChanged = false;
-      Object.entries(properties).forEach(([key, value]) => {
-        if (key === 'id') return;
-        let changed = false;
-        if (entity.properties && entity.properties[key] !== value) {
-          entity.properties[key] = value;
-          changed = true;
-        }
-        if (local && changed) {
-          // If this is a change, let's generate a delta
-          if (!this.rhizomeNode) throw new Error(`${this.name} collection not connected to rhizome`);
-          const delta: Delta = {
-            creator: this.rhizomeNode.config.creator,
-            host: this.rhizomeNode.config.peerId,
-            pointers: [{
-              localContext: this.name,
-              target: entityId,
-              targetContext: key
-            }, {
-              localContext: key,
-              target: value
-            }]
-          };
-          deltas?.push(delta);
-
-          // We append to the array the caller may provide
-          // We can update this count as we receive network confirmation for deltas
-          entity.ahead += 1;
-        }
-        anyChanged = anyChanged || changed;
-      });
-
-      this.entities.set(entityId, entity);
-
-      if (anyChanged) {
-        eventType = eventType || 'update';
-      }
-    }
-    if (eventType) {
-      // TODO: Reconcile this with lossy view approach
-      this.eventStream.emit(eventType, entity);
-    }
-    return entity;
-  }
-
   onCreate(cb: (entity: Entity) => void) {
-    // TODO: Reconcile this with lossy view approach
+    // TODO: Trigger for changes received from peers
     this.eventStream.on('create', (entity: Entity) => {
       cb(entity);
     });
   }
 
   onUpdate(cb: (entity: Entity) => void) {
-    // TODO: Reconcile this with lossy view approach
+    // TODO: Trigger for changes received from peers
     this.eventStream.on('update', (entity: Entity) => {
       cb(entity);
     });
   }
 
-  put(entityId: string | undefined, properties: object): Entity {
+  defaultResolver(losslessView: LosslessViewMany): LossyViewMany {
+    const resolved: LossyViewMany = {};
+    debug('default resolver, lossless view', JSON.stringify(losslessView));
+    for (const [id, ent] of Object.entries(losslessView)) {
+      resolved[id] = {id, properties: {}};
+      for (const key of Object.keys(ent.properties)) {
+        const {value} = firstValueFromLosslessViewOne(ent, key) || {};
+        debug(`[ ${key} ] = ${value}`);
+        resolved[id].properties[key] = value;
+      }
+    }
+    return resolved;
+  }
+
+  // Applies the javascript rules for updating object values,
+  // e.g. set to `undefined` to delete a property
+  generateDeltas(
+    entityId: DomainEntityID,
+    newProperties: EntityProperties,
+    creator?: string,
+    host?: string
+  ): Delta[] {
     const deltas: Delta[] = [];
-    const entity = this.updateEntity(entityId, properties, true, deltas);
+    let oldProperties: EntityProperties = {};
+
+    if (entityId) {
+      const entity = this.get(entityId);
+      if (entity) {
+        oldProperties = entity.properties;
+      }
+    }
+
+    // Generate a delta for each changed property
+    Object.entries(newProperties).forEach(([key, value]) => {
+      // Disallow property named "id" TODO: Clarify id semantics
+      if (key === 'id') return;
+
+      if (oldProperties[key] !== value && host && creator) {
+        deltas.push(new Delta({
+          creator,
+          host,
+          pointers: [{
+            localContext: this.name,
+            target: entityId,
+            targetContext: key
+          }, {
+            localContext: key,
+            target: value
+          }]
+        }));
+      }
+    });
+
+    return deltas;
+  }
+
+  async put(
+    entityId: DomainEntityID | undefined,
+    properties: EntityProperties
+  ): Promise<LossyViewOne> {
+    // const deltas: Delta[] = [];
+    // const entity = this.updateEntity(entityId, properties, true, deltas);
+
+    // THIS PUT SHOULD CORRESOND TO A PARTICULAR MATERIALIZED VIEW...
+    // How can we encode that?
+    // Well, we have a way to do that, we just need the same particular inputs
+
+    if (!entityId) {
+      entityId = randomUUID();
+    }
+
+    const deltas = this.generateDeltas(
+      entityId,
+      properties,
+      this.rhizomeNode?.config.creator,
+      this.rhizomeNode?.config.peerId,
+    );
 
     debug(`put ${entityId} generated deltas:`, JSON.stringify(deltas));
+
+    const allIngested = new Promise<boolean>((resolve) => {
+      const ingestedIds = new Set<DeltaID>();
+      this.eventStream.on('ingested', (delta: Delta) => {
+        // TODO: timeout
+        if (deltas.map(({id}) => id).includes(delta.id)) {
+          ingestedIds.add(delta.id);
+          if (ingestedIds.size === deltas.length) {
+            resolve(true);
+          }
+        }
+      })
+    });
 
     // updateEntity may have generated some deltas for us to store and publish
     deltas.forEach(async (delta: Delta) => {
@@ -141,30 +173,28 @@ export class Collection {
       debug(`published delta ${JSON.stringify(delta)}`);
 
       // ingest the delta as though we had received it from a peer
-      this.lossless.ingestDelta(delta);
+      this.ingestDelta(delta);
     });
-    return entity;
+
+    // Return updated view of this entity
+    // Let's wait for an event notifying us that the entity has been updated.
+    // This means all of our deltas have been applied.
+
+    await allIngested;
+
+    const res = this.get(entityId);
+    if (!res) throw new Error("could not get what we just put!");
+
+    this.eventStream.emit("update", res);
+
+    return res;
   }
 
   get(id: string): LossyViewOne | undefined {
     // Now with lossy view approach, instead of just returning what we already have,
     // let's compute our view now.
     // return this.entities.get(id);
-    const lossy = new Lossy(this.lossless);
-    const resolver = (losslessView: LosslessViewMany) => {
-      const lossyView: LossyViewMany = {};
-      debug('lossless view', JSON.stringify(losslessView));
-      for (const [id, ent] of Object.entries(losslessView)) {
-        lossyView[id] = {id, properties: {}};
-        for (const key of Object.keys(ent.properties)) {
-          const {value} = firstValueFromLosslessViewOne(ent, key) || {};
-          debug(`[ ${key} ] = ${value}`);
-          lossyView[id].properties[key] = value;
-        }
-      }
-      return lossyView;
-    };
-    const res = lossy.resolve(resolver, [id]) as LossyViewMany;;
+    const res = this.lossy.resolve((view) => this.defaultResolver(view), [id]);
     return res[id];
   }
 

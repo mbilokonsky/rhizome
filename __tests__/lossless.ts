@@ -1,9 +1,9 @@
+import {Delta, DeltaFilter} from '../src/delta';
 import {Lossless} from '../src/lossless';
-import {Delta, DeltaFilter} from '../src/types';
 
 describe('Lossless', () => {
   it('creates a lossless view of keanu as neo in the matrix', () => {
-    const delta: Delta = {
+    const delta = new Delta({
       creator: 'a',
       host: 'h',
       pointers: [{
@@ -25,13 +25,13 @@ describe('Lossless', () => {
         localContext: "salary_currency",
         target: "usd"
       }]
-    };
+    });
 
     const lossless = new Lossless();
 
     lossless.ingestDelta(delta);
 
-    expect(lossless.view()).toEqual({
+    expect(lossless.view()).toMatchObject({
       keanu: {
         referencedAs: ["actor"],
         properties: {
@@ -87,7 +87,7 @@ describe('Lossless', () => {
     const lossless = new Lossless();
 
     beforeAll(() => {
-      lossless.ingestDelta({
+      lossless.ingestDelta(new Delta({
         creator: 'A',
         host: 'H',
         pointers: [{
@@ -95,9 +95,9 @@ describe('Lossless', () => {
           target: "ace",
           targetContext: "value"
         }]
-      });
+      }));
 
-      lossless.ingestDelta({
+      lossless.ingestDelta(new Delta({
         creator: 'B',
         host: 'H',
         pointers: [{
@@ -106,9 +106,9 @@ describe('Lossless', () => {
           target: "ace",
           targetContext: "value"
         }]
-      });
+      }));
 
-      expect(lossless.view()).toEqual({
+      expect(lossless.view()).toMatchObject({
         ace: {
           referencedAs: ["1", "14"],
           properties: {
@@ -135,7 +135,7 @@ describe('Lossless', () => {
         return creator === 'A' && host === 'H';
       };
 
-      expect(lossless.view(undefined, filter)).toEqual({
+      expect(lossless.view(undefined, filter)).toMatchObject({
         ace: {
           referencedAs: ["1"],
           properties: {
@@ -150,7 +150,7 @@ describe('Lossless', () => {
         }
       });
 
-      expect(lossless.view(["ace"], filter)).toEqual({
+      expect(lossless.view(["ace"], filter)).toMatchObject({
         ace: {
           referencedAs: ["1"],
           properties: {

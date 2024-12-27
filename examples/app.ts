@@ -1,7 +1,7 @@
 import Debug from 'debug';
-import {RhizomeNode} from "./node";
-import {Entity} from "./entity";
-import {TypedCollection} from "./typed-collection";
+import {RhizomeNode} from "../src/node";
+import {Entity} from "../src/entity";
+import {TypedCollection} from "../src/typed-collection";
 const debug = Debug('example-app');
 
 // As an app we want to be able to write and read data.
@@ -30,11 +30,16 @@ type User = {
     debug('New user!:', u);
   });
 
+  await rhizomeNode.start();
 
-  await rhizomeNode.start()
+  // Let's use the rhizomic database for some more things.
+  // Like what?
+  // - Logging
+  // - Chat
+  //
 
-  const taliesin = users.put(undefined, {
-    // id: 'taliesin-1',
+  const taliesin = await users.put(undefined, {
+    id: 'taliesin-1',
     name: 'Taliesin',
     nameLong: 'Taliesin (Ladd)',
     age: Math.floor(Math.random() * 1000)

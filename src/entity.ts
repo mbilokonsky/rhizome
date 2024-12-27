@@ -14,12 +14,11 @@ export type EntityProperties = {
 };
 
 export class Entity {
-  id: string;
   properties: EntityProperties = {};
   ahead = 0;
 
-  constructor(id: string) {
-    this.id = id;
-  }
+  constructor(
+    readonly id: string,
+  ) {}
 }
 
