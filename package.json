@@ -12,7 +12,8 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "preset": "ts-jest"
+    "preset": "ts-jest",
+    "roots": ["__tests__/"]
   },
   "author": "Taliesin (Ladd) <ladd@dgov.io>",
   "license": "Unlicense",
