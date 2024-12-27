@@ -93,13 +93,9 @@ export class HttpApi {
     });
 
     // Serve index
-    {
-      const html = this.mdFiles.generateIndex();
-
-      this.router.get('/html', (_req: express.Request, res: express.Response) => {
-        res.setHeader('content-type', 'text/html').send(this.mdFiles.indexHtml);
-      });
-    }
+    this.router.get('/html', (_req: express.Request, res: express.Response) => {
+      res.setHeader('content-type', 'text/html').send(this.mdFiles.indexHtml);
+    });
 
     // ------------------- server ---------------------
 
