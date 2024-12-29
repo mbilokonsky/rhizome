@@ -8,7 +8,7 @@ import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
 import {Delta, DeltaID} from "./delta";
 import {Entity, EntityProperties} from "./entity";
-import {Lossless, LosslessViewMany} from "./lossless";
+import {LosslessViewMany} from "./lossless";
 import {firstValueFromLosslessViewOne, Lossy, LossyViewMany, LossyViewOne} from "./lossy";
 import {RhizomeNode} from "./node";
 import {DomainEntityID} from "./types";
@@ -19,16 +19,15 @@ export class Collection {
   name: string;
   entities = new Map<string, Entity>();
   eventStream = new EventEmitter();
-  lossless = new Lossless(); // TODO: Really just need one global Lossless instance
-  lossy: Lossy;
 
   constructor(name: string) {
     this.name = name;
-    this.lossy = new Lossy(this.lossless);
   }
 
   ingestDelta(delta: Delta) {
-    const updated = this.lossless.ingestDelta(delta);
+    if (!this.rhizomeNode) return;
+
+    const updated = this.rhizomeNode.lossless.ingestDelta(delta);
 
     this.eventStream.emit('ingested', delta);
     this.eventStream.emit('updated', updated);
@@ -194,12 +193,14 @@ export class Collection {
     // Now with lossy view approach, instead of just returning what we already have,
     // let's compute our view now.
     // return this.entities.get(id);
-    const res = this.lossy.resolve((view) => this.defaultResolver(view), [id]);
+    if (!this.rhizomeNode) return undefined;
+    const lossy = new Lossy(this.rhizomeNode.lossless);
+    const res = lossy.resolve((view) => this.defaultResolver(view), [id]);
     return res[id];
   }
 
   getIds(): string[] {
-    // return Array.from(this.entities.keys());
-    return Array.from(this.lossless.domainEntities.keys());
+    if (!this.rhizomeNode) return [];
+    return Array.from(this.rhizomeNode.lossless.domainEntities.keys());
   }
 }
