@@ -2,11 +2,11 @@
 // We can maintain a record of all the targeted entities, and the deltas that targeted them
 
 import Debug from 'debug';
-import {Delta, DeltaFilter} from './delta';
-import {DomainEntityID, PropertyID, PropertyTypes, ViewMany} from "./types";
+import {Delta, DeltaFilter, DeltaID} from './delta';
+import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types";
 const debug = Debug('lossless');
 
-export type CollapsedPointer = {[key: string]: PropertyTypes};
+export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
 
 export type CollapsedDelta = Omit<Delta, 'pointers'> & {
   pointers: CollapsedPointer[];
@@ -61,8 +61,48 @@ class DomainEntity {
   }
 }
 
+class Transaction {
+  size?: number;
+  receivedDeltaIds = new Set<DeltaID>();
+}
+
+class Transactions {
+  transactions = new Map<TransactionID, Transaction>();
+
+  getOrInit(id: TransactionID): Transaction {
+    let t = this.transactions.get(id);
+    if (!t) {
+      t = new Transaction();
+      this.transactions.set(id, t);
+    }
+    return t;
+  }
+
+  receivedDelta(id: TransactionID, deltaId: DeltaID) {
+    const t = this.getOrInit(id);
+    t.receivedDeltaIds.add(deltaId);
+  }
+
+  isComplete(id: TransactionID) {
+    const t = this.getOrInit(id);
+    return t.size !== undefined && t.receivedDeltaIds.size === t.size;
+  }
+
+  setSize(id: TransactionID, size: number) {
+    const t = this.getOrInit(id);
+    t.size = size;
+  }
+
+  get ids() {
+    return Array.from(this.transactions.keys());
+  }
+}
+
 export class Lossless {
   domainEntities = new DomainEntityMap();
+  transactions = new Transactions();
+  referencedAs = new Map<string, Set<DomainEntityID>>();
+  // referencingAs = new Map<string, Set<DomainEntityID>>();
 
   ingestDelta(delta: Delta) {
     const targets = delta.pointers
@@ -78,15 +118,61 @@ export class Lossless {
         this.domainEntities.set(target, ent);
       }
 
-      debug('before add, domain entity:', JSON.stringify(ent));
-
       ent.addDelta(delta);
+    }
 
-      debug('after add, domain entity:', JSON.stringify(ent));
+    for (const {target, localContext} of delta.pointers) {
+      if (typeof target === "string" && this.domainEntities.has(target)) {
+        if (this.domainEntities.has(target)) {
+          let referencedAs = this.referencedAs.get(localContext);
+          if (!referencedAs) {
+            referencedAs = new Set<string>();
+            this.referencedAs.set(localContext, referencedAs);
+          }
+          referencedAs.add(target);
+        }
+      }
+    }
+
+    const {target: transactionId} = delta.pointers.find(({
+      localContext,
+      target,
+      targetContext
+    }) =>
+      localContext === "_transaction" &&
+      typeof target === "string" &&
+      targetContext === "deltas"
+    ) || {};
+
+    if (transactionId) {
+      // This delta is part of a transaction
+      this.transactions.receivedDelta(transactionId as string, delta.id);
+    } else {
+      const {target: transactionId} = delta.pointers.find(({
+        localContext,
+        target,
+        targetContext
+      }) =>
+        localContext === "_transaction" &&
+        typeof target === "string" &&
+        targetContext === "size"
+      ) || {};
+
+      if (transactionId) {
+        // This delta describes a transaction
+        const {target: size} = delta.pointers.find(({
+          localContext,
+          target
+        }) =>
+          localContext === "size" &&
+          typeof target === "number"
+        ) || {};
+
+        this.transactions.setSize(transactionId as string, size as number);
+      }
     }
   }
 
-  //TODO: json logic -- view(deltaFilter?: FilterExpr) {
   view(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
     const view: LosslessViewMany = {};
     entityIds = entityIds ?? Array.from(this.domainEntities.keys());

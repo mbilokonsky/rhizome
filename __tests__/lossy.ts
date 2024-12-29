@@ -1,6 +1,6 @@
 import {Delta, PointerTarget} from "../src/delta";
 import {Lossless, LosslessViewMany} from "../src/lossless";
-import {Lossy, firstValueFromLosslessViewOne, valueFromCollapsedDelta} from "../src/lossy";
+import {Lossy, lastValueFromLosslessViewOne, valueFromCollapsedDelta, ResolvedViewMany} from "../src/lossy";
 
 describe('Lossy', () => {
   describe('se a provided function to resolve entity views', () => {
@@ -48,7 +48,7 @@ describe('Lossy', () => {
         const roles: Role[] = [];
         for (const [id, ent] of Object.entries(losslessView)) {
           if (ent.referencedAs.includes("role")) {
-            const {delta, value: actor} = firstValueFromLosslessViewOne(ent, "actor") ?? {};
+            const {delta, value: actor} = lastValueFromLosslessViewOne(ent, "actor") ?? {};
             if (!delta) continue; // TODO: panic
             if (!actor) continue; // TODO: panic
             const film = valueFromCollapsedDelta(delta, "film");

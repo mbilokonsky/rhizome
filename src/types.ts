@@ -8,6 +8,7 @@ export type PropertyTypes = string | number | undefined;
 
 export type DomainEntityID = string;
 export type PropertyID = string;
+export type TransactionID = string;
 
 export type Timestamp = number;
 

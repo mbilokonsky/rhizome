@@ -19,6 +19,10 @@ type User = {
 
 (async () => {
   const rhizomeNode = new RhizomeNode();
+
+  // Enable API to read lossless view
+  rhizomeNode.httpServer.httpApi.serveLossless();
+
   const users = new Collection("user");
   users.rhizomeConnect(rhizomeNode);
 
@@ -65,6 +69,8 @@ type User = {
 
   const resolved = users.resolve('taliesin-1');
   if (!resolved) throw new Error('unable to resolve entity we just created');
+
+  debug('resolved', resolved);
 
   const resolvedUser = {
     id: resolved.id,

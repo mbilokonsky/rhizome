@@ -45,20 +45,6 @@ export function valueFromCollapsedDelta(
   }
 }
 
-// Example function for resolving a value for an entity by taking the first value we find
-export function firstValueFromLosslessViewOne(
-  ent: LosslessViewOne,
-  key: string
-): {
-  delta: CollapsedDelta,
-  value: string | number
-} | undefined {
-  debug(`trying to get first value for ${key} from ${JSON.stringify(ent.properties[key])}`);
-  for (const delta of ent.properties[key] || []) {
-    const value = valueFromCollapsedDelta(delta, key);
-    if (value) return {delta, value};
-  }
-}
 
 // Function for resolving a value for an entity by last write wins
 export function lastValueFromLosslessViewOne(
@@ -89,6 +75,24 @@ export function lastValueFromLosslessViewOne(
   return res;
 }
 
+function defaultResolver(losslessView: LosslessViewMany): ResolvedViewMany {
+    const resolved: ResolvedViewMany = {};
+
+    // debug('default resolver, lossless view', JSON.stringify(losslessView));
+    for (const [id, ent] of Object.entries(losslessView)) {
+      resolved[id] = {id, properties: {}};
+
+      for (const key of Object.keys(ent.properties)) {
+        const {value} = lastValueFromLosslessViewOne(ent, key) || {};
+
+        // debug(`[ ${key} ] = ${value}`);
+        resolved[id].properties[key] = value;
+      }
+    }
+    return resolved;
+  };
+
+
 export class Lossy {
   lossless: Lossless;
 
@@ -100,9 +104,12 @@ export class Lossy {
   // apply a filter to the deltas composing that lossless view,
   // and then apply a supplied resolver function which receives
   // the filtered lossless view as input.
-  resolve<T>(fn: Resolver<T>, entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter) {
+  resolve<T = ResolvedViewOne>(fn?: Resolver<T> | Resolver, entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): T {
+    if (!fn) {
+      fn = defaultResolver;
+    }
     const losslessView = this.lossless.view(entityIds, deltaFilter);
-    return fn(losslessView);
+    return fn(losslessView) as T;
   }
 }
 

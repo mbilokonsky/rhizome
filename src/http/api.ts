@@ -88,4 +88,49 @@ export class HttpApi {
       res.json(ent);
     });
   }
+
+  serveLossless() {
+    // Get all domain entity IDs. TODO: This won't scale
+    this.router.get('/lossless/ids', (_req: express.Request, res: express.Response) => {
+      res.json({
+        ids: Array.from(this.rhizomeNode.lossless.domainEntities.keys())
+      });
+    });
+
+    // Get all transaction IDs. TODO: This won't scale
+    this.router.get('/transaction/ids', (_req: express.Request, res: express.Response) => {
+      const set = this.rhizomeNode.lossless.referencedAs.get("_transaction");
+      res.json({
+        ids: set ? Array.from(set.values()) : []
+      });
+    });
+
+    // View a single transaction
+    this.router.get('/transaction/:id', (req: express.Request, res: express.Response) => {
+      const {params: {id}} = req;
+      const v = this.rhizomeNode.lossless.view([id]);
+      const ent = v[id];
+      if (!ent.referencedAs.includes("_transaction")) {
+        res.status(400).json({error: "Entity is not a transaction", id});
+        return;
+      }
+
+      res.json({
+        ...ent,
+        isComplete: this.rhizomeNode.lossless.transactions.isComplete(id)
+      });
+    });
+
+    // Get a lossless view of a single domain entity
+    this.router.get('/lossless/:id', (req: express.Request, res: express.Response) => {
+      const {params: {id}} = req;
+      const v = this.rhizomeNode.lossless.view([id]);
+      const ent = v[id];
+
+      res.json({
+        ...ent,
+        isComplete: this.rhizomeNode.lossless.transactions.isComplete(id)
+      });
+    });
+  }
 }

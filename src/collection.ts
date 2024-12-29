@@ -8,8 +8,7 @@ import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
 import {Delta, DeltaID} from "./delta";
 import {Entity, EntityProperties} from "./entity";
-import {LosslessViewMany} from "./lossless";
-import {lastValueFromLosslessViewOne, Lossy, ResolvedViewMany, ResolvedViewOne, Resolver} from "./lossy";
+import {Lossy, ResolvedViewOne, Resolver} from "./lossy";
 import {RhizomeNode} from "./node";
 import {DomainEntityID} from "./types";
 const debug = Debug('collection');
@@ -60,9 +59,9 @@ export class Collection {
   generateDeltas(
     entityId: DomainEntityID,
     newProperties: EntityProperties,
-    resolver?: Resolver,
-    creator?: string,
-    host?: string
+    creator: string,
+    host: string,
+    resolver?: Resolver
   ): Delta[] {
     const deltas: Delta[] = [];
     let oldProperties: EntityProperties = {};
@@ -74,9 +73,12 @@ export class Collection {
       }
     }
 
+    // Generate a transaction ID
+    const transactionId = `transaction-${randomUUID()}`;
+
     // Generate a delta for each changed property
     Object.entries(newProperties).forEach(([key, value]) => {
-      // Disallow property named "id" TODO: Clarify id semantics
+      // Disallow property named "id" 
       if (key === 'id') return;
 
       if (oldProperties[key] !== value && host && creator) {
@@ -84,6 +86,10 @@ export class Collection {
           creator,
           host,
           pointers: [{
+            localContext: "_transaction",
+            target: transactionId,
+            targetContext: "deltas"
+          }, {
             localContext: this.name,
             target: entityId,
             targetContext: key
@@ -95,7 +101,21 @@ export class Collection {
       }
     });
 
-    return deltas;
+    // We can generate a separate delta describing this transaction
+    const transactionDelta = new Delta({
+      creator,
+      host,
+      pointers: [{
+        localContext: "_transaction",
+        target: transactionId,
+        targetContext: "size"
+      }, {
+        localContext: "size",
+        target: deltas.length
+      }]
+    });
+
+    return [transactionDelta, ...deltas];
   }
 
   onCreate(cb: (entity: Entity) => void) {
@@ -114,7 +134,9 @@ export class Collection {
 
   getIds(): string[] {
     if (!this.rhizomeNode) return [];
-    return Array.from(this.rhizomeNode.lossless.domainEntities.keys());
+    const set = this.rhizomeNode.lossless.referencedAs.get(this.name);
+    if (!set) return [];
+    return Array.from(set.values());
   }
 
   // THIS PUT SHOULD CORRESOND TO A PARTICULAR MATERIALIZED VIEW...
@@ -126,6 +148,8 @@ export class Collection {
     properties: EntityProperties,
     resolver?: Resolver
   ): Promise<ResolvedViewOne> {
+    if (!this.rhizomeNode) throw new Error('collection not connecte to rhizome');
+
     // For convenience, we allow setting id via properties.id
     if (!entityId && !!properties.id && typeof properties.id === 'string') {
       entityId = properties.id;
@@ -138,9 +162,9 @@ export class Collection {
     const deltas = this.generateDeltas(
       entityId,
       properties,
-      resolver,
       this.rhizomeNode?.config.creator,
       this.rhizomeNode?.config.peerId,
+      resolver,
     );
 
     debug(`put ${entityId} generated deltas:`, JSON.stringify(deltas));
@@ -148,6 +172,8 @@ export class Collection {
     // Here we set up a listener so we can wait for all our deltas to be
     // ingested into our lossless view before proceeding.
     // TODO: Hoist this into a more generic transaction mechanism.
+
+    // 
 
     const allIngested = new Promise<boolean>((resolve) => {
       const ingestedIds = new Set<DeltaID>();
@@ -190,25 +216,7 @@ export class Collection {
     return res;
   }
 
-  // TODO: default should probably be last write wins
-  defaultResolver(losslessView: LosslessViewMany): ResolvedViewMany {
-    const resolved: ResolvedViewMany = {};
-
-    // debug('default resolver, lossless view', JSON.stringify(losslessView));
-    for (const [id, ent] of Object.entries(losslessView)) {
-      resolved[id] = {id, properties: {}};
-
-      for (const key of Object.keys(ent.properties)) {
-        const {value} = lastValueFromLosslessViewOne(ent, key) || {};
-
-        // debug(`[ ${key} ] = ${value}`);
-        resolved[id].properties[key] = value;
-      }
-    }
-    return resolved;
-  }
-
-  resolve(id: string, resolver?: Resolver): ResolvedViewOne | undefined {
+  resolve<T = ResolvedViewOne>(id: string, resolver?: Resolver): T | undefined {
     // Now with lossy view approach, instead of just returning what we
     // already have, let's compute our view now.
     // return this.entities.resolve(id);
@@ -216,15 +224,11 @@ export class Collection {
 
     if (!this.rhizomeNode) return undefined;
 
-    if (!resolver) {
-      debug('using default resolver');
-      resolver = (view) => this.defaultResolver(view);
-    }
-
     const lossy = new Lossy(this.rhizomeNode.lossless);
+    // TODO: deltaFilter
     const res = lossy.resolve(resolver, [id]);
     debug('lossy view', res);
 
-    return res[id];
+    return res[id] as T;
   }
 }
