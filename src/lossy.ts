@@ -6,21 +6,30 @@
 // Fields in the output can be described as transformations
 
 import Debug from 'debug';
-import {CollapsedDelta, Lossless, LosslessViewMany, LosslessViewOne} from "./lossless";
-import {DomainEntityID, Properties} from "./types";
 import {DeltaFilter} from "./delta";
+import {CollapsedDelta, Lossless, LosslessViewMany, LosslessViewOne} from "./lossless";
+import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types";
 const debug = Debug('lossy');
 
-export type LossyViewOne<T = Properties> = {
+type TimestampedProperty = {
+  value: PropertyTypes,
+  timeUpdated: Timestamp
+};
+
+export type LossyViewOne<T = TimestampedProperty> = {
   id: DomainEntityID;
-  properties: T;
+  properties: {
+    [key: PropertyID]: T
+  };
 };
 
-export type LossyViewMany = {
-  [key: DomainEntityID]: LossyViewOne;
-};
+export type LossyViewMany<T> = ViewMany<LossyViewOne<T>>;
 
-type Resolver<T = LosslessViewMany> = (losslessView: LosslessViewMany) => T;
+export type ResolvedViewOne = LossyViewOne<PropertyTypes>;
+export type ResolvedViewMany = ViewMany<ResolvedViewOne>;
+
+export type Resolver<T = ResolvedViewMany> =
+  (losslessView: LosslessViewMany) => T;
 
 // Extract a particular value from a delta's pointers
 export function valueFromCollapsedDelta(
@@ -44,11 +53,40 @@ export function firstValueFromLosslessViewOne(
   delta: CollapsedDelta,
   value: string | number
 } | undefined {
-  debug(`trying to get value for ${key} from ${JSON.stringify(ent.properties[key])}`);
+  debug(`trying to get first value for ${key} from ${JSON.stringify(ent.properties[key])}`);
   for (const delta of ent.properties[key] || []) {
     const value = valueFromCollapsedDelta(delta, key);
     if (value) return {delta, value};
   }
+}
+
+// Function for resolving a value for an entity by last write wins
+export function lastValueFromLosslessViewOne(
+  ent: LosslessViewOne,
+  key: string
+): {
+  delta?: CollapsedDelta,
+  value?: string | number,
+  timeUpdated?: number
+} | undefined {
+  const res: {
+    delta?: CollapsedDelta,
+    value?: string | number,
+    timeUpdated?: number
+  } = {};
+  debug(`trying to get last value for ${key} from ${JSON.stringify(ent.properties[key])}`);
+  res.timeUpdated = 0;
+
+  for (const delta of ent.properties[key] || []) {
+    const value = valueFromCollapsedDelta(delta, key);
+    if (value === undefined) continue;
+    if (delta.timeCreated < res.timeUpdated) continue;
+    res.delta = delta;
+    res.value = value;
+    res.timeUpdated = delta.timeCreated;
+  }
+
+  return res;
 }
 
 export class Lossy {

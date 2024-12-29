@@ -3,7 +3,7 @@
 
 import Debug from 'debug';
 import {Delta, DeltaFilter} from './delta';
-import {DomainEntityID, PropertyID, PropertyTypes} from "./types";
+import {DomainEntityID, PropertyID, PropertyTypes, ViewMany} from "./types";
 const debug = Debug('lossless');
 
 export type CollapsedPointer = {[key: string]: PropertyTypes};
@@ -19,9 +19,7 @@ export type LosslessViewOne = {
   }
 };
 
-export type LosslessViewMany = {
-  [key: DomainEntityID]: LosslessViewOne;
-};
+export type LosslessViewMany = ViewMany<LosslessViewOne>;
 
 class DomainEntityMap extends Map<DomainEntityID, DomainEntity> {};
 
@@ -66,7 +64,7 @@ class DomainEntity {
 export class Lossless {
   domainEntities = new DomainEntityMap();
 
-  ingestDelta(delta: Delta): LosslessViewMany {
+  ingestDelta(delta: Delta) {
     const targets = delta.pointers
       .filter(({targetContext}) => !!targetContext)
       .map(({target}) => target)
@@ -86,8 +84,6 @@ export class Lossless {
 
       debug('after add, domain entity:', JSON.stringify(ent));
     }
-
-    return this.view(targets);
   }
 
   //TODO: json logic -- view(deltaFilter?: FilterExpr) {

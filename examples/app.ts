@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import {RhizomeNode} from "../src/node";
 import {Entity} from "../src/entity";
-import {TypedCollection} from "../src/typed-collection";
+import {Collection} from "../src/collection";
 const debug = Debug('example-app');
 
 // As an app we want to be able to write and read data.
@@ -19,7 +19,7 @@ type User = {
 
 (async () => {
   const rhizomeNode = new RhizomeNode();
-  const users = new TypedCollection<User>("user");
+  const users = new Collection("user");
   users.rhizomeConnect(rhizomeNode);
 
   users.onUpdate((u: Entity) => {
@@ -37,27 +37,63 @@ type User = {
   // - Logging
   // - Chat
   //
-
-  const taliesin = await users.put(undefined, {
+  const taliesinData: User = {
     id: 'taliesin-1',
     name: 'Taliesin',
     nameLong: 'Taliesin (Ladd)',
     age: Math.floor(Math.random() * 1000)
-  });
+  };
+
+  const taliesinPutResult = await users.put(undefined, taliesinData);
+
+  {
+    const result = JSON.stringify(taliesinPutResult);
+    const expected = JSON.stringify(taliesinData);
+
+    if (result === expected) {
+      debug('Put result matches expected: ' + expected);
+    } else {
+      debug(`Put result does not match expected.` +
+        `\n\nExpected \n${expected}` +
+        `\nReceived\n${result}`);
+    }
+  }
 
   // TODO: Allow configuration regarding read/write concern i.e.
   // if we perform a read immediately do we see the value we wrote?
   // Intuition says yes, we want that-- but how do we expose the propagation status?
 
-  const result = users.get(taliesin.id);
-  const matches: boolean = JSON.stringify(result) === JSON.stringify(taliesin);
-  if (matches) {
-    debug('Result matches expected: ' + JSON.stringify(taliesin));
-  } else {
-    debug(`Result does not match expected.` +
-      `\n\nExpected \n${JSON.stringify(taliesin)}` +
-      `\nReceived\n${JSON.stringify(result)}`);
+  const resolved = users.resolve('taliesin-1');
+  if (!resolved) throw new Error('unable to resolve entity we just created');
+
+  const resolvedUser = {
+    id: resolved.id,
+    ...resolved.properties
+  } as User;
+
+  /*
+  function sortKeys (o: {[key: string]: unknown}): {[key: string]: unknown} {
+    const r: {[key: string]: unknown} = {};
+    r.id = o.id;
+    Object.keys(o).sort().forEach((key) => {
+      if (key === "id") return;
+      r[key] = o[key];
+    })
+    return r;
   }
+  */
+
+  const result = JSON.stringify(resolvedUser);
+  const expected = JSON.stringify(taliesinData);
+
+  if (result === expected) {
+    debug('Get result matches expected: ' + expected);
+  } else {
+    debug(`Get result does not match expected.` +
+      `\n\nExpected \n${expected}` +
+      `\nReceived\n${result}`);
+  }
+
 
 })();
 

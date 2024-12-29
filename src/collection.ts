@@ -9,7 +9,7 @@ import EventEmitter from "node:events";
 import {Delta, DeltaID} from "./delta";
 import {Entity, EntityProperties} from "./entity";
 import {LosslessViewMany} from "./lossless";
-import {firstValueFromLosslessViewOne, Lossy, LossyViewMany, LossyViewOne} from "./lossy";
+import {lastValueFromLosslessViewOne, Lossy, ResolvedViewMany, ResolvedViewOne, Resolver} from "./lossy";
 import {RhizomeNode} from "./node";
 import {DomainEntityID} from "./types";
 const debug = Debug('collection');
@@ -17,20 +17,10 @@ const debug = Debug('collection');
 export class Collection {
   rhizomeNode?: RhizomeNode;
   name: string;
-  entities = new Map<string, Entity>();
   eventStream = new EventEmitter();
 
   constructor(name: string) {
     this.name = name;
-  }
-
-  ingestDelta(delta: Delta) {
-    if (!this.rhizomeNode) return;
-
-    const updated = this.rhizomeNode.lossless.ingestDelta(delta);
-
-    this.eventStream.emit('ingested', delta);
-    this.eventStream.emit('updated', updated);
   }
 
   // Instead of trying to update our final view of the entity with every incoming delta,
@@ -53,39 +43,24 @@ export class Collection {
     debug(`connected ${this.name} to rhizome`);
   }
 
-  onCreate(cb: (entity: Entity) => void) {
-    // TODO: Trigger for changes received from peers
-    this.eventStream.on('create', (entity: Entity) => {
-      cb(entity);
-    });
-  }
+  ingestDelta(delta: Delta) {
+    if (!this.rhizomeNode) return;
 
-  onUpdate(cb: (entity: Entity) => void) {
-    // TODO: Trigger for changes received from peers
-    this.eventStream.on('update', (entity: Entity) => {
-      cb(entity);
-    });
-  }
+    const updated = this.rhizomeNode.lossless.ingestDelta(delta);
 
-  defaultResolver(losslessView: LosslessViewMany): LossyViewMany {
-    const resolved: LossyViewMany = {};
-    debug('default resolver, lossless view', JSON.stringify(losslessView));
-    for (const [id, ent] of Object.entries(losslessView)) {
-      resolved[id] = {id, properties: {}};
-      for (const key of Object.keys(ent.properties)) {
-        const {value} = firstValueFromLosslessViewOne(ent, key) || {};
-        debug(`[ ${key} ] = ${value}`);
-        resolved[id].properties[key] = value;
-      }
-    }
-    return resolved;
+    this.eventStream.emit('ingested', delta);
+    this.eventStream.emit('updated', updated);
   }
 
   // Applies the javascript rules for updating object values,
-  // e.g. set to `undefined` to delete a property
+  // e.g. set to `undefined` to delete a property.
+  // This function is here instead of Entity so that it can:
+  // - read the current state in order to build its delta
+  // - include the collection name in the delta it produces
   generateDeltas(
     entityId: DomainEntityID,
     newProperties: EntityProperties,
+    resolver?: Resolver,
     creator?: string,
     host?: string
   ): Delta[] {
@@ -93,7 +68,7 @@ export class Collection {
     let oldProperties: EntityProperties = {};
 
     if (entityId) {
-      const entity = this.get(entityId);
+      const entity = this.resolve(entityId, resolver);
       if (entity) {
         oldProperties = entity.properties;
       }
@@ -123,17 +98,39 @@ export class Collection {
     return deltas;
   }
 
+  onCreate(cb: (entity: Entity) => void) {
+    // TODO: Trigger for changes received from peers
+    this.eventStream.on('create', (entity: Entity) => {
+      cb(entity);
+    });
+  }
+
+  onUpdate(cb: (entity: Entity) => void) {
+    // TODO: Trigger for changes received from peers
+    this.eventStream.on('update', (entity: Entity) => {
+      cb(entity);
+    });
+  }
+
+  getIds(): string[] {
+    if (!this.rhizomeNode) return [];
+    return Array.from(this.rhizomeNode.lossless.domainEntities.keys());
+  }
+
+  // THIS PUT SHOULD CORRESOND TO A PARTICULAR MATERIALIZED VIEW...
+  // How can we encode that?
+  // Well, we have a way to do that, we just need the same particular inputs.
+  // We take a resolver as an optional argument.
   async put(
     entityId: DomainEntityID | undefined,
-    properties: EntityProperties
-  ): Promise<LossyViewOne> {
-    // const deltas: Delta[] = [];
-    // const entity = this.updateEntity(entityId, properties, true, deltas);
-
-    // THIS PUT SHOULD CORRESOND TO A PARTICULAR MATERIALIZED VIEW...
-    // How can we encode that?
-    // Well, we have a way to do that, we just need the same particular inputs
-
+    properties: EntityProperties,
+    resolver?: Resolver
+  ): Promise<ResolvedViewOne> {
+    // For convenience, we allow setting id via properties.id
+    if (!entityId && !!properties.id && typeof properties.id === 'string') {
+      entityId = properties.id;
+    }
+    // Generate an ID if none is provided
     if (!entityId) {
       entityId = randomUUID();
     }
@@ -141,11 +138,16 @@ export class Collection {
     const deltas = this.generateDeltas(
       entityId,
       properties,
+      resolver,
       this.rhizomeNode?.config.creator,
       this.rhizomeNode?.config.peerId,
     );
 
     debug(`put ${entityId} generated deltas:`, JSON.stringify(deltas));
+
+    // Here we set up a listener so we can wait for all our deltas to be
+    // ingested into our lossless view before proceeding.
+    // TODO: Hoist this into a more generic transaction mechanism.
 
     const allIngested = new Promise<boolean>((resolve) => {
       const ingestedIds = new Set<DeltaID>();
@@ -160,7 +162,6 @@ export class Collection {
       })
     });
 
-    // updateEntity may have generated some deltas for us to store and publish
     deltas.forEach(async (delta: Delta) => {
 
       // record this delta just as if we had received it from a peer
@@ -181,7 +182,7 @@ export class Collection {
 
     await allIngested;
 
-    const res = this.get(entityId);
+    const res = this.resolve(entityId, resolver);
     if (!res) throw new Error("could not get what we just put!");
 
     this.eventStream.emit("update", res);
@@ -189,18 +190,41 @@ export class Collection {
     return res;
   }
 
-  get(id: string): LossyViewOne | undefined {
-    // Now with lossy view approach, instead of just returning what we already have,
-    // let's compute our view now.
-    // return this.entities.get(id);
-    if (!this.rhizomeNode) return undefined;
-    const lossy = new Lossy(this.rhizomeNode.lossless);
-    const res = lossy.resolve((view) => this.defaultResolver(view), [id]);
-    return res[id];
+  // TODO: default should probably be last write wins
+  defaultResolver(losslessView: LosslessViewMany): ResolvedViewMany {
+    const resolved: ResolvedViewMany = {};
+
+    // debug('default resolver, lossless view', JSON.stringify(losslessView));
+    for (const [id, ent] of Object.entries(losslessView)) {
+      resolved[id] = {id, properties: {}};
+
+      for (const key of Object.keys(ent.properties)) {
+        const {value} = lastValueFromLosslessViewOne(ent, key) || {};
+
+        // debug(`[ ${key} ] = ${value}`);
+        resolved[id].properties[key] = value;
+      }
+    }
+    return resolved;
   }
 
-  getIds(): string[] {
-    if (!this.rhizomeNode) return [];
-    return Array.from(this.rhizomeNode.lossless.domainEntities.keys());
+  resolve(id: string, resolver?: Resolver): ResolvedViewOne | undefined {
+    // Now with lossy view approach, instead of just returning what we
+    // already have, let's compute our view now.
+    // return this.entities.resolve(id);
+    // TODO: Caching
+
+    if (!this.rhizomeNode) return undefined;
+
+    if (!resolver) {
+      debug('using default resolver');
+      resolver = (view) => this.defaultResolver(view);
+    }
+
+    const lossy = new Lossy(this.rhizomeNode.lossless);
+    const res = lossy.resolve(resolver, [id]);
+    debug('lossy view', res);
+
+    return res[id];
   }
 }

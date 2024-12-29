@@ -4,15 +4,22 @@
     "module": "CommonJS",
     "esModuleInterop": true,
     "moduleResolution": "Node",
-    "sourceMap": true,
+    "sourceMap": false,
     "baseUrl": ".",
     "outDir": "dist",
     "importsNotUsedAsValues": "remove",
     "strict": true,
-    "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "examples/**/*", "__tests__/**/*"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*",
+    "util/**/*",
+    "examples/**/*",
+    "scratch/**/*",
+    "__tests__/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

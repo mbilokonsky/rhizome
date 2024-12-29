@@ -9,8 +9,13 @@ export type PropertyTypes = string | number | undefined;
 export type DomainEntityID = string;
 export type PropertyID = string;
 
-export type Properties = {[key: PropertyID]: PropertyTypes};
+export type Timestamp = number;
 
+export type ViewMany<T> = {
+  [key: DomainEntityID]: T;
+};
+
+// TODO: Move to ./peers.ts
 export class PeerAddress {
   addr: string;
   port: number;

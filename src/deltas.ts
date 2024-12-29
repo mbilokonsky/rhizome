@@ -42,7 +42,7 @@ export class DeltaStream {
     switch (decision) {
       case Decision.Accept:
         this.deltasAccepted.push(delta);
-        this.deltaStream.emit('delta', {delta});
+        this.deltaStream.emit('delta', delta);
         break;
       case Decision.Reject:
         this.deltasRejected.push(delta);
@@ -80,7 +80,7 @@ export class DeltaStream {
   }
 
   subscribeDeltas(fn: (delta: Delta) => void) {
-    this.deltaStream.on('delta', ({delta}) => {
+    this.deltaStream.on('delta', (delta) => {
       fn(delta);
     });
   }
@@ -90,11 +90,12 @@ export class DeltaStream {
     await this.rhizomeNode.pubSub.publish("deltas", this.serializeDelta(delta));
   }
 
-  serializeDelta(delta: Delta) {
+  serializeDelta(delta: Delta): string {
     return JSON.stringify(delta);
   }
 
-  deserializeDelta(input: string) {
+  deserializeDelta(input: string): Delta {
+    // TODO: Input validation
     return JSON.parse(input);
   }
 }

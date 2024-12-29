@@ -13,25 +13,32 @@
   "jest": {
     "testEnvironment": "node",
     "preset": "ts-jest",
-    "roots": ["__tests__/"]
+    "roots": [
+      "./__tests__/"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*"
+    ]
   },
   "author": "Taliesin (Ladd) <ladd@dgov.io>",
   "license": "Unlicense",
   "dependencies": {
-    "@types/bluebird": "^3.5.42",
-    "@types/debug": "^4.1.12",
-    "@types/json-logic-js": "^2.0.8",
-    "@types/object-hash": "^3.0.6",
     "debug": "^4.4.0",
     "express": "^4.21.2",
     "json-logic-js": "^2.0.5",
     "level": "^9.0.0",
+    "microtime": "^3.1.1",
     "object-hash": "^3.0.0",
     "showdown": "^2.1.0",
-    "zeromq": "^6.1.2",
-    "util": "./util/"
+    "util": "./util/",
+    "zeromq": "^6.1.2"
   },
   "devDependencies": {
+    "@types/bluebird": "^3.5.42",
+    "@types/debug": "^4.1.12",
+    "@types/json-logic-js": "^2.0.8",
+    "@types/microtime": "^2.1.2",
+    "@types/object-hash": "^3.0.6",
     "@eslint/js": "^9.17.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",

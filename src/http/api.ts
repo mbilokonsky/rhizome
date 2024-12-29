@@ -61,7 +61,7 @@ export class HttpApi {
     // Get a single domain entity by ID
     this.router.get(`/${name}/:id`, (req: express.Request, res: express.Response) => {
       const {params: {id}} = req;
-      const ent = collection.get(id);
+      const ent = collection.resolve(id);
       if (!ent) {
         res.status(404).send({error: "Not Found"});
         return;
