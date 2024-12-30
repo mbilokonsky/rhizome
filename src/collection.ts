@@ -6,7 +6,7 @@
 import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
-import {Delta, DeltaID} from "./delta";
+import {Delta, DeltaFilter} from "./delta";
 import {Entity, EntityProperties} from "./entity";
 import {Lossy, ResolvedViewOne, Resolver} from "./lossy";
 import {RhizomeNode} from "./node";
@@ -17,6 +17,7 @@ export class Collection {
   rhizomeNode?: RhizomeNode;
   name: string;
   eventStream = new EventEmitter();
+  lossy?: Lossy;
 
   constructor(name: string) {
     this.name = name;
@@ -31,24 +32,20 @@ export class Collection {
   rhizomeConnect(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
 
-    rhizomeNode.deltaStream.subscribeDeltas((delta: Delta) => {
-      // TODO: Make sure this is the kind of delta we're looking for
-      debug(`collection ${this.name} received delta ${JSON.stringify(delta)}`);
-      this.ingestDelta(delta);
+    this.lossy = new Lossy(this.rhizomeNode.lossless);
+
+    // Listen for completed transactions, and emit updates to event stream
+    this.rhizomeNode.lossless.eventStream.on("updated", (id) => {
+      // TODO: Filter so we only get members of our collection
+
+      // TODO: Reslover / Delta Filter?
+      const res = this.resolve(id);
+      this.eventStream.emit("update", res);
     });
 
     rhizomeNode.httpServer.httpApi.serveCollection(this);
 
     debug(`connected ${this.name} to rhizome`);
-  }
-
-  ingestDelta(delta: Delta) {
-    if (!this.rhizomeNode) return;
-
-    const updated = this.rhizomeNode.lossless.ingestDelta(delta);
-
-    this.eventStream.emit('ingested', delta);
-    this.eventStream.emit('updated', updated);
   }
 
   // Applies the javascript rules for updating object values,
@@ -62,7 +59,10 @@ export class Collection {
     creator: string,
     host: string,
     resolver?: Resolver
-  ): Delta[] {
+  ): {
+    transactionDelta: Delta | undefined,
+    deltas: Delta[]
+  } {
     const deltas: Delta[] = [];
     let oldProperties: EntityProperties = {};
 
@@ -86,10 +86,6 @@ export class Collection {
           creator,
           host,
           pointers: [{
-            localContext: "_transaction",
-            target: transactionId,
-            targetContext: "deltas"
-          }, {
             localContext: this.name,
             target: entityId,
             targetContext: key
@@ -101,21 +97,34 @@ export class Collection {
       }
     });
 
-    // We can generate a separate delta describing this transaction
-    const transactionDelta = new Delta({
-      creator,
-      host,
-      pointers: [{
-        localContext: "_transaction",
-        target: transactionId,
-        targetContext: "size"
-      }, {
-        localContext: "size",
-        target: deltas.length
-      }]
-    });
+    let transactionDelta: Delta | undefined;
 
-    return [transactionDelta, ...deltas];
+    if (deltas.length > 1) {
+      // We can generate a separate delta describing this transaction
+      transactionDelta = new Delta({
+        creator,
+        host,
+        pointers: [{
+          localContext: "_transaction",
+          target: transactionId,
+          targetContext: "size"
+        }, {
+          localContext: "size",
+          target: deltas.length
+        }]
+      });
+
+      // Also need to annotate the deltas with the transactionId
+      for (const delta of deltas) {
+        delta.pointers.unshift({
+          localContext: "_transaction",
+          target: transactionId,
+          targetContext: "deltas"
+        });
+      }
+    }
+
+    return {transactionDelta, deltas};
   }
 
   onCreate(cb: (entity: Entity) => void) {
@@ -159,7 +168,7 @@ export class Collection {
       entityId = randomUUID();
     }
 
-    const deltas = this.generateDeltas(
+    const {transactionDelta, deltas} = this.generateDeltas(
       entityId,
       properties,
       this.rhizomeNode?.config.creator,
@@ -167,67 +176,47 @@ export class Collection {
       resolver,
     );
 
-    debug(`put ${entityId} generated deltas:`, JSON.stringify(deltas));
-
-    // Here we set up a listener so we can wait for all our deltas to be
-    // ingested into our lossless view before proceeding.
-    // TODO: Hoist this into a more generic transaction mechanism.
-
-    // 
-
-    const allIngested = new Promise<boolean>((resolve) => {
-      const ingestedIds = new Set<DeltaID>();
-      this.eventStream.on('ingested', (delta: Delta) => {
-        // TODO: timeout
-        if (deltas.map(({id}) => id).includes(delta.id)) {
-          ingestedIds.add(delta.id);
-          if (ingestedIds.size === deltas.length) {
-            resolve(true);
-          }
-        }
+    const ingested = new Promise<boolean>((resolve) => {
+      this.rhizomeNode!.lossless.eventStream.on("updated", (id: DomainEntityID) => {
+        if (id === entityId) resolve(true);
       })
     });
 
-    deltas.forEach(async (delta: Delta) => {
+    if (transactionDelta) {
+      deltas.unshift(transactionDelta);
+    }
 
+    deltas.forEach(async (delta: Delta) => {
       // record this delta just as if we had received it from a peer
       delta.receivedFrom = this.rhizomeNode!.myRequestAddr;
       this.rhizomeNode!.deltaStream.deltasAccepted.push(delta);
 
       // publish the delta to our subscribed peers
       await this.rhizomeNode!.deltaStream.publishDelta(delta);
-      debug(`published delta ${JSON.stringify(delta)}`);
 
       // ingest the delta as though we had received it from a peer
-      this.ingestDelta(delta);
+      this.rhizomeNode!.lossless.ingestDelta(delta);
     });
 
     // Return updated view of this entity
     // Let's wait for an event notifying us that the entity has been updated.
     // This means all of our deltas have been applied.
 
-    await allIngested;
+    await ingested;
 
     const res = this.resolve(entityId, resolver);
     if (!res) throw new Error("could not get what we just put!");
-
-    this.eventStream.emit("update", res);
-
     return res;
   }
 
-  resolve<T = ResolvedViewOne>(id: string, resolver?: Resolver): T | undefined {
-    // Now with lossy view approach, instead of just returning what we
-    // already have, let's compute our view now.
-    // return this.entities.resolve(id);
-    // TODO: Caching
-
+  resolve<T = ResolvedViewOne>(
+    id: string,
+    resolver?: Resolver,
+    deltaFilter?: DeltaFilter
+  ): T | undefined {
     if (!this.rhizomeNode) return undefined;
 
-    const lossy = new Lossy(this.rhizomeNode.lossless);
-    // TODO: deltaFilter
-    const res = lossy.resolve(resolver, [id]);
-    debug('lossy view', res);
+    const res = this.lossy?.resolve(resolver, [id], deltaFilter) || {};
 
     return res[id] as T;
   }

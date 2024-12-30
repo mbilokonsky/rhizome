@@ -1,11 +1,11 @@
 import Debug from 'debug';
 import {Message} from 'zeromq';
 import {SEED_PEERS} from "./config";
+import {Delta} from "./delta";
 import {RhizomeNode} from "./node";
 import {Subscription} from './pub-sub';
 import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply";
 import {PeerAddress} from "./types";
-import {Delta} from "./delta";
 const debug = Debug('peers');
 
 export enum RequestMethods {
@@ -92,7 +92,9 @@ export class Peers {
           debug('it\'s a request for deltas');
           // TODO: stream these rather than
           // trying to write them all in one message
-          await res.send(JSON.stringify(this.rhizomeNode.deltaStream.deltasAccepted));
+          const deltas = this.rhizomeNode.deltaStream.deltasAccepted;
+          debug(`sending ${deltas.length} deltas`);
+          await res.send(JSON.stringify(deltas));
           break;
         }
       }

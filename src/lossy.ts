@@ -60,7 +60,6 @@ export function lastValueFromLosslessViewOne(
     value?: string | number,
     timeUpdated?: number
   } = {};
-  debug(`trying to get last value for ${key} from ${JSON.stringify(ent.properties[key])}`);
   res.timeUpdated = 0;
 
   for (const delta of ent.properties[key] || []) {
@@ -76,23 +75,25 @@ export function lastValueFromLosslessViewOne(
 }
 
 function defaultResolver(losslessView: LosslessViewMany): ResolvedViewMany {
-    const resolved: ResolvedViewMany = {};
+  const resolved: ResolvedViewMany = {};
 
-    // debug('default resolver, lossless view', JSON.stringify(losslessView));
-    for (const [id, ent] of Object.entries(losslessView)) {
-      resolved[id] = {id, properties: {}};
+  // debug('default resolver, lossless view', JSON.stringify(losslessView));
+  for (const [id, ent] of Object.entries(losslessView)) {
+    resolved[id] = {id, properties: {}};
 
-      for (const key of Object.keys(ent.properties)) {
-        const {value} = lastValueFromLosslessViewOne(ent, key) || {};
+    for (const key of Object.keys(ent.properties)) {
+      const {value} = lastValueFromLosslessViewOne(ent, key) || {};
 
-        // debug(`[ ${key} ] = ${value}`);
-        resolved[id].properties[key] = value;
-      }
+      // debug(`[ ${key} ] = ${value}`);
+      resolved[id].properties[key] = value;
     }
-    return resolved;
-  };
+  }
+  return resolved;
+};
 
-
+// TODO: Incremental updates of lossy models. For example, with last-write-wins,
+// we keep the timeUpdated for each field. A second stage resolver can rearrange
+// the data structure to a preferred shape and may discard the timeUpdated info.
 export class Lossy {
   lossless: Lossless;
 
@@ -104,6 +105,7 @@ export class Lossy {
   // apply a filter to the deltas composing that lossless view,
   // and then apply a supplied resolver function which receives
   // the filtered lossless view as input.
+  // TODO: Cache things!
   resolve<T = ResolvedViewOne>(fn?: Resolver<T> | Resolver, entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): T {
     if (!fn) {
       fn = defaultResolver;

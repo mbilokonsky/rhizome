@@ -2,13 +2,15 @@
 // We can maintain a record of all the targeted entities, and the deltas that targeted them
 
 import Debug from 'debug';
-import {Delta, DeltaFilter, DeltaID} from './delta';
+import EventEmitter from 'events';
+import {Delta, DeltaFilter, DeltaNetworkImage} from './delta';
+import {Transactions} from './transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types";
 const debug = Debug('lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
 
-export type CollapsedDelta = Omit<Delta, 'pointers'> & {
+export type CollapsedDelta = Omit<DeltaNetworkImage, 'pointers'> & {
   pointers: CollapsedPointer[];
 };
 
@@ -21,9 +23,9 @@ export type LosslessViewOne = {
 
 export type LosslessViewMany = ViewMany<LosslessViewOne>;
 
-class DomainEntityMap extends Map<DomainEntityID, DomainEntity> {};
+class LosslessEntityMap extends Map<DomainEntityID, LosslessEntity> {};
 
-class DomainEntity {
+class LosslessEntity {
   id: DomainEntityID;
   properties = new Map<PropertyID, Set<Delta>>();
 
@@ -44,7 +46,6 @@ class DomainEntity {
         this.properties.set(targetContext, propertyDeltas);
       }
 
-      debug(`adding delta for entity ${this.id}`);
       propertyDeltas.add(delta);
     }
   }
@@ -61,50 +62,24 @@ class DomainEntity {
   }
 }
 
-class Transaction {
-  size?: number;
-  receivedDeltaIds = new Set<DeltaID>();
-}
-
-class Transactions {
-  transactions = new Map<TransactionID, Transaction>();
-
-  getOrInit(id: TransactionID): Transaction {
-    let t = this.transactions.get(id);
-    if (!t) {
-      t = new Transaction();
-      this.transactions.set(id, t);
-    }
-    return t;
-  }
-
-  receivedDelta(id: TransactionID, deltaId: DeltaID) {
-    const t = this.getOrInit(id);
-    t.receivedDeltaIds.add(deltaId);
-  }
-
-  isComplete(id: TransactionID) {
-    const t = this.getOrInit(id);
-    return t.size !== undefined && t.receivedDeltaIds.size === t.size;
-  }
-
-  setSize(id: TransactionID, size: number) {
-    const t = this.getOrInit(id);
-    t.size = size;
-  }
-
-  get ids() {
-    return Array.from(this.transactions.keys());
-  }
-}
-
 export class Lossless {
-  domainEntities = new DomainEntityMap();
+  domainEntities = new LosslessEntityMap();
   transactions = new Transactions();
   referencedAs = new Map<string, Set<DomainEntityID>>();
-  // referencingAs = new Map<string, Set<DomainEntityID>>();
+  eventStream = new EventEmitter();
 
-  ingestDelta(delta: Delta) {
+  constructor() {
+    this.transactions.eventStream.on("completed", (transactionId) => {
+      debug(`completed transaction ${transactionId}`);
+      const transaction = this.transactions.get(transactionId);
+      if (!transaction) return;
+      for (const id of transaction.entityIds) {
+        this.eventStream.emit("updated", id);
+      }
+    });
+  }
+
+  ingestDelta(delta: Delta): TransactionID | undefined {
     const targets = delta.pointers
       .filter(({targetContext}) => !!targetContext)
       .map(({target}) => target)
@@ -114,7 +89,7 @@ export class Lossless {
       let ent = this.domainEntities.get(target);
 
       if (!ent) {
-        ent = new DomainEntity(target);
+        ent = new LosslessEntity(target);
         this.domainEntities.set(target, ent);
       }
 
@@ -134,43 +109,15 @@ export class Lossless {
       }
     }
 
-    const {target: transactionId} = delta.pointers.find(({
-      localContext,
-      target,
-      targetContext
-    }) =>
-      localContext === "_transaction" &&
-      typeof target === "string" &&
-      targetContext === "deltas"
-    ) || {};
+    const transactionId = this.transactions.ingestDelta(delta, targets);
 
-    if (transactionId) {
-      // This delta is part of a transaction
-      this.transactions.receivedDelta(transactionId as string, delta.id);
-    } else {
-      const {target: transactionId} = delta.pointers.find(({
-        localContext,
-        target,
-        targetContext
-      }) =>
-        localContext === "_transaction" &&
-        typeof target === "string" &&
-        targetContext === "size"
-      ) || {};
-
-      if (transactionId) {
-        // This delta describes a transaction
-        const {target: size} = delta.pointers.find(({
-          localContext,
-          target
-        }) =>
-          localContext === "size" &&
-          typeof target === "number"
-        ) || {};
-
-        this.transactions.setSize(transactionId as string, size as number);
+    if (!transactionId) {
+      // No transaction -- we can issue an update event immediately
+      for (const id of targets) {
+        this.eventStream.emit("updated", id);
       }
     }
+    return transactionId;
   }
 
   view(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
@@ -179,8 +126,6 @@ export class Lossless {
     for (const id of entityIds) {
       const ent = this.domainEntities.get(id);
       if (!ent) continue;
-
-      debug(`domain entity ${id}`, JSON.stringify(ent));
 
       const referencedAs = new Set<string>();
       const properties: {
@@ -191,6 +136,14 @@ export class Lossless {
         properties[key] = properties[key] || [];
 
         for (const delta of deltas) {
+          // If this delta is part of a transaction,
+          // we need to be able to wait for the whole transaction.
+          if (delta.transactionId) {
+            if (!this.transactions.isComplete(delta.transactionId)) {
+              // TODO: Test this condition
+              continue;
+            }
+          }
 
           if (deltaFilter) {
             const include = deltaFilter(delta);

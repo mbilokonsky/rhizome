@@ -1,7 +1,7 @@
 import Debug from 'debug';
-import {RhizomeNode} from "../src/node";
-import {Entity} from "../src/entity";
 import {Collection} from "../src/collection";
+import {Entity} from "../src/entity";
+import {RhizomeNode} from "../src/node";
 const debug = Debug('example-app');
 
 // As an app we want to be able to write and read data.
@@ -36,11 +36,17 @@ type User = {
 
   await rhizomeNode.start();
 
-  // Let's use the rhizomic database for some more things.
+  // TODO: Use the rhizomic database for some more things.
   // Like what?
   // - Logging
   // - Chat
-  //
+
+  // TODO: Allow configuration regarding read/write concern i.e.
+  // if we perform a read immediately do we see the value we wrote?
+  // Intuition says yes, we want that-- but how do we expose the propagation status?
+
+  // Insert a "user" record
+
   const taliesinData: User = {
     id: 'taliesin-1',
     name: 'Taliesin',
@@ -48,10 +54,13 @@ type User = {
     age: Math.floor(Math.random() * 1000)
   };
 
-  const taliesinPutResult = await users.put(undefined, taliesinData);
-
   {
-    const result = JSON.stringify(taliesinPutResult);
+    const taliesinPutResult = await users.put(undefined, taliesinData);
+    const resolvedUser = {
+      id: taliesinPutResult.id,
+      ...taliesinPutResult.properties
+    } as User;
+    const result = JSON.stringify(resolvedUser);
     const expected = JSON.stringify(taliesinData);
 
     if (result === expected) {
@@ -63,41 +72,27 @@ type User = {
     }
   }
 
-  // TODO: Allow configuration regarding read/write concern i.e.
-  // if we perform a read immediately do we see the value we wrote?
-  // Intuition says yes, we want that-- but how do we expose the propagation status?
+  // Read back what we wrote
 
-  const resolved = users.resolve('taliesin-1');
-  if (!resolved) throw new Error('unable to resolve entity we just created');
+  {
+    const resolved = users.resolve('taliesin-1');
+    if (!resolved) throw new Error('unable to resolve entity we just created');
 
-  debug('resolved', resolved);
+    const resolvedUser = {
+      id: resolved.id,
+      ...resolved.properties
+    } as User;
 
-  const resolvedUser = {
-    id: resolved.id,
-    ...resolved.properties
-  } as User;
+    const result = JSON.stringify(resolvedUser);
+    const expected = JSON.stringify(taliesinData);
 
-  /*
-  function sortKeys (o: {[key: string]: unknown}): {[key: string]: unknown} {
-    const r: {[key: string]: unknown} = {};
-    r.id = o.id;
-    Object.keys(o).sort().forEach((key) => {
-      if (key === "id") return;
-      r[key] = o[key];
-    })
-    return r;
-  }
-  */
-
-  const result = JSON.stringify(resolvedUser);
-  const expected = JSON.stringify(taliesinData);
-
-  if (result === expected) {
-    debug('Get result matches expected: ' + expected);
-  } else {
-    debug(`Get result does not match expected.` +
-      `\n\nExpected \n${expected}` +
-      `\nReceived\n${result}`);
+    if (result === expected) {
+      debug('Get result matches expected: ' + expected);
+    } else {
+      debug(`Get result does not match expected.` +
+        `\n\nExpected \n${expected}` +
+        `\nReceived\n${result}`);
+    }
   }
 
 

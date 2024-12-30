@@ -31,7 +31,7 @@ export class RhizomeNode {
   requestReply: RequestReply;
   httpServer: HttpServer;
   deltaStream: DeltaStream;
-  lossless = new Lossless();
+  lossless: Lossless;
   peers: Peers;
   myRequestAddr: PeerAddress;
   myPublishAddr: PeerAddress;
@@ -66,9 +66,13 @@ export class RhizomeNode {
     this.httpServer = new HttpServer(this);
     this.deltaStream = new DeltaStream(this);
     this.peers = new Peers(this);
+    this.lossless = new Lossless();
   }
 
   async start() {
+    // Connect our lossless view to the delta stream
+    this.deltaStream.subscribeDeltas((delta) => this.lossless.ingestDelta(delta));
+
     // Start ZeroMQ publish and reply sockets
     this.pubSub.start();
     this.requestReply.start();

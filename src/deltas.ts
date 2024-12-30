@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import EventEmitter from 'node:events';
 import objectHash from 'object-hash';
-import {Delta} from './delta';
+import {Delta, DeltaNetworkImage} from './delta';
 import {RhizomeNode} from './node';
 const debug = Debug('deltas');
 
@@ -91,7 +91,8 @@ export class DeltaStream {
   }
 
   serializeDelta(delta: Delta): string {
-    return JSON.stringify(delta);
+    const deltaNetworkImage = new DeltaNetworkImage(delta);
+    return JSON.stringify(deltaNetworkImage);
   }
 
   deserializeDelta(input: string): Delta {

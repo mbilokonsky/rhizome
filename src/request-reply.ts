@@ -45,7 +45,6 @@ export class ResponseSocket {
     if (typeof msg === 'object') {
       msg = JSON.stringify(msg);
     }
-    debug('sending reply', {msg});
     await this.sock.send(msg);
   }
 }

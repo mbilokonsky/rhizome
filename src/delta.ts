@@ -1,6 +1,6 @@
-import microtime from 'microtime';
 import {randomUUID} from "crypto";
-import {PeerAddress, Timestamp} from "./types";
+import microtime from 'microtime';
+import {CreatorID, HostID, PeerAddress, Timestamp, TransactionID} from "./types";
 
 export type DeltaID = string;
 
@@ -12,22 +12,39 @@ export type Pointer = {
   targetContext?: string;
 };
 
-export class Delta {
+export class DeltaNetworkImage {
   id: DeltaID;
+  timeCreated: Timestamp;
+  host: HostID;
+  creator: CreatorID;
+  pointers: Pointer[];
+  constructor({id, timeCreated, host, creator, pointers}: DeltaNetworkImage) {
+    this.id = id;
+    this.host = host;
+    this.creator = creator;
+    this.timeCreated = timeCreated;
+    this.pointers = pointers;
+  }
+};
+
+export class Delta extends DeltaNetworkImage {
   receivedFrom?: PeerAddress;
   timeReceived: Timestamp;
-  timeCreated: Timestamp;
-  creator: string;
-  host: string;
-  pointers: Pointer[] = [];
-  constructor(delta: Omit<Delta, "id" | "timeReceived" | "timeCreated">) {
-    this.id = randomUUID();
-    this.timeCreated = microtime.now();
+  transactionId?: TransactionID;
+
+  // TODO: Verify the following assumption:
+  // We're assuming that you only call this constructor when
+  // actually creating a new delta.
+  // When receiving one from the network, you can 
+  constructor({host, creator, pointers}: Partial<DeltaNetworkImage>) {
+    // TODO: Verify that when receiving a delta from the network we can
+    //   retain the delta's id.
+    const id = randomUUID();
+    const timeCreated = microtime.now();
+    if (!host || !creator || !pointers) throw new Error('uninitializied values');
+    super({id, timeCreated, host, creator, pointers});
+    this.timeCreated = timeCreated;
     this.timeReceived = this.timeCreated;
-    this.creator = delta.creator;
-    this.host = delta.host;
-    this.receivedFrom = delta.receivedFrom;
-    this.pointers = delta.pointers;
   }
 }
 
