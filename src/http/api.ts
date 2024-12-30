@@ -15,6 +15,12 @@ export class HttpApi {
       res.json(this.rhizomeNode.deltaStream.deltasAccepted);
     });
 
+    this.router.get("/delta/ids", (_req: express.Request, res: express.Response) => {
+      res.json({
+        ids: this.rhizomeNode.deltaStream.deltasAccepted.map(({id}) => id)
+      });
+    });
+
     // Get the number of deltas ingested by this node
     this.router.get("/deltas/count", (_req: express.Request, res: express.Response) => {
       res.json(this.rhizomeNode.deltaStream.deltasAccepted.length);
