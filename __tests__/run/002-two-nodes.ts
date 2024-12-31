@@ -16,8 +16,13 @@ describe('Run', () => {
       // Make the apps use the same pubsub topic so they can talk to each other
       pubSubTopic: apps[0].config.pubSubTopic,
     });
+    debug('app[0].config.seedPeers before adding:', JSON.stringify(apps[0].config.seedPeers));
     apps[0].config.seedPeers.push(apps[1].myRequestAddr);
+    debug('app[0].config.seedPeers after adding:', JSON.stringify(apps[0].config.seedPeers));
+    debug('app[1].config.seedPeers before adding:', JSON.stringify(apps[1].config.seedPeers));
     apps[1].config.seedPeers.push(apps[0].myRequestAddr);
+    debug('app[1].config.seedPeers after adding:', JSON.stringify(apps[1].config.seedPeers));
+    debug('app[0].config.seedPeers after adding:', JSON.stringify(apps[0].config.seedPeers));
 
     await Promise.all(apps.map((app) => app.start()));
   });

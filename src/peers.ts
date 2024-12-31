@@ -1,12 +1,43 @@
 import Debug from 'debug';
 import {Message} from 'zeromq';
-import {SEED_PEERS} from "./config.js";
 import {Delta} from "./delta.js";
 import {RhizomeNode} from "./node.js";
 import {Subscription} from './pub-sub.js';
 import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply.js";
-import {PeerAddress} from "./types.js";
 const debug = Debug('rz:peers');
+
+export class PeerAddress {
+  addr: string;
+  port: number;
+
+  constructor(addr: string, port: number) {
+    this.addr = addr;
+    this.port = port;
+  }
+
+  static fromString(addrString: string): PeerAddress {
+    const [addr, port] = addrString.trim().split(':');
+    return new PeerAddress(addr, parseInt(port));
+  }
+
+  toAddrString() {
+    return `${this.addr}:${this.port}`;
+  }
+
+  toJSON() {
+    return this.toAddrString();
+  }
+
+  isEqual(other: PeerAddress) {
+    return this.addr === other.addr && this.port === other.port;
+  }
+};
+
+export function parseAddressList(input: string): PeerAddress[] {
+  return input.split(',')
+    .filter(x => !!x)
+    .map((peer: string) => PeerAddress.fromString(peer));
+}
 
 export enum RequestMethods {
   GetPublishAddress,
@@ -26,7 +57,7 @@ class Peer {
     this.rhizomeNode = rhizomeNode;
     this.reqAddr = reqAddr;
     this.isSelf = reqAddr.isEqual(this.rhizomeNode.myRequestAddr);
-    this.isSeedPeer = !!SEED_PEERS.find((seedPeer) => reqAddr.isEqual(seedPeer));
+    this.isSeedPeer = this.rhizomeNode.config.seedPeers.some((seedPeer) => reqAddr.isEqual(seedPeer));
   }
 
   async request(method: RequestMethods): Promise<Message> {
@@ -44,6 +75,9 @@ class Peer {
       debug(`[${this.rhizomeNode.config.peerId}]`, `received publish addr ${this.publishAddr.toAddrString()} from peer ${this.reqAddr.toAddrString()}`);
     }
 
+    debug(`[${this.rhizomeNode.config.peerId}]`, `subscribing to peer ${this.reqAddr.toAddrString()}`);
+
+    // ZeroMQ subscription
     this.subscription = this.rhizomeNode.pubSub.subscribe(
       this.publishAddr,
       this.rhizomeNode.config.pubSubTopic,
@@ -121,17 +155,24 @@ export class Peers {
   }
 
   async subscribeToSeeds() {
-    SEED_PEERS.forEach(async (addr, idx) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `SEED PEERS[${idx}]=${addr.toAddrString()}`);
+    const {seedPeers} = this.rhizomeNode.config;
+    debug(`[${this.rhizomeNode.config.peerId}]`, `subscribeToSeeds, seedPeers: ${JSON.stringify(seedPeers)}`);
+    seedPeers.forEach(async (addr, idx) => {
       const peer = this.addPeer(addr);
-      await peer.subscribeDeltas();
+
+      debug(`[${this.rhizomeNode.config.peerId}]`, `SEED PEERS[${idx}]=${addr.toAddrString()}, isSelf:`, peer.isSelf);
+      if (!peer.isSelf) {
+        await peer.subscribeDeltas();
+      }
     });
   }
 
   //! TODO Expect abysmal scaling properties with this function
   async askAllPeersForDeltas() {
-    this.peers.filter(({isSelf}) => !isSelf)
+    this.peers
       .forEach(async (peer, idx) => {
+        debug(`[${this.rhizomeNode.config.peerId}]`, `peer ${peer.reqAddr.toAddrString()} isSelf`, peer.isSelf);
+        if (peer.isSelf) return;
         debug(`[${this.rhizomeNode.config.peerId}]`, `Asking peer ${idx} for deltas`);
         const deltas = await peer.askForDeltas();
         debug(`[${this.rhizomeNode.config.peerId}]`, `received ${deltas.length} deltas from ${peer.reqAddr.toAddrString()}`);

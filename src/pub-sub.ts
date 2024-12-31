@@ -9,7 +9,7 @@ import Debug from 'debug';
 import {Libp2p, createLibp2p} from 'libp2p';
 import {Publisher, Subscriber} from 'zeromq';
 import {RhizomeNode} from './node.js';
-import {PeerAddress} from './types.js';
+import {PeerAddress} from './peers.js';
 const debug = Debug('rz:pub-sub');
 
 export type SubscribedMessageHandler = (sender: PeerAddress, msg: string) => void;
@@ -50,6 +50,8 @@ export class Subscription {
       debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `ZeroMQ subscribtion received msg: ${msgStr}`);
       this.cb(senderStr, msgStr);
     }
+
+    debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `done waiting for subscription socket for topic ${this.topic}`);
   }
 }
 
@@ -89,12 +91,12 @@ export class PubSub {
     });
 
     this.libp2p.addEventListener("peer:discovery", (event) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `found peer: ${JSON.stringify(event.detail, null, 2)}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `found peer: ${JSON.stringify(event.detail)}`);
       this.libp2p?.dial(event.detail.multiaddrs);
     });
 
     this.libp2p.addEventListener("peer:connect", (event) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `connected to peer: ${JSON.stringify(event.detail, null, 2)}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `connected to peer: ${JSON.stringify(event.detail)}`);
     });
   }
 

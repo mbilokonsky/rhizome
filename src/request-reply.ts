@@ -2,8 +2,7 @@ import Debug from 'debug';
 import {EventEmitter} from 'node:events';
 import {Message, Reply, Request} from 'zeromq';
 import {RhizomeNode} from './node.js';
-import {RequestMethods} from './peers.js';
-import {PeerAddress} from './types.js';
+import {PeerAddress, RequestMethods} from './peers.js';
 const debug = Debug('rz:request-reply');
 
 export type PeerRequest = {

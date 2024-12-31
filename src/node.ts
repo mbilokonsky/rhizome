@@ -3,10 +3,9 @@ import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUB_SUB
 import {DeltaStream} from './deltas.js';
 import {HttpServer} from './http/index.js';
 import {Lossless} from './lossless.js';
-import {Peers} from './peers.js';
+import {parseAddressList, PeerAddress, Peers} from './peers.js';
 import {PubSub} from './pub-sub.js';
 import {RequestReply} from './request-reply.js';
-import {PeerAddress} from './types.js';
 const debug = Debug('rz:rhizome-node');
 
 export type RhizomeNodeConfig = {
@@ -48,7 +47,7 @@ export class RhizomeNode {
       httpAddr: HTTP_API_ADDR,
       httpPort: HTTP_API_PORT,
       httpEnable: HTTP_API_ENABLE,
-      seedPeers: SEED_PEERS,
+      seedPeers: parseAddressList(SEED_PEERS),
       peerId: PEER_ID,
       creator: CREATOR,
       pubSubTopic: PUB_SUB_TOPIC,
@@ -107,5 +106,6 @@ export class RhizomeNode {
     await this.pubSub.stop();
     await this.requestReply.stop();
     await this.httpServer.stop();
+    debug(`[${this.config.peerId}]`, 'stopped');
   }
 }
