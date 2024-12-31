@@ -72,7 +72,7 @@ export class Lossless {
   constructor(readonly rhizomeNode: RhizomeNode) {
     this.transactions = new Transactions(this);
     this.transactions.eventStream.on("completed", (transactionId) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `completed transaction ${transactionId}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Completed transaction ${transactionId}`);
       const transaction = this.transactions.get(transactionId);
       if (!transaction) return;
       for (const id of transaction.entityIds) {
@@ -143,7 +143,7 @@ export class Lossless {
           if (delta.transactionId) {
             if (!this.transactions.isComplete(delta.transactionId)) {
               // TODO: Test this condition
-              debug(`[${this.rhizomeNode.config.peerId}]`, `excluding delta ${delta.id} because transaction ${delta.transactionId} is not completed`);
+              debug(`[${this.rhizomeNode.config.peerId}]`, `Excluding delta ${delta.id} because transaction ${delta.transactionId} is not completed`);
               continue;
             }
           }

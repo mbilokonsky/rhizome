@@ -24,7 +24,7 @@ describe('Run', () => {
     debug('app[1].config.seedPeers after adding:', JSON.stringify(apps[1].config.seedPeers));
     debug('app[0].config.seedPeers after adding:', JSON.stringify(apps[0].config.seedPeers));
 
-    await Promise.all(apps.map((app) => app.start()));
+    await Promise.all(apps.map((app) => app.start(false)));
   });
 
   afterAll(async () => {

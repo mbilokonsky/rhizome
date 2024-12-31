@@ -53,7 +53,7 @@ export class RhizomeNode {
       pubSubTopic: PUB_SUB_TOPIC,
       ...config
     };
-    debug(`[${this.config.peerId}]`, 'config', this.config);
+    debug(`[${this.config.peerId}]`, 'Config', this.config);
     this.myRequestAddr = new PeerAddress(
       this.config.requestBindHost,
       this.config.requestBindPort
@@ -70,12 +70,20 @@ export class RhizomeNode {
     this.lossless = new Lossless(this);
   }
 
-  async start() {
+  async start(syncOnStart = false) {
     // Connect our lossless view to the delta stream
     this.deltaStream.subscribeDeltas((delta) => this.lossless.ingestDelta(delta));
 
-    // Start ZeroMQ publish and reply sockets
-    await this.pubSub.start();
+    // Bind ZeroMQ publish socket
+    // TODO: Config option to enable zmq pubsub
+    // await this.pubSub.startZmq();
+
+    // Initialize Libp2p
+    await this.pubSub.startLibp2p();
+
+    // Bind ZeroMQ request socket
+    // TODO: request/reply via libp2p?
+    // TODO: config options to enable request/reply, or configure available commands
     this.requestReply.start();
 
     // Start HTTP server
@@ -83,29 +91,40 @@ export class RhizomeNode {
       this.httpServer.start();
     }
 
-    // Start libp2p subscription
-    this.peers.start();
+    {
+      // Start libp2p subscription
+      // TODO: Config option to enable gossipsub
+      // TODO: Config options for gossipsub and other libp2p configs
+      this.peers.start();
 
-    // Wait a short time for sockets to initialize
-    await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait a short time for peers to connect
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
 
-    // Subscribe to seed peers
-    this.peers.subscribeToSeeds();
+    {
+      // Wait a short time for sockets to initialize
+      // await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Wait a short time for sockets to initialize
-    await new Promise((resolve) => setTimeout(resolve, 500));
+      // Subscribe to seed peers
+      // this.peers.subscribeToSeeds();
 
-    // Ask all peers for all deltas
-    this.peers.askAllPeersForDeltas();
+      // Wait a short time for sockets to initialize
+      // await new Promise((resolve) => setTimeout(resolve, 500));
+    }
 
-    // Wait to receive all deltas
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (syncOnStart) {
+      // Ask all peers for all deltas
+      this.peers.askAllPeersForDeltas();
+
+      // Wait to receive all deltas
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
 
   async stop() {
     await this.pubSub.stop();
     await this.requestReply.stop();
     await this.httpServer.stop();
-    debug(`[${this.config.peerId}]`, 'stopped');
+    debug(`[${this.config.peerId}]`, 'Stopped');
   }
 }

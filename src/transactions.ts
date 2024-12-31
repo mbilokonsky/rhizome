@@ -104,7 +104,7 @@ export class Transactions {
       if (transactionId && size) {
         // This delta describes a transaction
 
-        debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `transaction ${transactionId} has size ${size}`);
+        debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `Transaction ${transactionId} has size ${size}`);
 
         this.setSize(transactionId, size as number);
 

@@ -69,13 +69,13 @@ class Peer {
 
   async subscribeDeltas() {
     if (!this.publishAddr) {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `requesting publish addr from peer ${this.reqAddr.toAddrString()}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Requesting publish addr from peer ${this.reqAddr.toAddrString()}`);
       const res = await this.request(RequestMethods.GetPublishAddress);
       this.publishAddr = PeerAddress.fromString(res.toString());
-      debug(`[${this.rhizomeNode.config.peerId}]`, `received publish addr ${this.publishAddr.toAddrString()} from peer ${this.reqAddr.toAddrString()}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Received publish addr ${this.publishAddr.toAddrString()} from peer ${this.reqAddr.toAddrString()}`);
     }
 
-    debug(`[${this.rhizomeNode.config.peerId}]`, `subscribing to peer ${this.reqAddr.toAddrString()}`);
+    debug(`[${this.rhizomeNode.config.peerId}]`, `Subscribing to peer ${this.reqAddr.toAddrString()}`);
 
     // ZeroMQ subscription
     this.subscription = this.rhizomeNode.pubSub.subscribe(
@@ -115,19 +115,19 @@ export class Peers {
     this.addPeer(this.rhizomeNode.myRequestAddr);
 
     this.rhizomeNode.requestReply.registerRequestHandler(async (req: PeerRequest, res: ResponseSocket) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, 'inspecting peer request');
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'Inspecting peer request');
       switch (req.method) {
         case RequestMethods.GetPublishAddress: {
-          debug(`[${this.rhizomeNode.config.peerId}]`, 'it\'s a request for our publish address');
+          debug(`[${this.rhizomeNode.config.peerId}]`, 'It\'s a request for our publish address');
           await res.send(this.rhizomeNode.myPublishAddr.toAddrString());
           break;
         }
         case RequestMethods.AskForDeltas: {
-          debug(`[${this.rhizomeNode.config.peerId}]`, 'it\'s a request for deltas');
+          debug(`[${this.rhizomeNode.config.peerId}]`, 'It\'s a request for deltas');
           // TODO: stream these rather than
           // trying to write them all in one message
           const deltas = this.rhizomeNode.deltaStream.deltasAccepted;
-          debug(`[${this.rhizomeNode.config.peerId}]`, `sending ${deltas.length} deltas`);
+          debug(`[${this.rhizomeNode.config.peerId}]`, `Sending ${deltas.length} deltas`);
           await res.send(JSON.stringify(deltas));
           break;
         }
@@ -150,13 +150,13 @@ export class Peers {
   addPeer(addr: PeerAddress): Peer {
     const peer = new Peer(this.rhizomeNode, addr);
     this.peers.push(peer);
-    debug(`[${this.rhizomeNode.config.peerId}]`, 'added peer', addr);
+    debug(`[${this.rhizomeNode.config.peerId}]`, 'Added peer', addr);
     return peer;
   }
 
   async subscribeToSeeds() {
     const {seedPeers} = this.rhizomeNode.config;
-    debug(`[${this.rhizomeNode.config.peerId}]`, `subscribeToSeeds, seedPeers: ${JSON.stringify(seedPeers)}`);
+    debug(`[${this.rhizomeNode.config.peerId}]`, `SubscribeToSeeds, seedPeers: ${JSON.stringify(seedPeers)}`);
     seedPeers.forEach(async (addr, idx) => {
       const peer = this.addPeer(addr);
 
@@ -171,11 +171,11 @@ export class Peers {
   async askAllPeersForDeltas() {
     this.peers
       .forEach(async (peer, idx) => {
-        debug(`[${this.rhizomeNode.config.peerId}]`, `peer ${peer.reqAddr.toAddrString()} isSelf`, peer.isSelf);
+        debug(`[${this.rhizomeNode.config.peerId}]`, `Peer ${peer.reqAddr.toAddrString()} isSelf`, peer.isSelf);
         if (peer.isSelf) return;
         debug(`[${this.rhizomeNode.config.peerId}]`, `Asking peer ${idx} for deltas`);
         const deltas = await peer.askForDeltas();
-        debug(`[${this.rhizomeNode.config.peerId}]`, `received ${deltas.length} deltas from ${peer.reqAddr.toAddrString()}`);
+        debug(`[${this.rhizomeNode.config.peerId}]`, `Received ${deltas.length} deltas from ${peer.reqAddr.toAddrString()}`);
         for (const delta of deltas) {
           delta.receivedFrom = peer.reqAddr;
           this.rhizomeNode.deltaStream.receiveDelta(delta);

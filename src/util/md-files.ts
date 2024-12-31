@@ -99,14 +99,14 @@ export class MDFiles {
 
       switch (eventType) {
         case 'rename': {
-          debug(`[${this.rhizomeNode.config.peerId}]`, `file ${name} renamed`);
+          debug(`[${this.rhizomeNode.config.peerId}]`, `File ${name} renamed`);
           // Remove it from memory and re-scan everything
           this.files.delete(name);
           this.readDir();
           break;
         }
         case 'change': {
-          debug(`[${this.rhizomeNode.config.peerId}]`, `file ${name} changed`);
+          debug(`[${this.rhizomeNode.config.peerId}]`, `File ${name} changed`);
           // Re-read this file
           this.readFile(name)
           break;

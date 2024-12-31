@@ -51,29 +51,32 @@ export class Subscription {
       this.cb(senderStr, msgStr);
     }
 
-    debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `done waiting for subscription socket for topic ${this.topic}`);
+    debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `Done waiting for subscription socket for topic ${this.topic}`);
   }
 }
 
 export class PubSub {
   rhizomeNode: RhizomeNode;
-  publishSock: Publisher;
+  publishSock?: Publisher;
   publishAddrStr: string;
   subscriptions: Subscription[] = [];
   libp2p?: Libp2p;
 
   constructor(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
-    this.publishSock = new Publisher();
 
     const {publishBindAddr, publishBindPort} = this.rhizomeNode.config;
     this.publishAddrStr = `tcp://${publishBindAddr}:${publishBindPort}`;
   }
 
-  async start() {
+  async startZmq() {
+    this.publishSock = new Publisher();
+
     await this.publishSock.bind(this.publishAddrStr);
     debug(`[${this.rhizomeNode.config.peerId}]`, `ZeroMQ publishing socket bound to ${this.publishAddrStr}`);
+  }
 
+  async startLibp2p() {
     this.libp2p = await createLibp2p({
       addresses: {
         // TODO: Config
@@ -91,30 +94,38 @@ export class PubSub {
     });
 
     this.libp2p.addEventListener("peer:discovery", (event) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `found peer: ${JSON.stringify(event.detail)}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Found peer: ${JSON.stringify(event.detail)}`);
       this.libp2p?.dial(event.detail.multiaddrs);
     });
 
     this.libp2p.addEventListener("peer:connect", (event) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `connected to peer: ${JSON.stringify(event.detail)}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Connected to peer: ${JSON.stringify(event.detail)}`);
     });
   }
 
   async publish(topic: string, msg: string) {
-    debug(`[${this.rhizomeNode.config.peerId}]`, `publishing to ZeroMQ, msg: ${msg}`);
-    await this.publishSock.send([
-      topic,
-      this.rhizomeNode.myRequestAddr.toAddrString(),
-      msg
-    ]);
+    if (this.publishSock) {
+      await this.publishSock.send([
+        topic,
+        this.rhizomeNode.myRequestAddr.toAddrString(),
+        msg
+      ]);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Published to ZeroMQ, msg: ${msg}`);
+    }
 
     if (this.libp2p) {
       const pubsub = this.libp2p.services.pubsub as GossipSub;
-      debug(`[${this.rhizomeNode.config.peerId}]`, `publishing to Libp2p, msg: ${msg}`);
+      let published = false;
       try {
         await pubsub.publish(topic, Buffer.from(msg));
+        published = true;
       } catch (e: unknown) {
-        debug(`[${this.rhizomeNode.config.peerId}]`, 'Libp2p publish:', (e as Error).message);
+        if (!((e as Error).message as string).match("PublishError.NoPeersSubscribedToTopic")) {
+          debug(`[${this.rhizomeNode.config.peerId}]`, 'Libp2p publish:', (e as Error).message);
+        }
+      }
+      if (published) {
+        debug(`[${this.rhizomeNode.config.peerId}]`, `Published to Libp2p, msg: ${msg}`);
       }
     }
   }
@@ -137,7 +148,7 @@ export class PubSub {
     if (!this.subscribedTopics.has(topic)) {
       pubsub.subscribe(topic);
       this.subscribedTopics.add(topic);
-      debug(`[${this.rhizomeNode.config.peerId}]`, 'subscribed topics:', Array.from(this.subscribedTopics.keys()));
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'Subscribed topics:', Array.from(this.subscribedTopics.keys()));
     }
   }
 
@@ -152,9 +163,12 @@ export class PubSub {
   }
 
   async stop() {
-    await this.publishSock.unbind(this.publishAddrStr);
-    this.publishSock.close();
-    this.publishSock = new Publisher();
+    if (this.publishSock) {
+      await this.publishSock.unbind(this.publishAddrStr);
+      this.publishSock.close();
+      // Free the memory by taking the old object out of scope.
+      this.publishSock = undefined;
+    }
 
     for (const subscription of this.subscriptions) {
       subscription.sock.close();
@@ -166,17 +180,17 @@ export class PubSub {
       pubsub.removeEventListener("message");
 
       for (const topic of this.subscribedTopics) {
-        debug(`[${this.rhizomeNode.config.peerId}]`, `unsubscribing Libp2p topic ${topic}`);
+        debug(`[${this.rhizomeNode.config.peerId}]`, `Unsubscribing Libp2p topic ${topic}`);
         pubsub.unsubscribe(topic)
       }
 
-      debug(`[${this.rhizomeNode.config.peerId}]`, 'stopping gossipsub');
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'Stopping gossipsub');
 
       await pubsub.stop();
 
       await this.libp2p.stop();
 
-      debug(`[${this.rhizomeNode.config.peerId}]`, 'stopped libp2p');
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'Stopped libp2p');
 
     }
   }

@@ -45,7 +45,7 @@ export class Collection {
 
     rhizomeNode.httpServer.httpApi.serveCollection(this);
 
-    debug(`[${this.rhizomeNode.config.peerId}]`, `connected ${this.name} to rhizome`);
+    debug(`[${this.rhizomeNode.config.peerId}]`, `Connected ${this.name} to rhizome`);
   }
 
   // Applies the javascript rules for updating object values,

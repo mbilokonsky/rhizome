@@ -100,7 +100,7 @@ export class Lossy {
   defaultResolver(losslessView: LosslessViewMany): ResolvedViewMany {
     const resolved: ResolvedViewMany = {};
 
-    // debug(`[${this.lossless.rhizomeNode.config.peerId}]`, 'default resolver, lossless view', JSON.stringify(losslessView));
+    // debug(`[${this.lossless.rhizomeNode.config.peerId}]`, 'Default resolver, lossless view', JSON.stringify(losslessView));
     for (const [id, ent] of Object.entries(losslessView)) {
       resolved[id] = {id, properties: {}};
 
