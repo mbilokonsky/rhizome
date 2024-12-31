@@ -2,7 +2,7 @@
 
 |               | Implemented | Notes                                                                    |
 | ------------- | ----------- | ------------------------------------------------------------------------ |
-| Peering       | Yes         | Currently using `RHIZOME_SEED_PEERS`, no gossip / discovery              |
+| Peering       | Yes         | Implemented with ZeroMQ and/or Libp2p. Libp2p solves more problems.      |
 | Schemas       | Not really  | Currently very thin layer allowing TypedCollections                      |
 | Relationships | No          | Supporting relational algebra among domain entities                      |
 | Views         | Yes         | Lossless: Map the `targetContext`s as properties of domain entities.     |
@@ -10,7 +10,7 @@
 |               |             | Currently using functions rather than JSON-Logic expressions.            |
 | Functions     | No          | Arbitrary subscribers to delta stream (that can also emit deltas?)       |
 | Tests         | Yes         | We are set up to run unit tests and multi-node tests                     |
-| Identity      | No          | Probably a public key / private key system                               |
+| Identity      | Sort of     | We have an identity service via Libp2p                                   |
 | Contexts      | No          | Each context may involve different lossy functions and delta filters     |
 | HTTP API      | Yes         | Basic peering info and entity CRUD                                       |
 
@@ -65,32 +65,35 @@ npm run coverage
 To demonstrate the example application, you can open multiple terminals, and in each terminal execute something like the following:
 
 ```bash
-export DEBUG="*,-express"
+export DEBUG="*,-express:*"
 export RHIZOME_REQUEST_BIND_PORT=4000
 export RHIZOME_PUBLISH_BIND_PORT=4001
 export RHIZOME_SEED_PEERS='localhost:4002, localhost:4004'
 export RHIZOME_HTTP_API_PORT=3000
 export RHIZOME_PEER_ID=peer1
+export RHIZOME_PUB_SUB_TOPIC=rhizome-demo-1
 npm run example-app
 ```
 
 ```bash
-export DEBUG="*,-express"
+export DEBUG="*,-express:*"
 export RHIZOME_REQUEST_BIND_PORT=4002
 export RHIZOME_PUBLISH_BIND_PORT=4003
 export RHIZOME_SEED_PEERS='localhost:4000, localhost:4004'
 export RHIZOME_HTTP_API_PORT=3001
 export RHIZOME_PEER_ID=peer2
+export RHIZOME_PUB_SUB_TOPIC=rhizome-demo-1
 npm run example-app
 ```
 
 ```bash
-export DEBUG="*,-express"
+export DEBUG="*,-express:*"
 export RHIZOME_REQUEST_BIND_PORT=4004
 export RHIZOME_PUBLISH_BIND_PORT=4005
 export RHIZOME_SEED_PEERS='localhost:4000, localhost:4002'
 export RHIZOME_HTTP_API_PORT=3002
 export RHIZOME_PEER_ID=peer3
+export RHIZOME_PUB_SUB_TOPIC=rhizome-demo-1
 npm run example-app
 ```
 
