@@ -11,7 +11,7 @@ import {Entity, EntityProperties} from "./entity.js";
 import {Lossy, ResolvedViewOne, Resolver} from "./lossy.js";
 import {RhizomeNode} from "./node.js";
 import {DomainEntityID} from "./types.js";
-const debug = Debug('collection');
+const debug = Debug('rz:collection');
 
 export class Collection {
   rhizomeNode?: RhizomeNode;

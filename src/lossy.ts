@@ -9,7 +9,7 @@
 import {DeltaFilter} from "./delta.js";
 import {CollapsedDelta, Lossless, LosslessViewMany, LosslessViewOne} from "./lossless.js";
 import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types.js";
-// const debug = Debug('lossy');
+// const debug = Debug('rz:lossy');
 
 type TimestampedProperty = {
   value: PropertyTypes,

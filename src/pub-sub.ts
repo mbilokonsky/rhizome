@@ -10,7 +10,7 @@ import {Libp2p, createLibp2p} from 'libp2p';
 import {Publisher, Subscriber} from 'zeromq';
 import {RhizomeNode} from './node.js';
 import {PeerAddress} from './types.js';
-const debug = Debug('pub-sub');
+const debug = Debug('rz:pub-sub');
 
 export type SubscribedMessageHandler = (sender: PeerAddress, msg: string) => void;
 

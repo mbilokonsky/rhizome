@@ -9,6 +9,7 @@ describe('Run', () => {
       httpEnable: true,
       requestBindPort: 5001,
       publishBindPort: 5002,
+      peerId: 'app-001',
     });
     await app.start();
   });

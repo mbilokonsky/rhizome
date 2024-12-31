@@ -7,7 +7,7 @@ import {Peers} from './peers.js';
 import {PubSub} from './pub-sub.js';
 import {RequestReply} from './request-reply.js';
 import {PeerAddress} from './types.js';
-const debug = Debug('rhizome-node');
+const debug = Debug('rz:rhizome-node');
 
 export type RhizomeNodeConfig = {
   requestBindAddr: string;

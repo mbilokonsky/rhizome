@@ -7,7 +7,7 @@ import {Delta, DeltaFilter, DeltaNetworkImage} from './delta.js';
 import {Transactions} from './transactions.js';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types.js";
 import {RhizomeNode} from './node.js';
-const debug = Debug('lossless');
+const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
 

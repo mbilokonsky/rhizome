@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import {Delta, DeltaID} from "./delta.js";
 import {DomainEntityID, TransactionID} from "./types.js";
 import {Lossless} from "./lossless.js";
-const debug = Debug("transactions");
+const debug = Debug('rz:transactions');
 
 function getDeltaTransactionId(delta: Delta): TransactionID | undefined {
   const {target: transactionId} = delta.pointers.find(({

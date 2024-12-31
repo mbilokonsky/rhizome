@@ -3,7 +3,7 @@ import EventEmitter from 'node:events';
 import objectHash from 'object-hash';
 import {Delta, DeltaNetworkImage} from './delta.js';
 import {RhizomeNode} from './node.js';
-const debug = Debug('deltas');
+const debug = Debug('rz:deltas');
 
 enum Decision {
   Accept,

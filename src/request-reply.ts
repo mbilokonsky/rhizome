@@ -4,7 +4,7 @@ import {Message, Reply, Request} from 'zeromq';
 import {RhizomeNode} from './node.js';
 import {RequestMethods} from './peers.js';
 import {PeerAddress} from './types.js';
-const debug = Debug('request-reply');
+const debug = Debug('rz:request-reply');
 
 export type PeerRequest = {
   method: RequestMethods;

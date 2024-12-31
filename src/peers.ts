@@ -6,7 +6,7 @@ import {RhizomeNode} from "./node.js";
 import {Subscription} from './pub-sub.js';
 import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply.js";
 import {PeerAddress} from "./types.js";
-const debug = Debug('peers');
+const debug = Debug('rz:peers');
 
 export enum RequestMethods {
   GetPublishAddress,

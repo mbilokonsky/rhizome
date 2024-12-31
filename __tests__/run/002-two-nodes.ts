@@ -8,11 +8,11 @@ describe('Run', () => {
   beforeAll(async () => {
     apps[0] = new App({
       httpEnable: true,
-      peerId: 'app0',
+      peerId: 'app-002-A',
     });
     apps[1] = new App({
       httpEnable: true,
-      peerId: 'app1',
+      peerId: 'app-002-B',
       // Make the apps use the same pubsub topic so they can talk to each other
       pubSubTopic: apps[0].config.pubSubTopic,
     });

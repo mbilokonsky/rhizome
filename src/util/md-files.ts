@@ -4,7 +4,7 @@ import path, {join} from "path";
 import showdown from "showdown";
 import {RhizomeNode} from "../node.js";
 const {Converter} = showdown;
-const debug = Debug('md-files');
+const debug = Debug('rz:md-files');
 
 const docConverter = new Converter({
   completeHTMLDocument: true,
