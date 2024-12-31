@@ -2,6 +2,7 @@ import Debug from "debug";
 import EventEmitter from "events";
 import {Delta, DeltaID} from "./delta.js";
 import {DomainEntityID, TransactionID} from "./types.js";
+import {Lossless} from "./lossless.js";
 const debug = Debug("transactions");
 
 function getDeltaTransactionId(delta: Delta): TransactionID | undefined {
@@ -58,6 +59,8 @@ export class Transactions {
   transactions = new Map<TransactionID, Transaction>();
   eventStream = new EventEmitter();
 
+  constructor(readonly lossless: Lossless) {}
+
   get(id: TransactionID): Transaction | undefined {
     return this.transactions.get(id);
   }
@@ -101,7 +104,7 @@ export class Transactions {
       if (transactionId && size) {
         // This delta describes a transaction
 
-        debug(`transaction ${transactionId} has size ${size}`);
+        debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `transaction ${transactionId} has size ${size}`);
 
         this.setSize(transactionId, size as number);
 

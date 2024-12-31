@@ -1,7 +1,10 @@
 import {Delta, DeltaFilter} from '../src/delta.js';
 import {Lossless} from '../src/lossless.js';
+import {RhizomeNode} from '../src/node.js';
 
 describe('Lossless', () => {
+  const node = new RhizomeNode();
+
   it('creates a lossless view of keanu as neo in the matrix', () => {
     const delta = new Delta({
       creator: 'a',
@@ -27,7 +30,7 @@ describe('Lossless', () => {
       }]
     });
 
-    const lossless = new Lossless();
+    const lossless = new Lossless(node);
 
     lossless.ingestDelta(delta);
 
@@ -84,7 +87,7 @@ describe('Lossless', () => {
   });
 
   describe('can filter deltas', () => {
-    const lossless = new Lossless();
+    const lossless = new Lossless(node);
 
     beforeAll(() => {
       lossless.ingestDelta(new Delta({

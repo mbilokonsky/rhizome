@@ -6,6 +6,7 @@ import EventEmitter from 'events';
 import {Delta, DeltaFilter, DeltaNetworkImage} from './delta.js';
 import {Transactions} from './transactions.js';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types.js";
+import {RhizomeNode} from './node.js';
 const debug = Debug('lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
@@ -64,13 +65,14 @@ class LosslessEntity {
 
 export class Lossless {
   domainEntities = new LosslessEntityMap();
-  transactions = new Transactions();
+  transactions: Transactions;
   referencedAs = new Map<string, Set<DomainEntityID>>();
   eventStream = new EventEmitter();
 
-  constructor() {
+  constructor(readonly rhizomeNode: RhizomeNode) {
+    this.transactions = new Transactions(this);
     this.transactions.eventStream.on("completed", (transactionId) => {
-      debug(`completed transaction ${transactionId}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `completed transaction ${transactionId}`);
       const transaction = this.transactions.get(transactionId);
       if (!transaction) return;
       for (const id of transaction.entityIds) {
@@ -141,7 +143,7 @@ export class Lossless {
           if (delta.transactionId) {
             if (!this.transactions.isComplete(delta.transactionId)) {
               // TODO: Test this condition
-              debug(`excluding delta ${delta.id} because transaction ${delta.transactionId} is not completed`);
+              debug(`[${this.rhizomeNode.config.peerId}]`, `excluding delta ${delta.id} because transaction ${delta.transactionId} is not completed`);
               continue;
             }
           }

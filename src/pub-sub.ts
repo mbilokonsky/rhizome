@@ -24,6 +24,7 @@ export class Subscription {
   libp2p?: Libp2p;
 
   constructor(
+    readonly pubSub: PubSub,
     publishAddr: PeerAddress,
     topic: string,
     cb: SubscribedMessageHandler,
@@ -39,14 +40,14 @@ export class Subscription {
   async start() {
     this.sock.connect(this.publishAddrStr);
     this.sock.subscribe(this.topic);
-    debug(`Subscribing to ${this.topic} topic on ZeroMQ ${this.publishAddrStr}`);
+    debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `Subscribing to ${this.topic} topic on ZeroMQ ${this.publishAddrStr}`);
 
     // Wait for ZeroMQ messages.
     // This will block indefinitely.
     for await (const [, sender, msg] of this.sock) {
       const senderStr = PeerAddress.fromString(sender.toString());
       const msgStr = msg.toString();
-      debug(`ZeroMQ subscribtion received msg: ${msgStr}`);
+      debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `ZeroMQ subscribtion received msg: ${msgStr}`);
       this.cb(senderStr, msgStr);
     }
   }
@@ -69,7 +70,7 @@ export class PubSub {
 
   async start() {
     await this.publishSock.bind(this.publishAddrStr);
-    debug(`ZeroMQ publishing socket bound to ${this.publishAddrStr}`);
+    debug(`[${this.rhizomeNode.config.peerId}]`, `ZeroMQ publishing socket bound to ${this.publishAddrStr}`);
 
     this.libp2p = await createLibp2p({
       addresses: {
@@ -88,18 +89,18 @@ export class PubSub {
     });
 
     this.libp2p.addEventListener("peer:discovery", (event) => {
-      debug(`found peer: ${JSON.stringify(event.detail, null, 2)}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `found peer: ${JSON.stringify(event.detail, null, 2)}`);
       this.libp2p?.dial(event.detail.multiaddrs);
     });
 
     this.libp2p.addEventListener("peer:connect", (event) => {
-      debug(`connected to peer: ${JSON.stringify(event.detail, null, 2)}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `connected to peer: ${JSON.stringify(event.detail, null, 2)}`);
       // TODO: Subscribe
     });
   }
 
   async publish(topic: string, msg: string) {
-    debug(`publishing to ZeroMQ, msg: ${msg}`);
+    debug(`[${this.rhizomeNode.config.peerId}]`, `publishing to ZeroMQ, msg: ${msg}`);
     await this.publishSock.send([
       topic,
       this.rhizomeNode.myRequestAddr.toAddrString(),
@@ -108,11 +109,11 @@ export class PubSub {
 
     if (this.libp2p) {
       const pubsub = this.libp2p.services.pubsub as GossipSub;
-      debug(`publishing to Libp2p, msg: ${msg}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `publishing to Libp2p, msg: ${msg}`);
       try {
         await pubsub.publish(topic, Buffer.from(msg));
       } catch (e: unknown) {
-        debug('Libp2p publish:', (e as Error).message);
+        debug(`[${this.rhizomeNode.config.peerId}]`, 'Libp2p publish:', (e as Error).message);
       }
     }
   }
@@ -126,7 +127,7 @@ export class PubSub {
     // TODO: If we subscribe to multiple topics this callback will be duplicated
     pubsub.addEventListener("message", (event) => {
       const msg = Buffer.from(event.detail.data).toString();
-      debug(`Libp2p subscribtion received msg: ${msg}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Libp2p subscribtion received msg: ${msg}`);
       cb(new PeerAddress('libp2p', 0), msg);
     });
 
@@ -135,7 +136,7 @@ export class PubSub {
     if (!this.subscribedTopics.has(topic)) {
       pubsub.subscribe(topic);
       this.subscribedTopics.add(topic);
-      debug('subscribed topics:', Array.from(this.subscribedTopics.keys()));
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'subscribed topics:', Array.from(this.subscribedTopics.keys()));
     }
   }
 
@@ -144,7 +145,7 @@ export class PubSub {
     topic: string,
     cb: SubscribedMessageHandler
   ): Subscription {
-    const subscription = new Subscription(publishAddr, topic, cb, this.libp2p);
+    const subscription = new Subscription(this, publishAddr, topic, cb, this.libp2p);
     this.subscriptions.push(subscription);
     return subscription;
   }
@@ -164,11 +165,11 @@ export class PubSub {
       pubsub.removeEventListener("message");
 
       for (const topic of this.subscribedTopics) {
-        debug(`unsubscribing Libp2p topic ${topic}`);
+        debug(`[${this.rhizomeNode.config.peerId}]`, `unsubscribing Libp2p topic ${topic}`);
         pubsub.unsubscribe(topic)
       }
 
-      debug('stopping gossipsub');
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'stopping gossipsub');
 
       await pubsub.stop();
 

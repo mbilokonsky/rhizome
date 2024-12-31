@@ -27,11 +27,11 @@ type User = {
   users.rhizomeConnect(rhizomeNode);
 
   users.onUpdate((u: Entity) => {
-    debug('User updated:', u);
+    debug(`[${rhizomeNode.config.peerId}]`, 'User updated:', u);
   });
 
   users.onCreate((u: Entity) => {
-    debug('New user!:', u);
+    debug(`[${rhizomeNode.config.peerId}]`, 'New user!:', u);
   });
 
   await rhizomeNode.start();
@@ -64,9 +64,9 @@ type User = {
     const expected = JSON.stringify(taliesinData);
 
     if (result === expected) {
-      debug('Put result matches expected: ' + expected);
+      debug(`[${rhizomeNode.config.peerId}]`, 'Put result matches expected: ' + expected);
     } else {
-      debug(`Put result does not match expected.` +
+      debug(`[${rhizomeNode.config.peerId}]`, `Put result does not match expected.` +
         `\n\nExpected \n${expected}` +
         `\nReceived\n${result}`);
     }
@@ -87,9 +87,9 @@ type User = {
     const expected = JSON.stringify(taliesinData);
 
     if (result === expected) {
-      debug('Get result matches expected: ' + expected);
+      debug(`[${rhizomeNode.config.peerId}]`, 'Get result matches expected: ' + expected);
     } else {
-      debug(`Get result does not match expected.` +
+      debug(`[${rhizomeNode.config.peerId}]`, `Get result does not match expected.` +
         `\n\nExpected \n${expected}` +
         `\nReceived\n${result}`);
     }

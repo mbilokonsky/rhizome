@@ -20,9 +20,8 @@
     "testMatch": [
       "**/__tests__/**/*"
     ],
-    "verbose": true,
     "transform": {
-      "^.+\\.ts?$": [
+      "^.+\\.ts$": [
         "ts-jest",
         {
           "useESM": true

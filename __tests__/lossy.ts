@@ -1,10 +1,12 @@
+import {RhizomeNode} from "../src/node.js";
 import {Delta, PointerTarget} from "../src/delta.js";
 import {Lossless, LosslessViewMany} from "../src/lossless.js";
 import {Lossy, lastValueFromLosslessViewOne, valueFromCollapsedDelta } from "../src/lossy.js";
 
 describe('Lossy', () => {
   describe('se a provided function to resolve entity views', () => {
-    const lossless = new Lossless();
+    const node = new RhizomeNode();
+    const lossless = new Lossless(node);
     const lossy = new Lossy(lossless);
 
     beforeAll(() => {

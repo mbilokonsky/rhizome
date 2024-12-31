@@ -1,7 +1,7 @@
 import express, {Router} from "express";
-import {Collection} from "src/collection";
-import {Delta} from "src/delta";
-import {RhizomeNode} from "src/node";
+import {Collection} from "../collection.js";
+import {Delta} from "../delta.js";
+import {RhizomeNode} from "../node.js";
 
 export class HttpApi {
   router = Router();

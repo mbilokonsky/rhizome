@@ -16,10 +16,10 @@ export type RequestHandler = (req: PeerRequest, res: ResponseSocket) => void;
 export class RequestSocket {
   sock = new Request();
 
-  constructor(addr: PeerAddress) {
+  constructor(readonly requestReply: RequestReply, addr: PeerAddress) {
     const addrStr = `tcp://${addr.addr}:${addr.port}`;
     this.sock.connect(addrStr);
-    debug(`Request socket connecting to ${addrStr}`);
+    debug(`[${this.requestReply.rhizomeNode.config.peerId}]`, `Request socket connecting to ${addrStr}`);
   }
 
   async request(method: RequestMethods): Promise<Message> {
@@ -55,7 +55,7 @@ function peerRequestFromMsg(msg: Message): PeerRequest | null {
     const obj = JSON.parse(msg.toString());
     req = {...obj};
   } catch (e) {
-    debug('error receiving command', e);
+    console.error('error receiving command', e);
   }
   return req;
 }
@@ -76,10 +76,10 @@ export class RequestReply {
   async start() {
 
     await this.replySock.bind(this.requestBindAddrStr);
-    debug(`Reply socket bound to ${this.requestBindAddrStr}`);
+    debug(`[${this.rhizomeNode.config.peerId}]`, `Reply socket bound to ${this.requestBindAddrStr}`);
 
     for await (const [msg] of this.replySock) {
-      debug(`Received message`, {msg: msg.toString()});
+      debug(`[${this.rhizomeNode.config.peerId}]`, `Received message`, {msg: msg.toString()});
       const req = peerRequestFromMsg(msg);
       this.requestStream.emit('request', req);
     }
@@ -92,6 +92,10 @@ export class RequestReply {
       const res = new ResponseSocket(this.replySock);
       handler(req, res);
     });
+  }
+
+  createRequestSocket(addr: PeerAddress) {
+    return new RequestSocket(this, addr);
   }
 
   async stop() {

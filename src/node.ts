@@ -54,7 +54,7 @@ export class RhizomeNode {
       pubSubTopic: PUB_SUB_TOPIC,
       ...config
     };
-    debug('config', this.config);
+    debug(`[${this.config.peerId}]`, 'config', this.config);
     this.myRequestAddr = new PeerAddress(
       this.config.requestBindHost,
       this.config.requestBindPort
@@ -68,7 +68,7 @@ export class RhizomeNode {
     this.httpServer = new HttpServer(this);
     this.deltaStream = new DeltaStream(this);
     this.peers = new Peers(this);
-    this.lossless = new Lossless();
+    this.lossless = new Lossless(this);
   }
 
   async start() {

@@ -1,11 +1,14 @@
 import express, {Router} from "express";
+import {RhizomeNode} from "../node.js";
 import {htmlDocFromMarkdown, MDFiles} from "../util/md-files.js";
 
 export class HttpHtml {
   router = Router();
-  mdFiles = new MDFiles();
+  mdFiles: MDFiles;
 
-  constructor() {
+  constructor(readonly rhizomeNode: RhizomeNode) {
+    this.mdFiles = new MDFiles(this.rhizomeNode);
+
     // Scan and watch for markdown files
     this.mdFiles.readDir();
     this.mdFiles.readReadme();

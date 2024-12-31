@@ -2,6 +2,7 @@ import Debug from "debug";
 import {FSWatcher, readdirSync, readFileSync, watch} from "fs";
 import path, {join} from "path";
 import showdown from "showdown";
+import {RhizomeNode} from "../node.js";
 const {Converter} = showdown;
 const debug = Debug('md-files');
 
@@ -29,6 +30,8 @@ export class MDFiles {
   dirWatcher?: FSWatcher;
   readmeWatcher?: FSWatcher;
   latestIndexHtml?: Html;
+
+  constructor(readonly rhizomeNode: RhizomeNode) {}
 
   readFile(name: string) {
     const md = readFileSync(join('./markdown', `${name}.md`)).toString();
@@ -96,14 +99,14 @@ export class MDFiles {
 
       switch (eventType) {
         case 'rename': {
-          debug(`file ${name} renamed`);
+          debug(`[${this.rhizomeNode.config.peerId}]`, `file ${name} renamed`);
           // Remove it from memory and re-scan everything
           this.files.delete(name);
           this.readDir();
           break;
         }
         case 'change': {
-          debug(`file ${name} changed`);
+          debug(`[${this.rhizomeNode.config.peerId}]`, `file ${name} changed`);
           // Re-read this file
           this.readFile(name)
           break;
@@ -118,7 +121,7 @@ export class MDFiles {
 
       switch (eventType) {
         case 'change': {
-          debug(`README file changed`);
+          debug(`[${this.rhizomeNode.config.peerId}]`, `README file changed`);
           // Re-read this file
           this.readReadme()
           break;

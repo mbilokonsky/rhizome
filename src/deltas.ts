@@ -86,7 +86,7 @@ export class DeltaStream {
   }
 
   async publishDelta(delta: Delta) {
-    debug(`Publishing delta: ${JSON.stringify(delta)}`);
+    debug(`[${this.rhizomeNode.config.peerId}]`, `Publishing delta: ${JSON.stringify(delta)}`);
     await this.rhizomeNode.pubSub.publish(
       this.rhizomeNode.config.pubSubTopic, 
       this.serializeDelta(delta)

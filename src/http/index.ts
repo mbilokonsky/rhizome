@@ -13,7 +13,7 @@ export class HttpServer {
   server?: Server;
 
   constructor(readonly rhizomeNode: RhizomeNode) {
-    this.httpHtml = new HttpHtml();
+    this.httpHtml = new HttpHtml(this.rhizomeNode);
     this.httpApi = new HttpApi(this.rhizomeNode);
 
     this.app.use(express.json());
@@ -28,7 +28,7 @@ export class HttpServer {
       host: httpAddr,
       exclusive: true
     }, () => {
-      debug(`HTTP API bound to ${httpAddr}:${httpPort}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`, `HTTP API bound to ${httpAddr}:${httpPort}`);
     });
   }
 
