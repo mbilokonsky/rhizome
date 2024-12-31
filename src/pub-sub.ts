@@ -95,7 +95,6 @@ export class PubSub {
 
     this.libp2p.addEventListener("peer:connect", (event) => {
       debug(`[${this.rhizomeNode.config.peerId}]`, `connected to peer: ${JSON.stringify(event.detail, null, 2)}`);
-      // TODO: Subscribe
     });
   }
 
@@ -174,6 +173,9 @@ export class PubSub {
       await pubsub.stop();
 
       await this.libp2p.stop();
+
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'stopped libp2p');
+
     }
   }
 }
