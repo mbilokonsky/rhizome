@@ -1,5 +1,5 @@
 import {randomUUID} from "crypto";
-import {PeerAddress} from "./types";
+import {PeerAddress} from "./types.js";
 
 // _HOST refers to the address from an external perspective
 // _ADDR refers to the interface address from the service's perspective
@@ -20,3 +20,5 @@ export const HTTP_API_ENABLE = process.env.RHIZOME_HTTP_API_ENABLE === 'true';
 export const SEED_PEERS: PeerAddress[]  = (process.env.RHIZOME_SEED_PEERS || '').split(',')
   .filter(x => !!x)
   .map((peer: string) => PeerAddress.fromString(peer));
+
+export const PUB_SUB_TOPIC = process.env.RHIZOME_PUB_SUB_TOPIC || `deltas-${randomUUID()}`;

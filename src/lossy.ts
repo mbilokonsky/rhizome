@@ -6,9 +6,9 @@
 // Fields in the output can be described as transformations
 
 import Debug from 'debug';
-import {DeltaFilter} from "./delta";
-import {CollapsedDelta, Lossless, LosslessViewMany, LosslessViewOne} from "./lossless";
-import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types";
+import {DeltaFilter} from "./delta.js";
+import {CollapsedDelta, Lossless, LosslessViewMany, LosslessViewOne} from "./lossless.js";
+import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types.js";
 const debug = Debug('lossy');
 
 type TimestampedProperty = {
@@ -77,14 +77,14 @@ export function lastValueFromLosslessViewOne(
 function defaultResolver(losslessView: LosslessViewMany): ResolvedViewMany {
   const resolved: ResolvedViewMany = {};
 
-  // debug('default resolver, lossless view', JSON.stringify(losslessView));
+  debug('default resolver, lossless view', JSON.stringify(losslessView));
   for (const [id, ent] of Object.entries(losslessView)) {
     resolved[id] = {id, properties: {}};
 
     for (const key of Object.keys(ent.properties)) {
       const {value} = lastValueFromLosslessViewOne(ent, key) || {};
 
-      // debug(`[ ${key} ] = ${value}`);
+      debug(`[ ${key} ] = ${value}`);
       resolved[id].properties[key] = value;
     }
   }

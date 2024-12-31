@@ -1,11 +1,11 @@
 import Debug from 'debug';
 import {Message} from 'zeromq';
-import {SEED_PEERS} from "./config";
-import {Delta} from "./delta";
-import {RhizomeNode} from "./node";
-import {Subscription} from './pub-sub';
-import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply";
-import {PeerAddress} from "./types";
+import {SEED_PEERS} from "./config.js";
+import {Delta} from "./delta.js";
+import {RhizomeNode} from "./node.js";
+import {Subscription} from './pub-sub.js';
+import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply.js";
+import {PeerAddress} from "./types.js";
 const debug = Debug('peers');
 
 export enum RequestMethods {
@@ -46,9 +46,9 @@ class Peer {
 
     this.subscription = this.rhizomeNode.pubSub.subscribe(
       this.publishAddr,
-      "deltas",
+      this.rhizomeNode.config.pubSubTopic,
       (sender, msg) => {
-        const delta = this.rhizomeNode.deltaStream.deserializeDelta(msg.toString());
+        const delta = this.rhizomeNode.deltaStream.deserializeDelta(msg);
         delta.receivedFrom = sender;
         debug(`Received delta: ${JSON.stringify(delta)}`);
         this.rhizomeNode.deltaStream.ingestDelta(delta);
@@ -99,7 +99,18 @@ export class Peers {
         }
       }
     });
+  }
 
+  start() {
+    this.rhizomeNode.pubSub.subscribeTopic(
+      this.rhizomeNode.config.pubSubTopic,
+      (sender, msg) => {
+        const delta = this.rhizomeNode.deltaStream.deserializeDelta(msg);
+        delta.receivedFrom = sender;
+        debug(`Received delta: ${JSON.stringify(delta)}`);
+        this.rhizomeNode.deltaStream.ingestDelta(delta);
+      }
+    );
   }
 
   addPeer(addr: PeerAddress): Peer {

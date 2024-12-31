@@ -3,9 +3,9 @@
 
 import Debug from 'debug';
 import EventEmitter from 'events';
-import {Delta, DeltaFilter, DeltaNetworkImage} from './delta';
-import {Transactions} from './transactions';
-import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types";
+import {Delta, DeltaFilter, DeltaNetworkImage} from './delta.js';
+import {Transactions} from './transactions.js';
+import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types.js";
 const debug = Debug('lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
@@ -141,6 +141,7 @@ export class Lossless {
           if (delta.transactionId) {
             if (!this.transactions.isComplete(delta.transactionId)) {
               // TODO: Test this condition
+              debug(`excluding delta ${delta.id} because transaction ${delta.transactionId} is not completed`);
               continue;
             }
           }

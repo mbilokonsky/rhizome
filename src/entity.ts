@@ -7,8 +7,8 @@
 // - As typescript interfaces?
 // - As typescript classes?
 
-import {Collection} from "./collection";
-import {PropertyTypes} from "./types";
+import {Collection} from "./collection.js";
+import {PropertyTypes} from "./types.js";
 
 export type EntityProperties = {
   [key: string]: PropertyTypes;

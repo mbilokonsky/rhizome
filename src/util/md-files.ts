@@ -1,7 +1,8 @@
 import Debug from "debug";
 import {FSWatcher, readdirSync, readFileSync, watch} from "fs";
 import path, {join} from "path";
-import {Converter} from "showdown";
+import showdown from "showdown";
+const {Converter} = showdown;
 const debug = Debug('md-files');
 
 const docConverter = new Converter({

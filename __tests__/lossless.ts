@@ -1,5 +1,5 @@
-import {Delta, DeltaFilter} from '../src/delta';
-import {Lossless} from '../src/lossless';
+import {Delta, DeltaFilter} from '../src/delta.js';
+import {Lossless} from '../src/lossless.js';
 
 describe('Lossless', () => {
   it('creates a lossless view of keanu as neo in the matrix', () => {

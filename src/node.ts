@@ -1,12 +1,12 @@
 import Debug from 'debug';
-import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config';
-import {DeltaStream} from './deltas';
-import {HttpServer} from './http';
-import {Lossless} from './lossless';
-import {Peers} from './peers';
-import {PubSub} from './pub-sub';
-import {RequestReply} from './request-reply';
-import {PeerAddress} from './types';
+import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUB_SUB_TOPIC, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config.js';
+import {DeltaStream} from './deltas.js';
+import {HttpServer} from './http/index.js';
+import {Lossless} from './lossless.js';
+import {Peers} from './peers.js';
+import {PubSub} from './pub-sub.js';
+import {RequestReply} from './request-reply.js';
+import {PeerAddress} from './types.js';
 const debug = Debug('rhizome-node');
 
 export type RhizomeNodeConfig = {
@@ -22,6 +22,7 @@ export type RhizomeNodeConfig = {
   seedPeers: PeerAddress[];
   peerId: string;
   creator: string; // TODO each host should be able to support multiple users
+  pubSubTopic: string;
 };
 
 // So that we can run more than one instance in the same process (for testing)
@@ -50,6 +51,7 @@ export class RhizomeNode {
       seedPeers: SEED_PEERS,
       peerId: PEER_ID,
       creator: CREATOR,
+      pubSubTopic: PUB_SUB_TOPIC,
       ...config
     };
     debug('config', this.config);
@@ -74,13 +76,16 @@ export class RhizomeNode {
     this.deltaStream.subscribeDeltas((delta) => this.lossless.ingestDelta(delta));
 
     // Start ZeroMQ publish and reply sockets
-    this.pubSub.start();
+    await this.pubSub.start();
     this.requestReply.start();
 
     // Start HTTP server
     if (this.config.httpEnable) {
       this.httpServer.start();
     }
+
+    // Start libp2p subscription
+    this.peers.start();
 
     // Wait a short time for sockets to initialize
     await new Promise((resolve) => setTimeout(resolve, 500));

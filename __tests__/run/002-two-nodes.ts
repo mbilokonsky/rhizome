@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import {App} from '../../util/app';
+import {App} from '../../util/app.js';
 const debug = Debug('test:two');
 
 describe('Run', () => {
@@ -13,6 +13,8 @@ describe('Run', () => {
     apps[1] = new App({
       httpEnable: true,
       peerId: 'app1',
+      // Make the apps use the same pubsub topic so they can talk to each other
+      pubSubTopic: apps[0].config.pubSubTopic,
     });
     apps[0].config.seedPeers.push(apps[1].myRequestAddr);
     apps[1].config.seedPeers.push(apps[0].myRequestAddr);

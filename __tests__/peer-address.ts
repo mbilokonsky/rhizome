@@ -1,4 +1,4 @@
-import {PeerAddress} from '../src/types';
+import {PeerAddress} from '../src/types.js';
 
 describe('PeerAddress', () => {
   it('toString()', () => {

@@ -1,5 +1,5 @@
 import express, {Router} from "express";
-import {htmlDocFromMarkdown, MDFiles} from "../util/md-files";
+import {htmlDocFromMarkdown, MDFiles} from "../util/md-files.js";
 
 export class HttpHtml {
   router = Router();

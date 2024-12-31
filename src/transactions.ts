@@ -1,7 +1,7 @@
 import Debug from "debug";
 import EventEmitter from "events";
-import {Delta, DeltaID} from "./delta";
-import {DomainEntityID, TransactionID} from "./types";
+import {Delta, DeltaID} from "./delta.js";
+import {DomainEntityID, TransactionID} from "./types.js";
 const debug = Debug("transactions");
 
 function getDeltaTransactionId(delta: Delta): TransactionID | undefined {

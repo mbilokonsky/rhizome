@@ -1,8 +1,8 @@
 import Debug from 'debug';
 import EventEmitter from 'node:events';
 import objectHash from 'object-hash';
-import {Delta, DeltaNetworkImage} from './delta';
-import {RhizomeNode} from './node';
+import {Delta, DeltaNetworkImage} from './delta.js';
+import {RhizomeNode} from './node.js';
 const debug = Debug('deltas');
 
 enum Decision {
@@ -87,7 +87,10 @@ export class DeltaStream {
 
   async publishDelta(delta: Delta) {
     debug(`Publishing delta: ${JSON.stringify(delta)}`);
-    await this.rhizomeNode.pubSub.publish("deltas", this.serializeDelta(delta));
+    await this.rhizomeNode.pubSub.publish(
+      this.rhizomeNode.config.pubSubTopic, 
+      this.serializeDelta(delta)
+    );
   }
 
   serializeDelta(delta: Delta): string {

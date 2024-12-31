@@ -30,24 +30,25 @@ export class HttpApi {
 
     // Get the list of peers seen by this node (including itself)
     this.router.get("/peers", (_req: express.Request, res: express.Response) => {
-      res.json(this.rhizomeNode.peers.peers.map(({reqAddr, publishAddr, isSelf, isSeedPeer}) => {
-        const deltasAcceptedCount = this.rhizomeNode.deltaStream.deltasAccepted
-          .filter((delta: Delta) => {
-            return delta.receivedFrom?.addr == reqAddr.addr &&
-              delta.receivedFrom?.port == reqAddr.port;
-          })
-          .length;
-        const peerInfo = {
-          reqAddr: reqAddr.toAddrString(),
-          publishAddr: publishAddr?.toAddrString(),
-          isSelf,
-          isSeedPeer,
-          deltaCount: {
-            accepted: deltasAcceptedCount
-          }
-        };
-        return peerInfo;
-      }));
+      res.json(this.rhizomeNode.peers.peers.map(
+        ({reqAddr, publishAddr, isSelf, isSeedPeer}) => {
+          const deltasAcceptedCount = this.rhizomeNode.deltaStream.deltasAccepted
+            .filter((delta: Delta) => {
+              return delta.receivedFrom?.addr == reqAddr.addr &&
+                delta.receivedFrom?.port == reqAddr.port;
+            })
+            .length;
+          const peerInfo = {
+            reqAddr: reqAddr.toAddrString(),
+            publishAddr: publishAddr?.toAddrString(),
+            isSelf,
+            isSeedPeer,
+            deltaCount: {
+              accepted: deltasAcceptedCount
+            }
+          };
+          return peerInfo;
+        }));
     });
 
     // Get the number of peers seen by this node (including itself)

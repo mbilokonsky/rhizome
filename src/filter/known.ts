@@ -1,4 +1,4 @@
-import { FilterExpr } from "../types";
+import { FilterExpr } from "../types.js";
 // import { map } from 'radash';
 
 // A creator as seen by a host

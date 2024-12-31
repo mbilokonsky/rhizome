@@ -1,6 +1,6 @@
-import {Delta, PointerTarget} from "../src/delta";
-import {Lossless, LosslessViewMany} from "../src/lossless";
-import {Lossy, lastValueFromLosslessViewOne, valueFromCollapsedDelta, ResolvedViewMany} from "../src/lossy";
+import {Delta, PointerTarget} from "../src/delta.js";
+import {Lossless, LosslessViewMany} from "../src/lossless.js";
+import {Lossy, lastValueFromLosslessViewOne, valueFromCollapsedDelta } from "../src/lossy.js";
 
 describe('Lossy', () => {
   describe('se a provided function to resolve entity views', () => {

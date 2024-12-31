@@ -1,12 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES6",
-    "module": "CommonJS",
+    "target": "ESNext",
+    "module": "ESNext",
     "esModuleInterop": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "sourceMap": false,
+    "isolatedModules": true,
+    /* "allowImportingTsExtensions": true, */
+    /* "noEmit": true, */
     "baseUrl": ".",
     "outDir": "dist",
+    "lib": ["ESNext"],
+    "types": ["node", "jest"],
     "importsNotUsedAsValues": "remove",
     "strict": true,
     "skipLibCheck": true,
@@ -21,5 +26,8 @@
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "tsc-alias": {
+    "resolveFullPaths": true
+  }
 }

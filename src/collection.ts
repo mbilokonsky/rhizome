@@ -6,11 +6,11 @@
 import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
-import {Delta, DeltaFilter} from "./delta";
-import {Entity, EntityProperties} from "./entity";
-import {Lossy, ResolvedViewOne, Resolver} from "./lossy";
-import {RhizomeNode} from "./node";
-import {DomainEntityID} from "./types";
+import {Delta, DeltaFilter} from "./delta.js";
+import {Entity, EntityProperties} from "./entity.js";
+import {Lossy, ResolvedViewOne, Resolver} from "./lossy.js";
+import {RhizomeNode} from "./node.js";
+import {DomainEntityID} from "./types.js";
 const debug = Debug('collection');
 
 export class Collection {
@@ -214,9 +214,10 @@ export class Collection {
     resolver?: Resolver,
     deltaFilter?: DeltaFilter
   ): T | undefined {
-    if (!this.rhizomeNode) return undefined;
+    if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
+    if (!this.lossy) throw new Error('lossy view not initialized');
 
-    const res = this.lossy?.resolve(resolver, [id], deltaFilter) || {};
+    const res = this.lossy.resolve(resolver, [id], deltaFilter) || {};
 
     return res[id] as T;
   }
