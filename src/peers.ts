@@ -136,6 +136,7 @@ export class Peers {
   }
 
   start() {
+    // TODO: Move this somewhere that makes more sense
     this.rhizomeNode.pubSub.subscribeTopic(
       this.rhizomeNode.config.pubSubTopic,
       (sender, msg) => {
@@ -145,6 +146,13 @@ export class Peers {
         this.rhizomeNode.deltaStream.ingestDelta(delta);
       }
     );
+  }
+
+  stop() {
+    debug(`[${this.rhizomeNode.config.peerId}]`, 'Closing all peer request sockets');
+    for (const peer of this.peers) {
+      peer.reqSock?.close();
+    }
   }
 
   addPeer(addr: PeerAddress): Peer {

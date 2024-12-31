@@ -122,6 +122,7 @@ export class RhizomeNode {
   }
 
   async stop() {
+    this.peers.stop();
     await this.pubSub.stop();
     await this.requestReply.stop();
     await this.httpServer.stop();

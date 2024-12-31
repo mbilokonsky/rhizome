@@ -11,7 +11,6 @@ export type PeerRequest = {
 
 export type RequestHandler = (req: PeerRequest, res: ResponseSocket) => void;
 
-// TODO: Retain handle to request socket for each peer, so we only need to open once
 export class RequestSocket {
   sock = new Request();
 
@@ -33,13 +32,16 @@ export class RequestSocket {
     const [res] = await this.sock.receive();
     return res;
   }
+
+  close() {
+    this.sock.close();
+    debug(`[${this.requestReply.rhizomeNode.config.peerId}]`, 'Request socket closed');
+  }
 }
 
 export class ResponseSocket {
-  sock: Reply;
-  constructor(sock: Reply) {
-    this.sock = sock;
-  }
+  constructor(readonly sock: Reply) {}
+
   async send(msg: object | string) {
     if (typeof msg === 'object') {
       msg = JSON.stringify(msg);
@@ -101,5 +103,6 @@ export class RequestReply {
     await this.replySock.unbind(this.requestBindAddrStr);
     this.replySock.close();
     this.replySock = new Reply();
+    debug(`[${this.rhizomeNode.config.peerId}]`, 'Reply socket closed');
   }
 }
