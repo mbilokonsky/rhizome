@@ -1,9 +1,9 @@
-import Debug from 'debug';
+// import Debug from 'debug';
 import {EntityProperties} from "./entity.js";
 import {CollapsedDelta, Lossless, LosslessViewOne} from "./lossless.js";
 import {Lossy, valueFromCollapsedDelta} from './lossy.js';
 import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types.js";
-const debug = Debug('rz:lossy:last-write-wins');
+// const debug = Debug('rz:lossy:last-write-wins');
 
 type TimestampedProperty = {
   value: PropertyTypes,
@@ -65,9 +65,7 @@ function reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
   }
 
   for (const [key, deltas] of Object.entries(cur.propertyDeltas)) {
-    debug(`reducer: looking for value for key ${key}`);
     const {value, timeUpdated} = lastValueFromDeltas(key, deltas) || {};
-    debug(`reducer: key ${key} value ${value} timeUpdated ${timeUpdated}`);
     if (!value || !timeUpdated) continue;
 
     if (timeUpdated > (acc[cur.id].properties[key]?.timeUpdated || 0)) {
