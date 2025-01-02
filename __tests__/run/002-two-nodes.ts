@@ -13,8 +13,6 @@ describe('Run', () => {
     apps[1] = new App({
       httpEnable: true,
       peerId: 'app-002-B',
-      // Make the apps use the same pubsub topic so they can talk to each other
-      pubSubTopic: apps[0].config.pubSubTopic,
     });
     apps[0].config.seedPeers.push(apps[1].myRequestAddr);
     apps[1].config.seedPeers.push(apps[0].myRequestAddr);

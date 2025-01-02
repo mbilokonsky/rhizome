@@ -80,7 +80,7 @@ class Peer {
     // ZeroMQ subscription
     this.subscription = this.rhizomeNode.pubSub.subscribe(
       this.publishAddr,
-      this.rhizomeNode.config.pubSubTopic,
+      "deltas",
       (sender, msg) => {
         const delta = this.rhizomeNode.deltaStream.deserializeDelta(msg);
         delta.receivedFrom = sender;
@@ -133,19 +133,6 @@ export class Peers {
         }
       }
     });
-  }
-
-  start() {
-    // TODO: Move this somewhere that makes more sense
-    this.rhizomeNode.pubSub.subscribeTopic(
-      this.rhizomeNode.config.pubSubTopic,
-      (sender, msg) => {
-        const delta = this.rhizomeNode.deltaStream.deserializeDelta(msg);
-        delta.receivedFrom = sender;
-        debug(`[${this.rhizomeNode.config.peerId}]`, `Received delta: ${JSON.stringify(delta)}`);
-        this.rhizomeNode.deltaStream.ingestDelta(delta);
-      }
-    );
   }
 
   stop() {

@@ -38,13 +38,6 @@
   "author": "Taliesin (Ladd) <ladd@dgov.io>",
   "license": "Unlicense",
   "dependencies": {
-    "@chainsafe/libp2p-gossipsub": "^14.1.0",
-    "@chainsafe/libp2p-noise": "^16.0.0",
-    "@chainsafe/libp2p-yamux": "^7.0.1",
-    "@libp2p/identify": "^3.0.14",
-    "@libp2p/mdns": "^11.0.16",
-    "@libp2p/ping": "^2.0.14",
-    "@libp2p/tcp": "^10.0.14",
     "debug": "^4.4.0",
     "express": "^4.21.2",
     "json-logic-js": "^2.0.5",

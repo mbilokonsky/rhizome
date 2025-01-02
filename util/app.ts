@@ -1,6 +1,5 @@
-import {RhizomeNode, RhizomeNodeConfig} from "../src/node.js";
 import {Collection} from "../src/collection.js";
-import {randomUUID} from "crypto";
+import {RhizomeNode, RhizomeNodeConfig} from "../src/node.js";
 
 const start = 5000;
 const range = 5000;
@@ -15,7 +14,6 @@ export class App extends RhizomeNode {
       publishBindPort: getRandomPort(),
       requestBindPort: getRandomPort(),
       httpPort: getRandomPort(),
-      pubSubTopic: config?.pubSubTopic || `deltas-${randomUUID()}`,
       ...config,
     });
 

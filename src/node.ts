@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUB_SUB_TOPIC, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config.js';
+import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config.js';
 import {DeltaStream} from './deltas.js';
 import {HttpServer} from './http/index.js';
 import {Lossless} from './lossless.js';
@@ -21,7 +21,6 @@ export type RhizomeNodeConfig = {
   seedPeers: PeerAddress[];
   peerId: string;
   creator: string; // TODO each host should be able to support multiple users
-  pubSubTopic: string;
 };
 
 // So that we can run more than one instance in the same process (for testing)
@@ -50,7 +49,6 @@ export class RhizomeNode {
       seedPeers: parseAddressList(SEED_PEERS),
       peerId: PEER_ID,
       creator: CREATOR,
-      pubSubTopic: PUB_SUB_TOPIC,
       ...config
     };
     debug(`[${this.config.peerId}]`, 'Config', this.config);
@@ -76,10 +74,7 @@ export class RhizomeNode {
 
     // Bind ZeroMQ publish socket
     // TODO: Config option to enable zmq pubsub
-    // await this.pubSub.startZmq();
-
-    // Initialize Libp2p
-    await this.pubSub.startLibp2p();
+    await this.pubSub.startZmq();
 
     // Bind ZeroMQ request socket
     // TODO: request/reply via libp2p?
@@ -92,21 +87,11 @@ export class RhizomeNode {
     }
 
     {
-      // Start libp2p subscription
-      // TODO: Config option to enable gossipsub
-      // TODO: Config options for gossipsub and other libp2p configs
-      this.peers.start();
-
-      // Wait a short time for peers to connect
-      await new Promise((resolve) => setTimeout(resolve, 200));
-    }
-
-    {
       // Wait a short time for sockets to initialize
-      // await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Subscribe to seed peers
-      // this.peers.subscribeToSeeds();
+      this.peers.subscribeToSeeds();
 
       // Wait a short time for sockets to initialize
       // await new Promise((resolve) => setTimeout(resolve, 500));
