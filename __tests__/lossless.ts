@@ -19,24 +19,24 @@ describe('Lossless', () => {
     }).toV1();
 
     expect(delta.pointers).toMatchObject([{
-        localContext: "actor",
-        target: "keanu",
-        targetContext: "roles"
-      }, {
-        localContext: "role",
-        target: "neo",
-        targetContext: "actor"
-      }, {
-        localContext: "film",
-        target: "the_matrix",
-        targetContext: "cast"
-      }, {
-        localContext: "base_salary",
-        target: 1000000
-      }, {
-        localContext: "salary_currency",
-        target: "usd"
-      }]);
+      localContext: "actor",
+      target: "keanu",
+      targetContext: "roles"
+    }, {
+      localContext: "role",
+      target: "neo",
+      targetContext: "actor"
+    }, {
+      localContext: "film",
+      target: "the_matrix",
+      targetContext: "cast"
+    }, {
+      localContext: "base_salary",
+      target: 1000000
+    }, {
+      localContext: "salary_currency",
+      target: "usd"
+    }]);
 
     const lossless = new Lossless(node);
 
