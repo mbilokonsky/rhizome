@@ -1,8 +1,8 @@
 // import Debug from 'debug';
-import {EntityProperties} from "./entity.js";
-import {CollapsedDelta, Lossless, LosslessViewOne} from "./lossless.js";
-import {Lossy, valueFromCollapsedDelta} from './lossy.js';
-import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types.js";
+import {EntityProperties} from "./entity";
+import {CollapsedDelta, Lossless, LosslessViewOne} from "./lossless";
+import {Lossy, valueFromCollapsedDelta} from './lossy';
+import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types";
 // const debug = Debug('rz:lossy:last-write-wins');
 
 type TimestampedProperty = {

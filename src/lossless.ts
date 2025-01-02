@@ -3,10 +3,10 @@
 
 import Debug from 'debug';
 import EventEmitter from 'events';
-import {Delta, DeltaFilter, DeltaID, DeltaNetworkImage} from './delta.js';
-import {RhizomeNode} from './node.js';
-import {Transactions} from './transactions.js';
-import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types.js";
+import {Delta, DeltaFilter, DeltaID, DeltaNetworkImage} from './delta';
+import {RhizomeNode} from './node';
+import {Transactions} from './transactions';
+import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types";
 const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};

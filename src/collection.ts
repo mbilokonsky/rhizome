@@ -6,11 +6,11 @@
 import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
-import {Delta} from "./delta.js";
-import {Entity, EntityProperties} from "./entity.js";
-import {LastWriteWins, ResolvedViewOne} from './last-write-wins.js';
-import {RhizomeNode} from "./node.js";
-import {DomainEntityID} from "./types.js";
+import {Delta} from "./delta";
+import {Entity, EntityProperties} from "./entity";
+import {LastWriteWins, ResolvedViewOne} from './last-write-wins';
+import {RhizomeNode} from "./node";
+import {DomainEntityID} from "./types";
 const debug = Debug('rz:collection');
 
 export class Collection {

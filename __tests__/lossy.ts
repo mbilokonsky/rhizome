@@ -1,9 +1,9 @@
 import Debug from 'debug';
-import {Delta, PointerTarget} from "../src/delta.js";
-import {lastValueFromDeltas} from "../src/last-write-wins.js";
-import {Lossless, LosslessViewOne} from "../src/lossless.js";
-import {Lossy, valueFromCollapsedDelta} from "../src/lossy.js";
-import {RhizomeNode} from "../src/node.js";
+import {Delta, PointerTarget} from "../src/delta";
+import {lastValueFromDeltas} from "../src/last-write-wins";
+import {Lossless, LosslessViewOne} from "../src/lossless";
+import {Lossy, valueFromCollapsedDelta} from "../src/lossy";
+import {RhizomeNode} from "../src/node";
 const debug = Debug('test:lossy');
 
 type Role = {

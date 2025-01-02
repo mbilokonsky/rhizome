@@ -1,7 +1,7 @@
 import {randomUUID} from "crypto";
 import microtime from 'microtime';
-import {CreatorID, HostID, Timestamp, TransactionID} from "./types.js";
-import {PeerAddress} from "./peers.js";
+import {CreatorID, HostID, Timestamp, TransactionID} from "./types";
+import {PeerAddress} from "./peers";
 
 export type DeltaID = string;
 

@@ -1,9 +1,9 @@
 import Debug from 'debug';
 import {Message} from 'zeromq';
-import {Delta} from "./delta.js";
-import {RhizomeNode} from "./node.js";
-import {Subscription} from './pub-sub.js';
-import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply.js";
+import {Delta} from "./delta";
+import {RhizomeNode} from "./node";
+import {Subscription} from './pub-sub';
+import {PeerRequest, RequestSocket, ResponseSocket} from "./request-reply";
 const debug = Debug('rz:peers');
 
 export class PeerAddress {

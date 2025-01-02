@@ -1,11 +1,11 @@
 import Debug from 'debug';
-import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config.js';
-import {DeltaStream} from './deltas.js';
-import {HttpServer} from './http/index.js';
-import {Lossless} from './lossless.js';
-import {parseAddressList, PeerAddress, Peers} from './peers.js';
-import {PubSub} from './pub-sub.js';
-import {RequestReply} from './request-reply.js';
+import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config';
+import {DeltaStream} from './deltas';
+import {HttpServer} from './http/index';
+import {Lossless} from './lossless';
+import {parseAddressList, PeerAddress, Peers} from './peers';
+import {PubSub} from './pub-sub';
+import {RequestReply} from './request-reply';
 const debug = Debug('rz:rhizome-node');
 
 export type RhizomeNodeConfig = {

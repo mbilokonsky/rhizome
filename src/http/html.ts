@@ -1,6 +1,6 @@
 import express, {Router} from "express";
-import {RhizomeNode} from "../node.js";
-import {htmlDocFromMarkdown, MDFiles} from "../util/md-files.js";
+import {RhizomeNode} from "../node";
+import {htmlDocFromMarkdown, MDFiles} from "../util/md-files";
 
 export class HttpHtml {
   router = Router();

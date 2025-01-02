@@ -1,5 +1,5 @@
 import { Level } from 'level';
-import { LEVEL_DB_DIR } from './config.js';
+import { LEVEL_DB_DIR } from './config';
 import path from 'path';
 
 function newStore(name: string): Level {

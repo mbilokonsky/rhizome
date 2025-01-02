@@ -1,4 +1,4 @@
-import {parseAddressList, PeerAddress} from '../src/peers.js';
+import {parseAddressList, PeerAddress} from '../src/peers';
 
 describe('PeerAddress', () => {
   it('toString()', () => {

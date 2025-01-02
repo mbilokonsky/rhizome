@@ -2,7 +2,7 @@ import Debug from "debug";
 import {FSWatcher, readdirSync, readFileSync, watch} from "fs";
 import path, {join} from "path";
 import showdown from "showdown";
-import {RhizomeNode} from "../node.js";
+import {RhizomeNode} from "../node";
 const {Converter} = showdown;
 const debug = Debug('rz:md-files');
 

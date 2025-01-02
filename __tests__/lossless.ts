@@ -1,6 +1,6 @@
-import {Delta, DeltaFilter} from '../src/delta.js';
-import {Lossless} from '../src/lossless.js';
-import {RhizomeNode} from '../src/node.js';
+import {Delta, DeltaFilter} from '../src/delta';
+import {Lossless} from '../src/lossless';
+import {RhizomeNode} from '../src/node';
 
 describe('Lossless', () => {
   const node = new RhizomeNode();

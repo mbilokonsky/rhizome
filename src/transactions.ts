@@ -1,8 +1,8 @@
 import Debug from "debug";
 import EventEmitter from "events";
-import {Delta, DeltaID} from "./delta.js";
-import {Lossless} from "./lossless.js";
-import {DomainEntityID, TransactionID} from "./types.js";
+import {Delta, DeltaID} from "./delta";
+import {Lossless} from "./lossless";
+import {DomainEntityID, TransactionID} from "./types";
 const debug = Debug('rz:transactions');
 
 function getDeltaTransactionId(delta: Delta): TransactionID | undefined {

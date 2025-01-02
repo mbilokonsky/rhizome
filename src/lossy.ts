@@ -3,9 +3,9 @@
 // into various possible "lossy" views that combine or exclude some information.
 
 import Debug from 'debug';
-import {DeltaFilter, DeltaID} from "./delta.js";
-import {CollapsedDelta, Lossless, LosslessViewOne} from "./lossless.js";
-import {DomainEntityID} from "./types.js";
+import {DeltaFilter, DeltaID} from "./delta";
+import {CollapsedDelta, Lossless, LosslessViewOne} from "./lossless";
+import {DomainEntityID} from "./types";
 const debug = Debug('rz:lossy');
 
 export type Initializer<Accumulator> = (v: LosslessViewOne) => Accumulator;

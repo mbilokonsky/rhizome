@@ -1,9 +1,9 @@
 import Debug from "debug";
 import express from "express";
 import {Server} from "http";
-import {RhizomeNode} from "../node.js";
-import {HttpApi} from "./api.js";
-import {HttpHtml} from "./html.js";
+import {RhizomeNode} from "../node";
+import {HttpApi} from "./api";
+import {HttpHtml} from "./html";
 const debug = Debug('rz:http-api');
 
 export class HttpServer {

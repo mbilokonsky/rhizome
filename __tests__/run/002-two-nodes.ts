@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import {App} from '../../util/app.js';
+import {App} from '../../util/app';
 const debug = Debug('test:two');
 
 describe('Run', () => {

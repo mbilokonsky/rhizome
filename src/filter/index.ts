@@ -1,5 +1,5 @@
 import { add_operation, apply } from 'json-logic-js';
-import { Delta } from '../delta.js';
+import { Delta } from '../delta';
 
 type DeltaContext = Delta & {
   creatorAddress: string;

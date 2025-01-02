@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import {Publisher, Subscriber} from 'zeromq';
-import {RhizomeNode} from './node.js';
-import {PeerAddress} from './peers.js';
+import {RhizomeNode} from './node';
+import {PeerAddress} from './peers';
 const debug = Debug('rz:pub-sub');
 
 export type SubscribedMessageHandler = (sender: PeerAddress, msg: string) => void;

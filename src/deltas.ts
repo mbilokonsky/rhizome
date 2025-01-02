@@ -1,8 +1,8 @@
 import Debug from 'debug';
 import EventEmitter from 'node:events';
 import objectHash from 'object-hash';
-import {Delta, DeltaNetworkImage} from './delta.js';
-import {RhizomeNode} from './node.js';
+import {Delta, DeltaNetworkImage} from './delta';
+import {RhizomeNode} from './node';
 const debug = Debug('rz:deltas');
 
 enum Decision {
