@@ -3,7 +3,7 @@
 
 import Debug from 'debug';
 import EventEmitter from 'events';
-import {Delta, DeltaFilter, DeltaID, DeltaNetworkImage} from './delta';
+import {Delta, DeltaFilter, DeltaID, DeltaNetworkImageV1} from './delta';
 import {RhizomeNode} from './node';
 import {Transactions} from './transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types";
@@ -11,7 +11,7 @@ const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
 
-export type CollapsedDelta = Omit<DeltaNetworkImage, 'pointers'> & {
+export type CollapsedDelta = Omit<DeltaNetworkImageV1, 'pointers'> & {
   pointers: CollapsedPointer[];
 };
 

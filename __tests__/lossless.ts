@@ -1,4 +1,4 @@
-import {Delta, DeltaFilter} from '../src/delta';
+import {Delta, DeltaFilter, DeltaV2} from '../src/delta';
 import {Lossless} from '../src/lossless';
 import {RhizomeNode} from '../src/node';
 
@@ -6,10 +6,19 @@ describe('Lossless', () => {
   const node = new RhizomeNode();
 
   it('creates a lossless view of keanu as neo in the matrix', () => {
-    const delta = new Delta({
+    const delta = new DeltaV2({
       creator: 'a',
       host: 'h',
-      pointers: [{
+      pointers: {
+        actor: {"keanu": "roles"},
+        role: {"neo": "actor"},
+        film: {"the_matrix": "cast"},
+        base_salary: 1000000,
+        salary_currency: "usd"
+      }
+    }).toV1();
+
+    expect(delta.pointers).toMatchObject([{
         localContext: "actor",
         target: "keanu",
         targetContext: "roles"
@@ -27,8 +36,7 @@ describe('Lossless', () => {
       }, {
         localContext: "salary_currency",
         target: "usd"
-      }]
-    });
+      }]);
 
     const lossless = new Lossless(node);
 
