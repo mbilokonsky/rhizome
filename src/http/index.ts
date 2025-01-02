@@ -23,6 +23,7 @@ export class HttpServer {
 
   start() {
     const {httpAddr, httpPort} = this.rhizomeNode.config;
+    this.httpHtml.start();
     this.server = this.app.listen({
       port: httpPort,
       host: httpAddr,
@@ -34,6 +35,6 @@ export class HttpServer {
 
   async stop() {
     this.server?.close();
-    this.httpHtml.close();
+    this.httpHtml.stop();
   }
 }

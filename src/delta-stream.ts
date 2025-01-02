@@ -12,7 +12,6 @@ enum Decision {
 };
 
 export class DeltaStream {
-  rhizomeNode: RhizomeNode;
   deltaStream = new EventEmitter();
   deltasProposed: Delta[] = [];
   deltasAccepted: Delta[] = [];
@@ -20,9 +19,7 @@ export class DeltaStream {
   deltasDeferred: Delta[] = [];
   hashesReceived = new Set<string>();
 
-  constructor(rhizomeNode: RhizomeNode) {
-    this.rhizomeNode = rhizomeNode;
-  }
+  constructor(readonly rhizomeNode: RhizomeNode) {}
 
   applyPolicy(delta: Delta): Decision {
     return !!delta && Decision.Accept;

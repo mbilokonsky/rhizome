@@ -9,12 +9,6 @@ export class HttpHtml {
   constructor(readonly rhizomeNode: RhizomeNode) {
     this.mdFiles = new MDFiles(this.rhizomeNode);
 
-    // Scan and watch for markdown files
-    this.mdFiles.readDir();
-    this.mdFiles.readReadme();
-    this.mdFiles.watchDir();
-    this.mdFiles.watchReadme();
-
     // Serve README
     this.router.get('/README', (_req: express.Request, res: express.Response) => {
       const html = this.mdFiles.getReadmeHTML();
@@ -39,7 +33,15 @@ export class HttpHtml {
     });
   }
 
-  close() {
-    this.mdFiles.close();
+  start() {
+    // Scan and watch for markdown files
+    this.mdFiles.readDir();
+    this.mdFiles.readReadme();
+    this.mdFiles.watchDir();
+    this.mdFiles.watchReadme();
+  }
+
+  stop() {
+    this.mdFiles.stop();
   }
 }

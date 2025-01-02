@@ -2,7 +2,6 @@
   "name": "rhizome-node",
   "version": "0.1.0",
   "description": "Rhizomatic database engine node",
-  "type": "module",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",

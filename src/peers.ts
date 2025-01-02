@@ -69,10 +69,12 @@ class Peer {
 
   async subscribeDeltas() {
     if (!this.publishAddr) {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `Requesting publish addr from peer ${this.reqAddr.toAddrString()}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`,
+        `Requesting publish addr from peer ${this.reqAddr.toAddrString()}`);
       const res = await this.request(RequestMethods.GetPublishAddress);
       this.publishAddr = PeerAddress.fromString(res.toString());
-      debug(`[${this.rhizomeNode.config.peerId}]`, `Received publish addr ${this.publishAddr.toAddrString()} from peer ${this.reqAddr.toAddrString()}`);
+      debug(`[${this.rhizomeNode.config.peerId}]`,
+        `Received publish addr ${this.publishAddr.toAddrString()} from peer ${this.reqAddr.toAddrString()}`);
     }
 
     debug(`[${this.rhizomeNode.config.peerId}]`, `Subscribing to peer ${this.reqAddr.toAddrString()}`);

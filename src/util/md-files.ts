@@ -130,7 +130,7 @@ export class MDFiles {
     });
   }
 
-  close() {
+  stop() {
     this.dirWatcher?.close();
     this.readmeWatcher?.close();
   }

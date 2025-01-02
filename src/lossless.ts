@@ -122,9 +122,7 @@ export class Lossless {
   }
 
   viewSpecific(entityId: DomainEntityID, deltaIds: DeltaID[], deltaFilter?: DeltaFilter): LosslessViewOne | undefined {
-    debug(`[${this.rhizomeNode.config.peerId}]`, `viewSpecific, deltaIds:`, JSON.stringify(deltaIds));
     const combinedFilter = (delta: Delta) => {
-      debug(`[${this.rhizomeNode.config.peerId}]`, `combinedFilter, deltaIds:`, JSON.stringify(deltaIds));
       if (!deltaIds.includes(delta.id)) {
         debug(`[${this.rhizomeNode.config.peerId}]`, `Excluding delta ${delta.id} because it's not in the requested list of deltas`);
         return false;
@@ -191,7 +189,6 @@ export class Lossless {
       };
     }
 
-    debug(`[${this.rhizomeNode.config.peerId}]`, `Returning view:`, JSON.stringify(view, null, 2));
     return view;
   }
 

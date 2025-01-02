@@ -1,6 +1,6 @@
 import Debug from 'debug';
 import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config';
-import {DeltaStream} from './deltas';
+import {DeltaStream} from './delta-stream';
 import {HttpServer} from './http/index';
 import {Lossless} from './lossless';
 import {parseAddressList, PeerAddress, Peers} from './peers';

@@ -12,15 +12,18 @@ export type PeerRequest = {
 export type RequestHandler = (req: PeerRequest, res: ResponseSocket) => void;
 
 export class RequestSocket {
-  sock = new Request();
+  sock?: Request;
+  addrStr: string;
 
   constructor(readonly requestReply: RequestReply, addr: PeerAddress) {
-    const addrStr = `tcp://${addr.addr}:${addr.port}`;
-    this.sock.connect(addrStr);
-    debug(`[${this.requestReply.rhizomeNode.config.peerId}]`, `Request socket connecting to ${addrStr}`);
+    this.addrStr = `tcp://${addr.addr}:${addr.port}`;
+    this.sock = new Request();
+    this.sock.connect(this.addrStr);
+    debug(`[${this.requestReply.rhizomeNode.config.peerId}]`, `Request socket connecting to ${this.addrStr}`);
   }
 
   async request(method: RequestMethods): Promise<Message> {
+    if (!this.sock) throw new Error('Request socket is undefined');
     const req: PeerRequest = {
       method
     };
@@ -34,7 +37,9 @@ export class RequestSocket {
   }
 
   close() {
-    this.sock.close();
+    this.sock?.close();
+    // Make sure it goes out of scope
+    this.sock = undefined;
     debug(`[${this.requestReply.rhizomeNode.config.peerId}]`, 'Request socket closed');
   }
 }
@@ -63,7 +68,7 @@ function peerRequestFromMsg(msg: Message): PeerRequest | null {
 
 export class RequestReply {
   rhizomeNode: RhizomeNode;
-  replySock = new Reply();
+  replySock?: Reply;
   requestStream = new EventEmitter();
   requestBindAddrStr: string;
 
@@ -75,6 +80,7 @@ export class RequestReply {
 
   // Listen for incoming requests
   async start() {
+    this.replySock = new Reply();
 
     await this.replySock.bind(this.requestBindAddrStr);
     debug(`[${this.rhizomeNode.config.peerId}]`, `Reply socket bound to ${this.requestBindAddrStr}`);
@@ -90,8 +96,10 @@ export class RequestReply {
   // Each handler will get a copy of every message.
   registerRequestHandler(handler: RequestHandler) {
     this.requestStream.on('request', (req) => {
-      const res = new ResponseSocket(this.replySock);
-      handler(req, res);
+      if (this.replySock) {
+        const res = new ResponseSocket(this.replySock);
+        handler(req, res);
+      }
     });
   }
 
@@ -100,9 +108,11 @@ export class RequestReply {
   }
 
   async stop() {
-    await this.replySock.unbind(this.requestBindAddrStr);
-    this.replySock.close();
-    this.replySock = new Reply();
-    debug(`[${this.rhizomeNode.config.peerId}]`, 'Reply socket closed');
+    if (this.replySock) {
+      await this.replySock.unbind(this.requestBindAddrStr);
+      this.replySock.close();
+      this.replySock = undefined;
+      debug(`[${this.rhizomeNode.config.peerId}]`, 'Reply socket closed');
+    }
   }
 }
