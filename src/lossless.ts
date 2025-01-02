@@ -3,10 +3,10 @@
 
 import Debug from 'debug';
 import EventEmitter from 'events';
-import {Delta, DeltaFilter, DeltaNetworkImage} from './delta.js';
+import {Delta, DeltaFilter, DeltaID, DeltaNetworkImage} from './delta.js';
+import {RhizomeNode} from './node.js';
 import {Transactions} from './transactions.js';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types.js";
-import {RhizomeNode} from './node.js';
 const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
@@ -16,8 +16,9 @@ export type CollapsedDelta = Omit<DeltaNetworkImage, 'pointers'> & {
 };
 
 export type LosslessViewOne = {
+  id: DomainEntityID,
   referencedAs: string[];
-  properties: {
+  propertyDeltas: {
     [key: PropertyID]: CollapsedDelta[]
   }
 };
@@ -27,12 +28,9 @@ export type LosslessViewMany = ViewMany<LosslessViewOne>;
 class LosslessEntityMap extends Map<DomainEntityID, LosslessEntity> {};
 
 class LosslessEntity {
-  id: DomainEntityID;
   properties = new Map<PropertyID, Set<Delta>>();
 
-  constructor(id: DomainEntityID) {
-    this.id = id;
-  }
+  constructor(readonly lossless: Lossless, readonly id: DomainEntityID) {}
 
   addDelta(delta: Delta) {
     const targetContexts = delta.pointers
@@ -48,6 +46,7 @@ class LosslessEntity {
       }
 
       propertyDeltas.add(delta);
+      debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `entity ${this.id} added delta:`, JSON.stringify(delta));
     }
   }
 
@@ -71,12 +70,12 @@ export class Lossless {
 
   constructor(readonly rhizomeNode: RhizomeNode) {
     this.transactions = new Transactions(this);
-    this.transactions.eventStream.on("completed", (transactionId) => {
+    this.transactions.eventStream.on("completed", (transactionId, deltaIds) => {
       debug(`[${this.rhizomeNode.config.peerId}]`, `Completed transaction ${transactionId}`);
       const transaction = this.transactions.get(transactionId);
       if (!transaction) return;
       for (const id of transaction.entityIds) {
-        this.eventStream.emit("updated", id);
+        this.eventStream.emit("updated", id, deltaIds);
       }
     });
   }
@@ -91,7 +90,7 @@ export class Lossless {
       let ent = this.domainEntities.get(target);
 
       if (!ent) {
-        ent = new LosslessEntity(target);
+        ent = new LosslessEntity(this, target);
         this.domainEntities.set(target, ent);
       }
 
@@ -116,28 +115,49 @@ export class Lossless {
     if (!transactionId) {
       // No transaction -- we can issue an update event immediately
       for (const id of targets) {
-        this.eventStream.emit("updated", id);
+        this.eventStream.emit("updated", id, [delta.id]);
       }
     }
     return transactionId;
   }
 
+  viewSpecific(entityId: DomainEntityID, deltaIds: DeltaID[], deltaFilter?: DeltaFilter): LosslessViewOne | undefined {
+    debug(`[${this.rhizomeNode.config.peerId}]`, `viewSpecific, deltaIds:`, JSON.stringify(deltaIds));
+    const combinedFilter = (delta: Delta) => {
+      debug(`[${this.rhizomeNode.config.peerId}]`, `combinedFilter, deltaIds:`, JSON.stringify(deltaIds));
+      if (!deltaIds.includes(delta.id)) {
+        debug(`[${this.rhizomeNode.config.peerId}]`, `Excluding delta ${delta.id} because it's not in the requested list of deltas`);
+        return false;
+      }
+      if (!deltaFilter) return true;
+      return deltaFilter(delta);
+    };
+    const res = this.view([entityId], (delta) => combinedFilter(delta));
+    return res[entityId];
+  }
+
   view(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
     const view: LosslessViewMany = {};
     entityIds = entityIds ?? Array.from(this.domainEntities.keys());
+
     for (const id of entityIds) {
       const ent = this.domainEntities.get(id);
       if (!ent) continue;
 
+
       const referencedAs = new Set<string>();
-      const properties: {
+      const propertyDeltas: {
         [key: PropertyID]: CollapsedDelta[]
       } = {};
 
       for (const [key, deltas] of ent.properties.entries()) {
-        properties[key] = properties[key] || [];
+        propertyDeltas[key] = propertyDeltas[key] || [];
 
         for (const delta of deltas) {
+          if (deltaFilter && !deltaFilter(delta)) {
+            continue;
+          }
+
           // If this delta is part of a transaction,
           // we need to be able to wait for the whole transaction.
           if (delta.transactionId) {
@@ -146,11 +166,6 @@ export class Lossless {
               debug(`[${this.rhizomeNode.config.peerId}]`, `Excluding delta ${delta.id} because transaction ${delta.transactionId} is not completed`);
               continue;
             }
-          }
-
-          if (deltaFilter) {
-            const include = deltaFilter(delta);
-            if (!include) continue;
           }
 
           const pointers: CollapsedPointer[] = [];
@@ -162,20 +177,21 @@ export class Lossless {
             }
           }
 
-          const collapsedDelta: CollapsedDelta = {
+          propertyDeltas[key].push({
             ...delta,
             pointers
-          };
-
-          properties[key].push(collapsedDelta);
+          });
         }
       }
 
       view[ent.id] = {
+        id: ent.id,
         referencedAs: Array.from(referencedAs.values()),
-        properties
+        propertyDeltas
       };
     }
+
+    debug(`[${this.rhizomeNode.config.peerId}]`, `Returning view:`, JSON.stringify(view, null, 2));
     return view;
   }
 

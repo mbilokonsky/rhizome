@@ -6,9 +6,9 @@
 import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
-import {Delta, DeltaFilter} from "./delta.js";
+import {Delta} from "./delta.js";
 import {Entity, EntityProperties} from "./entity.js";
-import {Lossy, ResolvedViewOne, Resolver} from "./lossy.js";
+import {LastWriteWins, ResolvedViewOne} from './last-write-wins.js';
 import {RhizomeNode} from "./node.js";
 import {DomainEntityID} from "./types.js";
 const debug = Debug('rz:collection');
@@ -17,7 +17,7 @@ export class Collection {
   rhizomeNode?: RhizomeNode;
   name: string;
   eventStream = new EventEmitter();
-  lossy?: Lossy;
+  lossy?: LastWriteWins;
 
   constructor(name: string) {
     this.name = name;
@@ -32,7 +32,7 @@ export class Collection {
   rhizomeConnect(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
 
-    this.lossy = new Lossy(this.rhizomeNode.lossless);
+    this.lossy = new LastWriteWins(this.rhizomeNode.lossless);
 
     // Listen for completed transactions, and emit updates to event stream
     this.rhizomeNode.lossless.eventStream.on("updated", (id) => {
@@ -58,7 +58,6 @@ export class Collection {
     newProperties: EntityProperties,
     creator: string,
     host: string,
-    resolver?: Resolver
   ): {
     transactionDelta: Delta | undefined,
     deltas: Delta[]
@@ -67,7 +66,7 @@ export class Collection {
     let oldProperties: EntityProperties = {};
 
     if (entityId) {
-      const entity = this.resolve(entityId, resolver);
+      const entity = this.resolve(entityId);
       if (entity) {
         oldProperties = entity.properties;
       }
@@ -155,7 +154,6 @@ export class Collection {
   async put(
     entityId: DomainEntityID | undefined,
     properties: EntityProperties,
-    resolver?: Resolver
   ): Promise<ResolvedViewOne> {
     if (!this.rhizomeNode) throw new Error('collection not connecte to rhizome');
 
@@ -173,7 +171,6 @@ export class Collection {
       properties,
       this.rhizomeNode?.config.creator,
       this.rhizomeNode?.config.peerId,
-      resolver,
     );
 
     const ingested = new Promise<boolean>((resolve) => {
@@ -204,21 +201,19 @@ export class Collection {
 
     await ingested;
 
-    const res = this.resolve(entityId, resolver);
+    const res = this.resolve(entityId);
     if (!res) throw new Error("could not get what we just put!");
     return res;
   }
 
-  resolve<T = ResolvedViewOne>(
-    id: string,
-    resolver?: Resolver,
-    deltaFilter?: DeltaFilter
-  ): T | undefined {
+  resolve(
+    id: string
+  ): ResolvedViewOne | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
     if (!this.lossy) throw new Error('lossy view not initialized');
 
-    const res = this.lossy.resolve(resolver, [id], deltaFilter) || {};
+    const res = this.lossy.resolve([id]) || {};
 
-    return res[id] as T;
+    return res[id];
   }
 }

@@ -1,8 +1,8 @@
 import Debug from "debug";
 import EventEmitter from "events";
 import {Delta, DeltaID} from "./delta.js";
-import {DomainEntityID, TransactionID} from "./types.js";
 import {Lossless} from "./lossless.js";
+import {DomainEntityID, TransactionID} from "./types.js";
 const debug = Debug('rz:transactions');
 
 function getDeltaTransactionId(delta: Delta): TransactionID | undefined {
@@ -53,6 +53,19 @@ export class Transaction {
   size?: number;
   receivedDeltaIds = new Set<DeltaID>();
   entityIds = new Set<DomainEntityID>();
+  resolved: Promise<boolean>;
+
+  constructor(readonly transactions: Transactions, readonly id: TransactionID) {
+    this.resolved = new Promise((resolve) => {
+      this.transactions.eventStream.on("completed", (transactionId) => {
+        if (transactionId === this.id) resolve(true);
+      });
+    });
+  }
+
+  getReceivedDeltaIds() {
+    return Array.from(this.receivedDeltaIds.values());
+  }
 }
 
 export class Transactions {
@@ -68,13 +81,14 @@ export class Transactions {
   getOrInit(id: TransactionID): Transaction {
     let t = this.transactions.get(id);
     if (!t) {
-      t = new Transaction();
+      t = new Transaction(this, id);
       this.transactions.set(id, t);
     }
     return t;
   }
 
   ingestDelta(delta: Delta, targets: DomainEntityID[]): TransactionID | undefined {
+    // This delta may be part of a transaction
     {
       const transactionId = getDeltaTransactionId(delta);
       if (transactionId) {
@@ -83,7 +97,6 @@ export class Transactions {
           t.entityIds.add(id);
         }
 
-        // This delta is part of a transaction
         // Add this to the delta's data structure for quick reference
         delta.transactionId = transactionId;
 
@@ -92,25 +105,25 @@ export class Transactions {
 
         // Notify that the transaction is complete
         if (this.isComplete(transactionId)) {
-          this.eventStream.emit("completed", transactionId);
+          this.eventStream.emit("completed", t.id, t.getReceivedDeltaIds());
         }
 
         return transactionId;
       }
     }
 
+    // This delta may describe a transaction
     {
       const {transactionId, size} = getTransactionSize(delta) || {};
       if (transactionId && size) {
-        // This delta describes a transaction
-
         debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `Transaction ${transactionId} has size ${size}`);
 
         this.setSize(transactionId, size as number);
 
         // Check if the transaction is complete
         if (this.isComplete(transactionId)) {
-          this.eventStream.emit("completed", transactionId);
+          const t = this.getOrInit(transactionId);
+          this.eventStream.emit("completed", t.id, t.getReceivedDeltaIds());
         }
 
         return transactionId;
@@ -124,8 +137,16 @@ export class Transactions {
   }
 
   isComplete(id: TransactionID) {
-    const t = this.getOrInit(id);
-    return t.size !== undefined && t.receivedDeltaIds.size === t.size;
+    const t = this.get(id);
+    if (!t) return false;
+    if (t.size === undefined) return false;
+    return t.receivedDeltaIds.size === t.size;
+  }
+
+  async waitFor(id: TransactionID) {
+    const t = this.get(id);
+    if (!t) return;
+    await t.resolved;
   }
 
   setSize(id: TransactionID, size: number) {

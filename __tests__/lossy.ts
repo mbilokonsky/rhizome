@@ -1,13 +1,60 @@
-import {RhizomeNode} from "../src/node.js";
+import Debug from 'debug';
 import {Delta, PointerTarget} from "../src/delta.js";
-import {Lossless, LosslessViewMany} from "../src/lossless.js";
-import {Lossy, lastValueFromLosslessViewOne, valueFromCollapsedDelta } from "../src/lossy.js";
+import {lastValueFromDeltas} from "../src/last-write-wins.js";
+import {Lossless, LosslessViewOne} from "../src/lossless.js";
+import {Lossy, valueFromCollapsedDelta} from "../src/lossy.js";
+import {RhizomeNode} from "../src/node.js";
+const debug = Debug('test:lossy');
+
+type Role = {
+  actor: PointerTarget,
+  film: PointerTarget,
+  role: PointerTarget
+};
+
+type Summary = {
+  roles: Role[];
+};
+
+
+function initializer(): Summary {
+  return {
+    roles: []
+  };
+}
+
+// TODO: Add more rigor to this example approach to generating a summary.
+// it's really not CRDT, it likely depends on the order of the pointers.
+// TODO: Prove with failing test
+
+const reducer = (acc: Summary, cur: LosslessViewOne): Summary => {
+  if (cur.referencedAs.includes("role")) {
+    const {delta, value: actor} = lastValueFromDeltas("actor", cur.propertyDeltas["actor"]) ?? {};
+    if (!delta) throw new Error('expected to find delta');
+    if (!actor) throw new Error('expected to find actor');
+    const film = valueFromCollapsedDelta("film", delta);
+    if (!film) throw new Error('expected to find film');
+    acc.roles.push({
+      role: cur.id,
+      actor,
+      film
+    });
+  }
+
+  return acc;
+}
+
+const resolver = (acc: Summary): Summary => {
+  return acc;
+}
+
 
 describe('Lossy', () => {
-  describe('se a provided function to resolve entity views', () => {
+  describe('use a provided initializer, reducer, and resolver to resolve entity views', () => {
     const node = new RhizomeNode();
     const lossless = new Lossless(node);
-    const lossy = new Lossy(lossless);
+
+    const lossy = new Lossy(lossless, initializer, reducer, resolver);
 
     beforeAll(() => {
       lossless.ingestDelta(new Delta({
@@ -36,36 +83,8 @@ describe('Lossy', () => {
     });
 
     it('example summary', () => {
-      type Role = {
-        actor: PointerTarget,
-        film: PointerTarget,
-        role: PointerTarget
-      };
-
-      type Summary = {
-        roles: Role[];
-      };
-
-      const resolver = (losslessView: LosslessViewMany): Summary => {
-        const roles: Role[] = [];
-        for (const [id, ent] of Object.entries(losslessView)) {
-          if (ent.referencedAs.includes("role")) {
-            const {delta, value: actor} = lastValueFromLosslessViewOne(ent, "actor") ?? {};
-            if (!delta) continue; // TODO: panic
-            if (!actor) continue; // TODO: panic
-            const film = valueFromCollapsedDelta(delta, "film");
-            if (!film) continue; // TODO: panic
-            roles.push({
-              role: id,
-              actor,
-              film
-            });
-          }
-        }
-        return {roles};
-      }
-
-      const result = lossy.resolve<Summary>(resolver);
+      const result = lossy.resolve();
+      debug('result', result);
       expect(result).toEqual({
         roles: [{
           film: "the_matrix",

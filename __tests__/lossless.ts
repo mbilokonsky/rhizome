@@ -37,7 +37,7 @@ describe('Lossless', () => {
     expect(lossless.view()).toMatchObject({
       keanu: {
         referencedAs: ["actor"],
-        properties: {
+        propertyDeltas: {
           roles: [{
             creator: "a",
             host: "h",
@@ -53,7 +53,7 @@ describe('Lossless', () => {
       },
       neo: {
         referencedAs: ["role"],
-        properties: {
+        propertyDeltas: {
           actor: [{
             creator: "a",
             host: "h",
@@ -69,7 +69,7 @@ describe('Lossless', () => {
       },
       the_matrix: {
         referencedAs: ["film"],
-        properties: {
+        propertyDeltas: {
           cast: [{
             creator: "a",
             host: "h",
@@ -114,7 +114,7 @@ describe('Lossless', () => {
       expect(lossless.view()).toMatchObject({
         ace: {
           referencedAs: ["1", "14"],
-          properties: {
+          propertyDeltas: {
             value: [{
               creator: 'A',
               host: 'H',
@@ -141,7 +141,7 @@ describe('Lossless', () => {
       expect(lossless.view(undefined, filter)).toMatchObject({
         ace: {
           referencedAs: ["1"],
-          properties: {
+          propertyDeltas: {
             value: [{
               creator: 'A',
               host: 'H',
@@ -156,7 +156,7 @@ describe('Lossless', () => {
       expect(lossless.view(["ace"], filter)).toMatchObject({
         ace: {
           referencedAs: ["1"],
-          properties: {
+          propertyDeltas: {
             value: [{
               creator: 'A',
               host: 'H',
@@ -168,5 +168,7 @@ describe('Lossless', () => {
         }
       });
     });
+
+    // TODO: Test with transactions, say A1 -- B -- A2
   });
 });
