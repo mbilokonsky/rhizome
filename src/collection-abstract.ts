@@ -8,11 +8,11 @@ import {RhizomeNode} from "./node";
 import {DomainEntityID} from "./types";
 const debug = Debug('rz:abstract-collection');
 
-export abstract class Collection<T> {
+export abstract class Collection<View> {
   rhizomeNode?: RhizomeNode;
   name: string;
   eventStream = new EventEmitter();
-  lossy?: T;
+  lossy?: View;
 
   constructor(name: string) {
     this.name = name;
@@ -37,7 +37,7 @@ export abstract class Collection<T> {
     });
 
     // TODO: Fix this
-    rhizomeNode.httpServer.httpApi.serveCollection<T>(this);
+    rhizomeNode.httpServer.httpApi.serveCollection<View>(this);
 
     debug(`[${this.rhizomeNode.config.peerId}]`, `Connected ${this.name} to rhizome`);
   }
