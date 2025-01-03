@@ -1,7 +1,7 @@
 // import Debug from 'debug';
 import {EntityProperties} from "./entity";
-import {CollapsedDelta, Lossless, LosslessViewOne} from "./lossless";
-import {Lossy, valueFromCollapsedDelta} from './lossy';
+import {CollapsedDelta, LosslessViewOne} from "./lossless";
+import {Lossy} from './lossy';
 import {DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany} from "./types";
 // const debug = Debug('rz:lossy:last-write-wins');
 
@@ -27,7 +27,21 @@ export type ResolvedViewMany = ViewMany<ResolvedViewOne>;
 type Accumulator = LossyViewMany<TimestampedProperties>;
 type Result = LossyViewMany<EntityProperties>;
 
-// Function for resolving a value for an entity by last write wins
+// Extract a particular value from a delta's pointers
+export function valueFromCollapsedDelta(
+  key: string,
+  delta: CollapsedDelta
+): string | number | undefined {
+  for (const pointer of delta.pointers) {
+    for (const [k, value] of Object.entries(pointer)) {
+      if (k === key && (typeof value === "string" || typeof value === "number")) {
+        return value;
+      }
+    }
+  }
+}
+
+// Resolve a value for an entity by last write wins
 export function lastValueFromDeltas(
   key: string,
   deltas?: CollapsedDelta[]
@@ -55,46 +69,41 @@ export function lastValueFromDeltas(
   return res;
 }
 
-function initializer(): Accumulator {
-  return {};
-};
-
-function reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
-  if (!acc[cur.id]) {
-    acc[cur.id] = {id: cur.id, properties: {}};
-  }
-
-  for (const [key, deltas] of Object.entries(cur.propertyDeltas)) {
-    const {value, timeUpdated} = lastValueFromDeltas(key, deltas) || {};
-    if (!value || !timeUpdated) continue;
-
-    if (timeUpdated > (acc[cur.id].properties[key]?.timeUpdated || 0)) {
-      acc[cur.id].properties[key] = {
-        value,
-        timeUpdated
-      };
-    }
-  }
-  return acc;
-};
-
-function resolver(cur: Accumulator): Result {
-  const res: Result = {};
-
-  for (const [id, ent] of Object.entries(cur)) {
-    res[id] = {id, properties: {}};
-    for (const [key, {value}] of Object.entries(ent.properties)) {
-      res[id].properties[key] = value;
-    }
-  }
-
-  return res;
-};
-
 export class LastWriteWins extends Lossy<Accumulator, Result> {
-  constructor(
-    readonly lossless: Lossless,
-  ) {
-    super(lossless, initializer, reducer, resolver);
+  initializer(): Accumulator {
+    return {};
   }
+
+  reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
+    if (!acc[cur.id]) {
+      acc[cur.id] = {id: cur.id, properties: {}};
+    }
+
+    for (const [key, deltas] of Object.entries(cur.propertyDeltas)) {
+      const {value, timeUpdated} = lastValueFromDeltas(key, deltas) || {};
+      if (!value || !timeUpdated) continue;
+
+      if (timeUpdated > (acc[cur.id].properties[key]?.timeUpdated || 0)) {
+        acc[cur.id].properties[key] = {
+          value,
+          timeUpdated
+        };
+      }
+    }
+    return acc;
+  };
+
+  resolver(cur: Accumulator): Result {
+    const res: Result = {};
+
+    for (const [id, ent] of Object.entries(cur)) {
+      res[id] = {id, properties: {}};
+      for (const [key, {value}] of Object.entries(ent.properties)) {
+        res[id].properties[key] = value;
+      }
+    }
+
+    return res;
+  };
 }
+

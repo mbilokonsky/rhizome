@@ -4,38 +4,21 @@
 
 import Debug from 'debug';
 import {DeltaFilter, DeltaID} from "./delta";
-import {CollapsedDelta, Lossless, LosslessViewOne} from "./lossless";
+import {Lossless, LosslessViewOne} from "./lossless";
 import {DomainEntityID} from "./types";
 const debug = Debug('rz:lossy');
 
-export type Initializer<Accumulator> = (v: LosslessViewOne) => Accumulator;
-export type Reducer<Accumulator> = (acc: Accumulator, cur: LosslessViewOne) => Accumulator;
-export type Resolver<Accumulator, Result> = (cur: Accumulator) => Result;
-
-// Extract a particular value from a delta's pointers
-export function valueFromCollapsedDelta(
-  key: string,
-  delta: CollapsedDelta
-): string | number | undefined {
-  for (const pointer of delta.pointers) {
-    for (const [k, value] of Object.entries(pointer)) {
-      if (k === key && (typeof value === "string" || typeof value === "number")) {
-        return value;
-      }
-    }
-  }
-}
-
 // We support incremental updates of lossy models.
-export class Lossy<Accumulator, Result> {
+export abstract class Lossy<Accumulator, Result> {
   deltaFilter?: DeltaFilter;
   accumulator?: Accumulator;
 
+  abstract initializer(v: LosslessViewOne): Accumulator;
+  abstract reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator;
+  abstract resolver(cur: Accumulator): Result;
+
   constructor(
     readonly lossless: Lossless,
-    readonly initializer: Initializer<Accumulator>,
-    readonly reducer: Reducer<Accumulator>,
-    readonly resolver: Resolver<Accumulator, Result>,
   ) {
     this.lossless.eventStream.on("updated", (id, deltaIds) => {
       debug(`[${this.lossless.rhizomeNode.config.peerId}] entity ${id} updated, deltaIds:`,
