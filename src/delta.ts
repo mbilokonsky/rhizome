@@ -17,7 +17,7 @@ type PointerV1 = {
 
 export type Scalar = string | number | null;
 export type Reference = {
-  [key: PropertyID]: DomainEntityID
+  [key: DomainEntityID]: PropertyID
 };
 
 export type PointersV2 = {

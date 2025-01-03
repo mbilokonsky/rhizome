@@ -23,6 +23,7 @@ export abstract class Lossy<Accumulator, Result> {
     this.lossless.eventStream.on("updated", (id, deltaIds) => {
       debug(`[${this.lossless.rhizomeNode.config.peerId}] entity ${id} updated, deltaIds:`,
         JSON.stringify(deltaIds));
+
       this.ingestUpdate(id, deltaIds);
     });
   }

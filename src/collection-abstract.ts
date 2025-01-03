@@ -20,7 +20,7 @@ export abstract class Collection<View> {
 
   abstract initializeView(): void;
 
-  abstract resolve(id: string): ResolvedViewOne | undefined;
+  abstract resolve(id: DomainEntityID): ResolvedViewOne | undefined;
 
   rhizomeConnect(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
@@ -36,7 +36,6 @@ export abstract class Collection<View> {
       this.eventStream.emit("update", res);
     });
 
-    // TODO: Fix this
     rhizomeNode.httpServer.httpApi.serveCollection<View>(this);
 
     debug(`[${this.rhizomeNode.config.peerId}]`, `Connected ${this.name} to rhizome`);
