@@ -1,5 +1,5 @@
 import express, {Router} from "express";
-import {Collection} from "../collection";
+import {Collection} from "../collection-abstract";
 import {Delta} from "../delta";
 import {RhizomeNode} from "../node";
 
@@ -57,7 +57,8 @@ export class HttpApi {
     });
   }
 
-  serveCollection(collection: Collection) {
+  // serveCollection<T extends Collection>(collection: T) {
+  serveCollection<View>(collection: Collection<View>) {
     const {name} = collection;
 
     // Get the ID of all domain entities

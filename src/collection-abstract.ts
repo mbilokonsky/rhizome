@@ -1,38 +1,31 @@
-// A basic collection of entities
-// This may be extended to house a collection of objects that all follow a common schema.
-// It should enable operations like removing a property removes the value from the entities in the collection
-// It could then be further extended with e.g. table semantics like filter, sort, join
-
 import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
 import {Delta} from "./delta";
 import {Entity, EntityProperties} from "./entity";
-import {LastWriteWins, ResolvedViewOne} from './last-write-wins';
+import {ResolvedViewOne} from './last-write-wins';
 import {RhizomeNode} from "./node";
 import {DomainEntityID} from "./types";
-const debug = Debug('rz:collection');
+const debug = Debug('rz:abstract-collection');
 
-export class Collection {
+export abstract class Collection<T> {
   rhizomeNode?: RhizomeNode;
   name: string;
   eventStream = new EventEmitter();
-  lossy?: LastWriteWins;
+  lossy?: T;
 
   constructor(name: string) {
     this.name = name;
   }
 
-  // Instead of trying to update our final view of the entity with every incoming delta,
-  // let's try this: 
-  // - keep a lossless view (of everything)
-  // - build a lossy view when needed
-  // This approach is simplistic, but can then be optimized and enhanced.
+  abstract initializeView(): void;
+
+  abstract resolve(id: string): ResolvedViewOne | undefined;
 
   rhizomeConnect(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
 
-    this.lossy = new LastWriteWins(this.rhizomeNode.lossless);
+    this.initializeView();
 
     // Listen for completed transactions, and emit updates to event stream
     this.rhizomeNode.lossless.eventStream.on("updated", (id) => {
@@ -43,13 +36,12 @@ export class Collection {
       this.eventStream.emit("update", res);
     });
 
-    rhizomeNode.httpServer.httpApi.serveCollection(this);
+    // TODO: Fix this
+    rhizomeNode.httpServer.httpApi.serveCollection<T>(this);
 
     debug(`[${this.rhizomeNode.config.peerId}]`, `Connected ${this.name} to rhizome`);
   }
 
-  // Applies the javascript rules for updating object values,
-  // e.g. set to `undefined` to delete a property.
   // This function is here instead of Entity so that it can:
   // - read the current state in order to build its delta
   // - include the collection name in the delta it produces
@@ -206,14 +198,4 @@ export class Collection {
     return res;
   }
 
-  resolve(
-    id: string
-  ): ResolvedViewOne | undefined {
-    if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
-    if (!this.lossy) throw new Error('lossy view not initialized');
-
-    const res = this.lossy.resolve([id]) || {};
-
-    return res[id];
-  }
 }

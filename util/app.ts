@@ -1,4 +1,4 @@
-import {Collection} from "../src/collection";
+import {BasicCollection} from "../src/collection-basic";
 import {RhizomeNode, RhizomeNodeConfig} from "../src/node";
 
 const start = 5000;
@@ -17,7 +17,7 @@ export class App extends RhizomeNode {
       ...config,
     });
 
-    const users = new Collection("user");
+    const users = new BasicCollection("user");
     users.rhizomeConnect(this);
 
     const {httpAddr, httpPort} = this.config;

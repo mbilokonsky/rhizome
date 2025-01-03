@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import {Collection} from "../src/collection";
+import {BasicCollection} from '../src/collection-basic';
 import {Entity} from "../src/entity";
 import {RhizomeNode} from "../src/node";
 const debug = Debug('example-app');
@@ -23,7 +23,7 @@ type User = {
   // Enable API to read lossless view
   rhizomeNode.httpServer.httpApi.serveLossless();
 
-  const users = new Collection("user");
+  const users = new BasicCollection("user");
   users.rhizomeConnect(rhizomeNode);
 
   users.onUpdate((u: Entity) => {

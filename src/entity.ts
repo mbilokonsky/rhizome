@@ -7,7 +7,6 @@
 // - As typescript interfaces?
 // - As typescript classes?
 
-import {Collection} from "./collection";
 import {PropertyTypes} from "./types";
 
 export type EntityProperties = {
@@ -20,11 +19,5 @@ export class Entity {
 
   constructor(
     readonly id: string,
-    readonly collection?: Collection
   ) {}
-
-  async save() {
-    if (!this.collection) throw new Error('to save this entity you must specify the collection');
-    return this.collection.put(this.id, this.properties);
-  }
 }
