@@ -3,6 +3,7 @@ import Debug from 'debug';
 import microtime from 'microtime';
 import {PeerAddress} from "./peers";
 import {CreatorID, DomainEntityID, HostID, PropertyID, Timestamp, TransactionID} from "./types";
+import {validateDeltaNetworkImageV1, validateDeltaNetworkImageV2} from "./delta-validation";
 const debug = Debug('rz:delta');
 
 export type DeltaID = string;
@@ -75,6 +76,7 @@ export class DeltaV1 extends DeltaNetworkImageV1 {
   }
 
   static fromNetworkImage(delta: DeltaNetworkImageV1) {
+    validateDeltaNetworkImageV1(delta);
     return new DeltaV1(delta);
   }
 }
@@ -98,6 +100,7 @@ export class DeltaV2 extends DeltaNetworkImageV2 {
   }
 
   static fromNetworkImage(delta: DeltaNetworkImageV2) {
+    validateDeltaNetworkImageV2(delta);
     return new DeltaV2(delta);
   }
 
