@@ -26,12 +26,12 @@ This document tracks work needed to achieve full specification compliance, organ
 
 ## Phase 2: Core Features (Spec Compliance)
 
-### 2.1 Negation Deltas
-- [ ] Implement negation delta type with "negates" pointer
-- [ ] Add "negated_by" context handling
-- [ ] Update lossless view to handle negations
-- [ ] Update lossy resolvers to respect negations
-- [ ] Add comprehensive negation tests
+### 2.1 Negation Deltas ✅
+- [x] Implement negation delta type with "negates" pointer
+- [x] Add "negated_by" context handling
+- [x] Update lossless view to handle negations
+- [x] Update lossy resolvers to respect negations
+- [x] Add comprehensive negation tests
 
 ### 2.2 Advanced Conflict Resolution
 - [ ] Implement numeric aggregation resolvers (min/max/sum/average)

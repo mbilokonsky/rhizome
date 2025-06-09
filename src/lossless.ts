@@ -7,6 +7,8 @@ import {Delta, DeltaFilter, DeltaID, DeltaNetworkImageV1} from './delta';
 import {RhizomeNode} from './node';
 import {Transactions} from './transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "./types";
+import {Negation} from './negation';
+import {NegationHelper} from './negation';
 const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
@@ -67,6 +69,11 @@ export class Lossless {
   transactions: Transactions;
   referencedAs = new Map<string, Set<DomainEntityID>>();
   eventStream = new EventEmitter();
+  
+  // Track all deltas by ID for negation processing
+  private allDeltas = new Map<DeltaID, Delta>();
+  // Track which entities are affected by each delta
+  private deltaToEntities = new Map<DeltaID, Set<DomainEntityID>>();
 
   constructor(readonly rhizomeNode: RhizomeNode) {
     this.transactions = new Transactions(this);
@@ -81,20 +88,61 @@ export class Lossless {
   }
 
   ingestDelta(delta: Delta): TransactionID | undefined {
-    const targets = delta.pointers
-      .filter(({targetContext}) => !!targetContext)
-      .map(({target}) => target)
-      .filter((target) => typeof target === 'string')
+    // Store delta for negation processing
+    this.allDeltas.set(delta.id, delta);
 
-    for (const target of targets) {
-      let ent = this.domainEntities.get(target);
+    let targets: string[] = [];
 
-      if (!ent) {
-        ent = new LosslessEntity(this, target);
-        this.domainEntities.set(target, ent);
+    // Handle negation deltas specially
+    if (NegationHelper.isNegationDelta(delta)) {
+      const negatedDeltaId = NegationHelper.getNegatedDeltaId(delta);
+      if (negatedDeltaId) {
+        // Find which entities were affected by the negated delta
+        const affectedEntities = this.deltaToEntities.get(negatedDeltaId);
+        if (affectedEntities) {
+          targets = Array.from(affectedEntities);
+          // Track which entities this negation delta affects
+          this.deltaToEntities.set(delta.id, affectedEntities);
+          
+          // Add the negation delta to all affected entities
+          for (const entityId of affectedEntities) {
+            let ent = this.domainEntities.get(entityId);
+            if (!ent) {
+              ent = new LosslessEntity(this, entityId);
+              this.domainEntities.set(entityId, ent);
+            }
+            // Add negation delta to the entity
+            // For negation deltas, we need to add them to a special property
+            // since they don't directly target the entity
+            let negationDeltas = ent.properties.get('_negations');
+            if (!negationDeltas) {
+              negationDeltas = new Set<Delta>();
+              ent.properties.set('_negations', negationDeltas);
+            }
+            negationDeltas.add(delta);
+          }
+        }
       }
+    } else {
+      // Regular delta processing
+      targets = delta.pointers
+        .filter(({targetContext}) => !!targetContext)
+        .map(({target}) => target)
+        .filter((target) => typeof target === 'string');
 
-      ent.addDelta(delta);
+      // Track which entities this delta affects
+      this.deltaToEntities.set(delta.id, new Set(targets));
+
+      for (const target of targets) {
+        let ent = this.domainEntities.get(target);
+
+        if (!ent) {
+          ent = new LosslessEntity(this, target);
+          this.domainEntities.set(target, ent);
+        }
+
+        ent.addDelta(delta);
+      }
     }
 
     for (const {target, localContext} of delta.pointers) {
@@ -150,10 +198,22 @@ export class Lossless {
 
       let hasVisibleDeltas = false;
 
+      // First, collect all deltas for this entity to properly apply negations
+      const allEntityDeltas: Delta[] = [];
+      for (const deltas of ent.properties.values()) {
+        allEntityDeltas.push(...Array.from(deltas));
+      }
+      
+      // Apply negation filtering to all deltas for this entity
+      const nonNegatedDeltas = Negation.filterNegatedDeltas(allEntityDeltas);
+      const nonNegatedDeltaIds = new Set(nonNegatedDeltas.map(d => d.id));
+
       for (const [key, deltas] of ent.properties.entries()) {
+        // Filter deltas for this property based on negation status
+        const filteredDeltas = Array.from(deltas).filter(delta => nonNegatedDeltaIds.has(delta.id));
         const visibleDeltas: CollapsedDelta[] = [];
 
-        for (const delta of deltas) {
+        for (const delta of filteredDeltas) {
           if (deltaFilter && !deltaFilter(delta)) {
             continue;
           }
@@ -199,6 +259,90 @@ export class Lossless {
     }
 
     return view;
+  }
+
+  // Get negation statistics for an entity
+  getNegationStats(entityId: DomainEntityID): {
+    totalDeltas: number;
+    negationDeltas: number;
+    negatedDeltas: number;
+    effectiveDeltas: number;
+    negationsByProperty: { [key: PropertyID]: { negated: number; total: number } };
+  } {
+    const ent = this.domainEntities.get(entityId);
+    if (!ent) {
+      return {
+        totalDeltas: 0,
+        negationDeltas: 0,
+        negatedDeltas: 0,
+        effectiveDeltas: 0,
+        negationsByProperty: {}
+      };
+    }
+
+    // Get all deltas for this entity, including negation deltas
+    const allEntityDeltas: Delta[] = [];
+    for (const deltas of ent.properties.values()) {
+      allEntityDeltas.push(...Array.from(deltas));
+    }
+
+    let totalDeltas = 0;
+    let totalNegationDeltas = 0;
+    let totalNegatedDeltas = 0;
+    let totalEffectiveDeltas = 0;
+    const negationsByProperty: { [key: PropertyID]: { negated: number; total: number } } = {};
+
+    // Get all negation deltas for this entity
+    const negationDeltas = this.getNegationDeltas(entityId);
+    const negatedDeltaIds = new Set<DeltaID>();
+    
+    for (const negDelta of negationDeltas) {
+      const negatedId = NegationHelper.getNegatedDeltaId(negDelta);
+      if (negatedId) {
+        negatedDeltaIds.add(negatedId);
+      }
+    }
+
+    for (const [property, deltas] of ent.properties.entries()) {
+      // Skip the special _negations property in the per-property stats
+      if (property === '_negations') {
+        totalDeltas += deltas.size;
+        totalNegationDeltas += deltas.size;
+        continue;
+      }
+
+      const deltaArray = Array.from(deltas);
+      const propertyNegatedCount = deltaArray.filter(d => negatedDeltaIds.has(d.id)).length;
+      const propertyTotal = deltaArray.length;
+      
+      totalDeltas += propertyTotal;
+      totalNegatedDeltas += propertyNegatedCount;
+      totalEffectiveDeltas += (propertyTotal - propertyNegatedCount);
+
+      negationsByProperty[property] = {
+        negated: propertyNegatedCount,
+        total: propertyTotal
+      };
+    }
+
+    return {
+      totalDeltas,
+      negationDeltas: totalNegationDeltas,
+      negatedDeltas: totalNegatedDeltas,
+      effectiveDeltas: totalEffectiveDeltas,
+      negationsByProperty
+    };
+  }
+
+  // Get all negation deltas for an entity
+  getNegationDeltas(entityId: DomainEntityID): Delta[] {
+    const ent = this.domainEntities.get(entityId);
+    if (!ent) return [];
+
+    const negationProperty = ent.properties.get('_negations');
+    if (!negationProperty) return [];
+
+    return Array.from(negationProperty);
   }
 
   // TODO: point-in-time queries
