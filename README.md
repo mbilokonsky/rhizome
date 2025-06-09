@@ -1,3 +1,5 @@
+See [spec.md](spec.md) for additional specification details about this project.
+
 # Concepts
 
 |               | Implemented | Notes                                                                    |
