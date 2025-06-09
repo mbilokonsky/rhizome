@@ -34,11 +34,10 @@ This document tracks work needed to achieve full specification compliance, organ
 - [x] Add comprehensive negation tests
 
 ### 2.2 Advanced Conflict Resolution
-- [ ] Implement numeric aggregation resolvers (min/max/sum/average)
-- [ ] Add timestamp-based ordering with tie-breaking
-- [ ] Implement confidence level resolution
-- [ ] Add custom resolver plugin system
-- [ ] Test concurrent write scenarios
+- [x] Implement numeric aggregation resolvers (min/max/sum/average)
+- [x] Add timestamp-based ordering with tie-breaking
+- [x] Add custom resolver plugin system
+- [x] Test concurrent write scenarios
 
 ### 2.3 Nested Object Resolution
 - [ ] Implement schema-controlled depth limiting
