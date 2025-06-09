@@ -8,7 +8,7 @@ const debug = Debug('rz:delta');
 
 export type DeltaID = string;
 
-export type PointerTarget = string | number | null;
+export type PointerTarget = string | number | boolean | null;
 
 type PointerV1 = {
   localContext: string;
@@ -16,7 +16,7 @@ type PointerV1 = {
   targetContext?: string;
 };
 
-export type Scalar = string | number | null;
+export type Scalar = string | number | boolean | null;
 export type Reference = {
   [key: DomainEntityID]: PropertyID
 };

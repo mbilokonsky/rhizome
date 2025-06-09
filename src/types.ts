@@ -4,7 +4,7 @@ export type FilterExpr = JSONLogic;
 
 export type FilterGenerator = () => FilterExpr;
 
-export type PropertyTypes = string | number | null;
+export type PropertyTypes = string | number | boolean | null;
 
 export type DomainEntityID = string;
 export type PropertyID = string;

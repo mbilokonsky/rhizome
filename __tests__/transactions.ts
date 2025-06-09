@@ -1,4 +1,4 @@
-import { Delta, DeltaV2 } from '../src/delta';
+import { Delta } from '../src/delta';
 import { Lossless } from '../src/lossless';
 import { RhizomeNode } from '../src/node';
 import { DeltaFilter } from '../src/delta';

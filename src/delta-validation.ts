@@ -60,8 +60,8 @@ export function validateCreatorId(creator: unknown): creator is CreatorID {
 }
 
 export function validatePointerTarget(target: unknown): target is PointerTarget {
-  if (target !== null && typeof target !== "string" && typeof target !== "number") {
-    throw new InvalidPointerError("Pointer target must be string, number, or null");
+  if (target !== null && typeof target !== "string" && typeof target !== "number" && typeof target !== "boolean") {
+    throw new InvalidPointerError("Pointer target must be string, number, boolean, or null");
   }
   return true;
 }
@@ -120,7 +120,7 @@ export function validatePointersV2(pointers: unknown): pointers is PointersV2 {
       throw new InvalidPointerError("Pointer key must be a non-empty string");
     }
 
-    if (value !== null && typeof value !== "string" && typeof value !== "number" && typeof value !== "object") {
+    if (value !== null && typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean" && typeof value !== "object") {
       throw new InvalidPointerError(`Invalid pointer value for key '${key}'`);
     }
 

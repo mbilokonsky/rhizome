@@ -157,9 +157,7 @@ describe("Delta Validation", () => {
       it("should throw error for invalid pointer values", () => {
         const invalidPointers = [
           { key: undefined },
-          { key: [] },
-          { key: true },
-          { key: false }
+          { key: [] }
         ];
 
         invalidPointers.forEach(pointers => {
