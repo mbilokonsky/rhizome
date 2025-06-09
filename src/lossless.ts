@@ -148,8 +148,10 @@ export class Lossless {
         [key: PropertyID]: CollapsedDelta[]
       } = {};
 
+      let hasVisibleDeltas = false;
+
       for (const [key, deltas] of ent.properties.entries()) {
-        propertyDeltas[key] = propertyDeltas[key] || [];
+        const visibleDeltas: CollapsedDelta[] = [];
 
         for (const delta of deltas) {
           if (deltaFilter && !deltaFilter(delta)) {
@@ -160,7 +162,6 @@ export class Lossless {
           // we need to be able to wait for the whole transaction.
           if (delta.transactionId) {
             if (!this.transactions.isComplete(delta.transactionId)) {
-              // TODO: Test this condition
               debug(`[${this.rhizomeNode.config.peerId}]`, `Excluding delta ${delta.id} because transaction ${delta.transactionId} is not completed`);
               continue;
             }
@@ -175,18 +176,26 @@ export class Lossless {
             }
           }
 
-          propertyDeltas[key].push({
+          visibleDeltas.push({
             ...delta,
             pointers
           });
+          hasVisibleDeltas = true;
+        }
+
+        if (visibleDeltas.length > 0) {
+          propertyDeltas[key] = visibleDeltas;
         }
       }
 
-      view[ent.id] = {
-        id: ent.id,
-        referencedAs: Array.from(referencedAs.values()),
-        propertyDeltas
-      };
+      // Only include entity in view if it has visible deltas
+      if (hasVisibleDeltas) {
+        view[ent.id] = {
+          id: ent.id,
+          referencedAs: Array.from(referencedAs.values()),
+          propertyDeltas
+        };
+      }
     }
 
     return view;

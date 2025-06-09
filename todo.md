@@ -11,11 +11,11 @@ This document tracks work needed to achieve full specification compliance, organ
 - [x] Implement proper error types for delta operations
 - [x] Add validation for pointer consistency
 
-### 1.2 Complete Transaction Support
-- [ ] Implement transaction-based filtering in lossless views
-- [ ] Add transaction grouping in delta streams
-- [ ] Test atomic transaction operations
-- [ ] Add transaction rollback capabilities
+### 1.2 Complete Transaction Support ✅ (mostly)
+- [x] Implement transaction-based filtering in lossless views
+- [x] Add transaction grouping in delta streams
+- [x] Test atomic transaction operations
+- [ ] Add transaction rollback capabilities (deferred - not critical for spec parity)
 
 ### 1.3 Schema Foundation
 - [ ] Design schema type definitions based on spec
