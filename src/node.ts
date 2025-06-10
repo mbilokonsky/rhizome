@@ -6,6 +6,8 @@ import {Lossless} from './lossless';
 import {parseAddressList, PeerAddress, Peers} from './peers';
 import {PubSub} from './pub-sub';
 import {RequestReply} from './request-reply';
+import {QueryEngine} from './query-engine';
+import {DefaultSchemaRegistry} from './schema-registry';
 const debug = Debug('rz:rhizome-node');
 
 export type RhizomeNodeConfig = {
@@ -32,6 +34,8 @@ export class RhizomeNode {
   deltaStream: DeltaStream;
   lossless: Lossless;
   peers: Peers;
+  queryEngine: QueryEngine;
+  schemaRegistry: DefaultSchemaRegistry;
   myRequestAddr: PeerAddress;
   myPublishAddr: PeerAddress;
 
@@ -66,6 +70,8 @@ export class RhizomeNode {
     this.deltaStream = new DeltaStream(this);
     this.peers = new Peers(this);
     this.lossless = new Lossless(this);
+    this.schemaRegistry = new DefaultSchemaRegistry();
+    this.queryEngine = new QueryEngine(this.lossless, this.schemaRegistry);
   }
 
   async start(syncOnStart = false) {

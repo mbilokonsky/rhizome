@@ -33,7 +33,7 @@ This document tracks work needed to achieve full specification compliance, organ
 - [x] Update lossy resolvers to respect negations
 - [x] Add comprehensive negation tests
 
-### 2.2 Advanced Conflict Resolution
+### 2.2 Advanced Conflict Resolution ✅
 - [x] Implement numeric aggregation resolvers (min/max/sum/average)
 - [x] Add timestamp-based ordering with tie-breaking
 - [x] Add custom resolver plugin system
@@ -48,18 +48,21 @@ This document tracks work needed to achieve full specification compliance, organ
 
 ## Phase 3: Query System
 
-### 3.1 Query Engine Foundation
-- [ ] Implement JSON Logic parser
-- [ ] Create query planner for lossless views
-- [ ] Add query execution engine
-- [ ] Implement query result caching
-- [ ] Enable the skipped query tests
+### 3.1 Query Engine Foundation ✅
+- [x] Implement JSON Logic parser (using json-logic-js)
+- [x] Create query planner for lossless views
+- [x] Add query execution engine (QueryEngine class)
+- [x] Implement schema-driven entity discovery
+- [x] Enable the skipped query tests
+- [x] Add HTTP API endpoints for querying
+- [x] Integrate QueryEngine into RhizomeNode
 
-### 3.2 Query Optimizations
+### 3.2 Query Optimizations (Future)
 - [ ] Add index support for common queries
 - [ ] Implement query cost estimation
 - [ ] Add query result streaming
 - [ ] Test query performance at scale
+- [ ] Add query result caching with invalidation
 
 ## Phase 4: Relational Features
 
@@ -125,9 +128,9 @@ This document tracks work needed to achieve full specification compliance, organ
 4. Negation handling tests
 
 ### Medium Priority (Needed for Features)
-1. Advanced resolver tests
-2. Nested object tests
-3. Query engine tests
+1. Advanced resolver tests ✅
+2. Nested object tests ✅
+3. Query engine tests ✅
 4. Relational constraint tests
 
 ### Low Priority (Nice to Have)
@@ -137,11 +140,11 @@ This document tracks work needed to achieve full specification compliance, organ
 
 ## Implementation Order
 
-1. **Start with Phase 1** - These are foundational requirements
-2. **Phase 2.1 (Negation)** - Core spec feature that affects all views
-3. **Phase 2.2 (Resolvers)** - Needed for proper lossy views
-4. **Phase 3 (Query)** - Unlocks powerful data access
-5. **Phase 2.3 (Nesting)** - Depends on schemas and queries
+1. **Phase 1** ✅ - These are foundational requirements
+2. **Phase 2.1 (Negation)** ✅ - Core spec feature that affects all views
+3. **Phase 2.2 (Resolvers)** ✅ - Needed for proper lossy views
+4. **Phase 2.3 (Nesting)** ✅ - Depends on schemas and queries
+5. **Phase 3 (Query)** ✅ - Unlocks powerful data access
 6. **Phase 4 (Relational)** - Builds on query system
 7. **Phase 5 & 6** - Optimization and polish
 
