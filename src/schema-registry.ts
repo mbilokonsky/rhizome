@@ -10,10 +10,12 @@ import {
   ReferenceSchema,
   ArraySchema,
   SchemaAppliedView,
-  SchemaApplicationOptions
+  SchemaAppliedViewWithNesting,
+  SchemaApplicationOptions,
+  ResolutionContext
 } from './schema';
-import { LosslessViewOne } from './lossless';
-import { DomainEntityID, PropertyID } from './types';
+import { LosslessViewOne, Lossless } from './lossless';
+import { DomainEntityID, PropertyID, PropertyTypes } from './types';
 import { CollapsedDelta } from './lossless';
 
 const debug = Debug('rz:schema-registry');
@@ -286,7 +288,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
       throw new Error(`Schema '${schemaId}' not found`);
     }
 
-    const { includeMetadata = true, strictValidation = false } = options;
+    const { includeMetadata = true, strictValidation = false, maxDepth: _maxDepth = 3 } = options;
     
     const appliedView: SchemaAppliedView = {
       id: view.id,
@@ -315,12 +317,417 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
     if (includeMetadata) {
       appliedView.metadata = {
         appliedAt: Date.now(),
-        depth: 1, // TODO: Calculate actual depth in nested references
-        truncated: false // TODO: Mark if we hit maxDepth limits
+        depth: 1,
+        truncated: false
       };
     }
 
     return appliedView;
+  }
+
+  /**
+   * Apply schema with nested object resolution
+   * Resolves references to other entities according to schema specifications
+   */
+  applySchemaWithNesting(
+    view: LosslessViewOne,
+    schemaId: SchemaID,
+    losslessView: Lossless,
+    options: SchemaApplicationOptions = {}
+  ): SchemaAppliedViewWithNesting {
+    const { maxDepth = 3, includeMetadata = true, strictValidation = false } = options;
+    const resolutionContext = new ResolutionContext(maxDepth);
+    
+    return this.resolveNestedView(
+      view,
+      schemaId,
+      losslessView,
+      resolutionContext,
+      { includeMetadata, strictValidation }
+    );
+  }
+
+  private resolveNestedView(
+    view: LosslessViewOne,
+    schemaId: SchemaID,
+    losslessView: Lossless,
+    context: ResolutionContext,
+    options: { includeMetadata: boolean; strictValidation: boolean }
+  ): SchemaAppliedViewWithNesting {
+    const schema = this.get(schemaId);
+    if (!schema) {
+      throw new Error(`Schema '${schemaId}' not found`);
+    }
+
+    // Check for circular reference
+    if (context.hasVisited(view.id, schemaId)) {
+      return this.createTruncatedView(view.id, schemaId, context.currentDepth, true);
+    }
+
+    // Check depth limit
+    if (context.currentDepth >= context.maxDepth) {
+      return this.createTruncatedView(view.id, schemaId, context.currentDepth, true);
+    }
+
+    // Mark this entity/schema combination as visited
+    context.visit(view.id, schemaId);
+
+    const appliedView: SchemaAppliedViewWithNesting = {
+      id: view.id,
+      schemaId,
+      properties: {},
+      nestedObjects: {}
+    };
+
+    // Validate the view once
+    const overallValidationResult = this.validate(view.id, schemaId, view);
+
+    // Process each property
+    for (const [propertyId, propertySchema] of Object.entries(schema.properties)) {
+      const deltas = view.propertyDeltas[propertyId] || [];
+
+      appliedView.properties[propertyId] = {
+        deltas,
+        schema: propertySchema,
+        validationResult: overallValidationResult
+      };
+
+      // Handle reference resolution
+      if (propertySchema.type === 'reference') {
+        const referenceSchema = propertySchema as ReferenceSchema;
+        const nestedViews = this.resolveReferenceProperty(
+          deltas,
+          referenceSchema,
+          losslessView,
+          context.withDepth(context.currentDepth + 1),
+          options,
+          view.id
+        );
+        if (nestedViews.length > 0) {
+          appliedView.nestedObjects[propertyId] = nestedViews;
+        }
+      } else if (propertySchema.type === 'array' && propertySchema.itemSchema?.type === 'reference') {
+        const arraySchema = propertySchema as ArraySchema;
+        const referenceSchema = arraySchema.itemSchema as ReferenceSchema;
+        const nestedViews = this.resolveReferenceProperty(
+          deltas,
+          referenceSchema,
+          losslessView,
+          context.withDepth(context.currentDepth + 1),
+          options,
+          view.id
+        );
+        if (nestedViews.length > 0) {
+          appliedView.nestedObjects[propertyId] = nestedViews;
+        }
+      }
+
+      // Validation error handling
+      if (options.strictValidation && !overallValidationResult.valid) {
+        throw new Error(`Schema validation failed for property '${propertyId}': ${overallValidationResult.errors[0]?.message}`);
+      }
+    }
+
+    // Add metadata
+    if (options.includeMetadata) {
+      appliedView.metadata = {
+        appliedAt: Date.now(),
+        depth: context.currentDepth,
+        truncated: context.currentDepth >= context.maxDepth
+      };
+    }
+
+    // Mark as unvisited when leaving this path
+    context.unvisit(view.id, schemaId);
+
+    return appliedView;
+  }
+
+  private resolveReferenceProperty(
+    deltas: CollapsedDelta[],
+    referenceSchema: ReferenceSchema,
+    losslessView: Lossless,
+    context: ResolutionContext,
+    options: { includeMetadata: boolean; strictValidation: boolean },
+    parentEntityId: string
+  ): SchemaAppliedViewWithNesting[] {
+    const resolvedViews: SchemaAppliedViewWithNesting[] = [];
+    const referenceDepthLimit = referenceSchema.maxDepth || context.maxDepth;
+
+    // Check if we're at the reference's specific depth limit
+    if (context.currentDepth >= referenceDepthLimit) {
+      return [];
+    }
+
+    // Create composite objects from deltas - one per delta
+    for (const delta of deltas) {
+      try {
+        const compositeObject = this.createCompositeObjectFromDelta(
+          delta,
+          parentEntityId,
+          referenceSchema.targetSchema,
+          losslessView,
+          context,
+          options
+        );
+        if (compositeObject) {
+          resolvedViews.push(compositeObject);
+        } else {
+          // Fall back to original logic for single entity references
+          const referenceIds = this.extractReferenceIdsFromDelta(delta, parentEntityId);
+          for (const referenceId of referenceIds) {
+            try {
+              // Get the referenced entity's lossless view
+              const referencedViews = losslessView.view([referenceId]);
+              const referencedView = referencedViews[referenceId];
+              
+              if (referencedView) {
+                // Recursively resolve the referenced entity with its target schema
+                const nestedView = this.resolveNestedView(
+                  referencedView,
+                  referenceSchema.targetSchema,
+                  losslessView,
+                  context,
+                  options
+                );
+                resolvedViews.push(nestedView);
+              }
+            } catch (error) {
+              // Handle resolution errors gracefully
+              console.warn(`Failed to resolve reference ${referenceId}:`, error);
+            }
+          }
+        }
+      } catch (error) {
+        // Handle resolution errors gracefully
+        console.warn(`Failed to resolve composite object from delta ${delta.id}:`, error);
+      }
+    }
+
+    return resolvedViews;
+  }
+
+  private createCompositeObjectFromDelta(
+    delta: CollapsedDelta,
+    parentEntityId: string,
+    targetSchema: SchemaID,
+    losslessView: Lossless,
+    context: ResolutionContext,
+    options: { includeMetadata: boolean; strictValidation: boolean }
+  ): SchemaAppliedViewWithNesting | null {
+    // Group pointers by localContext, excluding the parent pointer
+    const pointersByContext: { [localContext: string]: PropertyTypes[] } = {};
+    let entityReferenceCount = 0;
+    let scalarCount = 0;
+    
+    for (const pointer of delta.pointers) {
+      for (const [localContext, target] of Object.entries(pointer)) {
+        // Skip the pointer that references the parent entity (the "up" pointer)
+        if (typeof target === 'string' && target === parentEntityId) {
+          continue;
+        }
+        
+        if (!pointersByContext[localContext]) {
+          pointersByContext[localContext] = [];
+        }
+        pointersByContext[localContext].push(target);
+        
+        // Count entity references vs scalars
+        if (typeof target === 'string') {
+          const referencedViews = losslessView.view([target]);
+          if (referencedViews[target]) {
+            entityReferenceCount++;
+          } else {
+            scalarCount++;
+          }
+        } else {
+          scalarCount++;
+        }
+      }
+    }
+    
+    // If no non-parent pointers found, return null
+    if (Object.keys(pointersByContext).length === 0) {
+      return null;
+    }
+    
+    // Only create composite objects for deltas with multiple entity references or mixed entity/scalar
+    // Single entity reference should use the original behavior
+    if (entityReferenceCount === 1 && scalarCount === 0) {
+      return null; // Let the original logic handle single entity references
+    }
+    
+    // Create the composite object
+    const nestedObjects: { [propertyId: string]: SchemaAppliedViewWithNesting[] } = {};
+    const scalarProperties: { [key: string]: PropertyTypes | PropertyTypes[] } = {};
+    
+    for (const [localContext, targets] of Object.entries(pointersByContext)) {
+      if (targets.length === 1) {
+        const target = targets[0];
+        if (typeof target === 'string') {
+          // Try to resolve as entity reference
+          try {
+            const referencedViews = losslessView.view([target]);
+            const referencedView = referencedViews[target];
+            
+            if (referencedView) {
+              // Recursively resolve the referenced entity
+              const nestedView = this.resolveNestedView(
+                referencedView,
+                targetSchema,
+                losslessView,
+                context,
+                options
+              );
+              nestedObjects[localContext] = [nestedView];
+            } else {
+              // Not a valid entity reference, treat as scalar
+              scalarProperties[localContext] = target;
+            }
+          } catch (_error) {
+            // Failed to resolve as entity, treat as scalar
+            scalarProperties[localContext] = target;
+          }
+        } else {
+          // Scalar value
+          scalarProperties[localContext] = target;
+        }
+      } else {
+        // Multiple values for same localContext - create array
+        const resolvedArray: (PropertyTypes | SchemaAppliedViewWithNesting)[] = [];
+        
+        for (const target of targets) {
+          if (typeof target === 'string') {
+            // Try to resolve as entity reference
+            try {
+              const referencedViews = losslessView.view([target]);
+              const referencedView = referencedViews[target];
+              
+              if (referencedView) {
+                const nestedView = this.resolveNestedView(
+                  referencedView,
+                  targetSchema,
+                  losslessView,
+                  context,
+                  options
+                );
+                resolvedArray.push(nestedView);
+              } else {
+                // Not a valid entity reference, treat as scalar
+                resolvedArray.push(target);
+              }
+            } catch (_error) {
+              // Failed to resolve as entity, treat as scalar
+              resolvedArray.push(target);
+            }
+          } else {
+            // Scalar value
+            resolvedArray.push(target);
+          }
+        }
+        
+        // Separate entities from scalars in the array
+        const entities: SchemaAppliedViewWithNesting[] = [];
+        const scalars: PropertyTypes[] = [];
+        
+        for (const item of resolvedArray) {
+          if (typeof item === 'object' && item !== null && 'schemaId' in item) {
+            entities.push(item as SchemaAppliedViewWithNesting);
+          } else {
+            scalars.push(item as PropertyTypes);
+          }
+        }
+        
+        if (entities.length > 0) {
+          nestedObjects[localContext] = entities;
+        }
+        if (scalars.length > 0) {
+          scalarProperties[localContext] = scalars.length === 1 ? scalars[0] : scalars;
+        }
+      }
+    }
+    
+    // Create a synthetic composite object
+    const compositeObject = {
+      id: `composite-${delta.id}`, // Synthetic ID for the composite object
+      schemaId: targetSchema,
+      properties: scalarProperties, // Custom field for scalar values
+      nestedObjects,
+      metadata: {
+        appliedAt: Date.now(),
+        depth: context.currentDepth,
+        truncated: false
+      }
+    };
+    
+    return compositeObject as unknown as SchemaAppliedViewWithNesting;
+  }
+
+  private extractReferenceIdsFromDelta(delta: CollapsedDelta, parentEntityId: string): string[] {
+    const referenceIds = new Set<string>();
+    
+    // For each pointer in the delta, collect all values that aren't the parent entity
+    for (const pointer of delta.pointers) {
+      for (const [_key, value] of Object.entries(pointer)) {
+        if (typeof value === 'string' && value !== parentEntityId) {
+          // This is a potential reference - any string value that's not the parent
+          referenceIds.add(value);
+        } else if (typeof value === 'object' && value !== null) {
+          // For object values, collect the entity IDs (keys) that aren't the parent
+          for (const entityId of Object.keys(value)) {
+            if (typeof entityId === 'string' && entityId !== parentEntityId) {
+              referenceIds.add(entityId);
+            }
+          }
+        }
+      }
+    }
+    
+    return Array.from(referenceIds);
+  }
+
+  private extractReferenceIds(deltas: CollapsedDelta[], parentEntityId: string): string[] {
+    const referenceIds = new Set<string>();
+    
+    for (const delta of deltas) {
+      // For each pointer in the delta, collect all values that aren't the parent entity
+      for (const pointer of delta.pointers) {
+        for (const [_key, value] of Object.entries(pointer)) {
+          if (typeof value === 'string' && value !== parentEntityId) {
+            // This is a potential reference - any string value that's not the parent
+            referenceIds.add(value);
+          } else if (typeof value === 'object' && value !== null) {
+            // For object values, collect the entity IDs (keys) that aren't the parent
+            for (const entityId of Object.keys(value)) {
+              if (typeof entityId === 'string' && entityId !== parentEntityId) {
+                referenceIds.add(entityId);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return Array.from(referenceIds);
+  }
+
+  private createTruncatedView(
+    entityId: string,
+    schemaId: SchemaID,
+    depth: number,
+    truncated: boolean
+  ): SchemaAppliedViewWithNesting {
+    return {
+      id: entityId,
+      schemaId,
+      properties: {},
+      nestedObjects: {},
+      metadata: {
+        appliedAt: Date.now(),
+        depth,
+        truncated
+      }
+    };
   }
 
   // Helper method to resolve circular dependencies

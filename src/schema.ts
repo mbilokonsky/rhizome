@@ -94,6 +94,13 @@ export interface SchemaAppliedView {
   };
 }
 
+// Extended schema applied view with nested object resolution
+export interface SchemaAppliedViewWithNesting extends SchemaAppliedView {
+  nestedObjects: {
+    [propertyId: PropertyID]: SchemaAppliedViewWithNesting[];
+  };
+}
+
 // Schema-based collection interface
 export interface TypedCollection<T> {
   schema: ObjectSchema;
@@ -202,7 +209,7 @@ export const CommonSchemas = {
     .property('email', PrimitiveSchemas.string())
     .property('age', PrimitiveSchemas.number())
     .property('active', PrimitiveSchemas.boolean())
-    .property('friends', ArraySchemas.of(ReferenceSchemas.to('user-summary', 1)))
+    .property('friends', ArraySchemas.of(ReferenceSchemas.to('user-summary', 2)))
     .required('name')
     .build(),
     
@@ -231,3 +238,54 @@ export const CommonSchemas = {
     .required('title', 'author', 'created')
     .build()
 } as const;
+
+/**
+ * Context for tracking resolution state during nested object resolution
+ * Prevents circular references and manages depth tracking
+ */
+export class ResolutionContext {
+  private visited: Set<string> = new Set();
+  
+  constructor(
+    public readonly maxDepth: number,
+    public readonly currentDepth: number = 0
+  ) {}
+
+  /**
+   * Create a new context with incremented depth
+   */
+  withDepth(depth: number): ResolutionContext {
+    return new ResolutionContext(this.maxDepth, depth);
+  }
+
+  /**
+   * Check if entity/schema combination has been visited
+   */
+  hasVisited(entityId: string, schemaId: SchemaID): boolean {
+    const key = `${entityId}:${schemaId}`;
+    return this.visited.has(key);
+  }
+
+  /**
+   * Mark entity/schema combination as visited
+   */
+  visit(entityId: string, schemaId: SchemaID): void {
+    const key = `${entityId}:${schemaId}`;
+    this.visited.add(key);
+  }
+
+  /**
+   * Remove entity/schema combination from visited set
+   */
+  unvisit(entityId: string, schemaId: SchemaID): void {
+    const key = `${entityId}:${schemaId}`;
+    this.visited.delete(key);
+  }
+
+  /**
+   * Check if we're at maximum depth
+   */
+  isAtMaxDepth(): boolean {
+    return this.currentDepth >= this.maxDepth;
+  }
+}

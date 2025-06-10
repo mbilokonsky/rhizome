@@ -39,12 +39,12 @@ This document tracks work needed to achieve full specification compliance, organ
 - [x] Add custom resolver plugin system
 - [x] Test concurrent write scenarios
 
-### 2.3 Nested Object Resolution
-- [ ] Implement schema-controlled depth limiting
-- [ ] Add circular reference detection
-- [ ] Create "Summary" schema type for references
-- [ ] Test deep nesting scenarios
-- [ ] Add performance tests for large graphs
+### 2.3 Nested Object Resolution ✅
+- [x] Implement schema-controlled depth limiting
+- [x] Add circular reference detection
+- [x] Create "Summary" schema type for references
+- [x] Test deep nesting scenarios
+- [x] Add performance tests for large graphs
 
 ## Phase 3: Query System
 

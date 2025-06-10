@@ -178,11 +178,57 @@ export class Lossless {
       if (!deltaFilter) return true;
       return deltaFilter(delta);
     };
-    const res = this.view([entityId], (delta) => combinedFilter(delta));
+    const res = this.compose([entityId], (delta) => combinedFilter(delta));
     return res[entityId];
   }
 
+  decompose(view: LosslessViewOne): Delta[] {
+    const allDeltas: Delta[] = [];
+    const seenDeltaIds = new Set<DeltaID>();
+    
+    // Collect all deltas from all properties
+    for (const [propertyId, deltas] of Object.entries(view.propertyDeltas)) {
+      for (const delta of deltas) {
+        if (!seenDeltaIds.has(delta.id)) {
+          seenDeltaIds.add(delta.id);
+          // Convert CollapsedDelta back to Delta
+          const fullDelta = new Delta({
+            id: delta.id,
+            creator: delta.creator,
+            host: delta.host,
+            timeCreated: delta.timeCreated,
+            pointers: delta.pointers.map(pointer => {
+              // Convert back to V1 pointer format for Delta constructor
+              const pointerEntries = Object.entries(pointer);
+              if (pointerEntries.length === 1) {
+                const [localContext, target] = pointerEntries[0];
+                if (typeof target === 'string' && this.domainEntities.has(target)) {
+                  // This is a reference pointer to an entity
+                  // The targetContext is the property ID this delta appears under
+                  return { localContext, target, targetContext: propertyId };
+                } else {
+                  // Scalar pointer
+                  return { localContext, target: target as PropertyTypes };
+                }
+              }
+              // Fallback for unexpected pointer structure
+              return { localContext: 'unknown', target: 'unknown' };
+            })
+          });
+          allDeltas.push(fullDelta);
+        }
+      }
+    }
+    
+    return allDeltas;
+  }
+
+  // Backward compatibility alias
   view(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
+    return this.compose(entityIds, deltaFilter);
+  }
+
+  compose(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
     const view: LosslessViewMany = {};
     entityIds = entityIds ?? Array.from(this.domainEntities.keys());
 
