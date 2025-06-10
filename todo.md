@@ -64,56 +64,95 @@ This document tracks work needed to achieve full specification compliance, organ
 - [ ] Test query performance at scale
 - [ ] Add query result caching with invalidation
 
-## Phase 4: Relational Features
+## Phase 4: Delta Patterns & Query Traversal
 
-### 4.1 Relational Schema Expression
-- [ ] Design relational schema DSL
-- [ ] Implement foreign key constraints
-- [ ] Add relationship traversal in queries
-- [ ] Implement join operations in lossy views
-- [ ] Enable the skipped relational tests
+### 4.1 Delta Pattern Recognition
+- [ ] Define common delta patterns (authorship, membership, etc.)
+- [ ] Create pattern matching utilities
+- [ ] Build pattern validation (guidance, not enforcement)
+- [ ] Document delta-as-relationship philosophy
 
-### 4.2 Constraint Validation
-- [ ] Add unique constraints
-- [ ] Implement required field validation
-- [ ] Add custom constraint functions
-- [ ] Test constraint violations and error handling
+### 4.2 Pattern-Aware Queries
+- [ ] Extend QueryEngine with pattern traversal methods
+- [ ] Add multi-perspective query support
+- [ ] Implement temporal relationship queries
+- [ ] Create relationship history and timeline queries
 
-## Phase 5: Advanced Features
+### 4.3 Pattern-Based Resolvers
+- [ ] Build pattern-aware resolvers for common relationships
+- [ ] Implement competing relationship resolution
+- [ ] Add missing relationship detection
+- [ ] Create resolver composition utilities
 
-### 5.1 View Optimizations
+### 4.4 Schema-as-Deltas (Meta-Schema System)
+- [ ] Define schema entities that are stored as deltas in the system
+- [ ] Implement schema queries that return schema instances from lossless views
+- [ ] Create schema evolution through delta mutations
+- [ ] Add temporal schema queries (schema time-travel)
+- [ ] Build schema conflict resolution for competing schema definitions
+- [ ] Test runtime schema updates and their effects on existing data
+
+## Phase 5: GraphQL API Layer
+
+### 5.1 GraphQL Schema Generation
+- [ ] Generate GraphQL schemas from Rhizome schemas
+- [ ] Map delta patterns to GraphQL relationships
+- [ ] Support multiple schema perspectives (published, draft, etc.)
+- [ ] Add GraphQL directives for perspective control
+
+### 5.2 GraphQL Resolvers
+- [ ] Implement resolvers that traverse delta patterns
+- [ ] Add support for nested relationship queries
+- [ ] Handle temporal queries (time-travel via arguments)
+- [ ] Implement competing value resolution in GraphQL context
+
+### 5.3 GraphQL Mutations
+- [ ] Create mutations that generate appropriate deltas
+- [ ] Handle relationship creation/updates via delta generation
+- [ ] Implement negation mutations for "deletes"
+- [ ] Add transaction support for multi-delta mutations
+
+### 5.4 GraphQL Subscriptions
+- [ ] Stream delta updates as GraphQL subscriptions
+- [ ] Filter subscriptions by pattern/entity
+- [ ] Support real-time relationship updates
+- [ ] Add perspective-aware subscription filtering
+
+## Phase 6: Performance & Optimization
+
+### 6.1 View Optimizations
 - [ ] Implement incremental view updates
 - [ ] Add view materialization strategies
 - [ ] Create view caching layer
 - [ ] Add partial view generation
 
-### 5.2 Network Resilience
+### 6.2 Network Resilience
 - [ ] Add network partition handling
 - [ ] Implement delta retry mechanisms
 - [ ] Add peer health monitoring
 - [ ] Test split-brain scenarios
 
-### 5.3 Performance & Scale
+### 6.3 Performance & Scale
 - [ ] Add benchmarks for large datasets
 - [ ] Implement delta pruning strategies
 - [ ] Add memory-efficient view generation
 - [ ] Create performance regression tests
 
-## Phase 6: Developer Experience
+## Phase 7: Developer Experience
 
-### 6.1 Better TypeScript Support
+### 7.1 Better TypeScript Support
 - [ ] Improve TypedCollection type inference
 - [ ] Add stricter schema typing
 - [ ] Create type guards for delta operations
 - [ ] Add better IDE autocomplete support
 
-### 6.2 Debugging & Monitoring
+### 7.2 Debugging & Monitoring
 - [ ] Add delta stream visualization
 - [ ] Create conflict resolution debugger
 - [ ] Add performance profiling hooks
 - [ ] Implement comprehensive logging
 
-### 6.3 Documentation
+### 7.3 Documentation
 - [ ] Document schema definition format
 - [ ] Create resolver implementation guide
 - [ ] Add query language documentation

@@ -1,4 +1,4 @@
-import * as RhizomeImports from "../src";
+import * as _RhizomeImports from "../src";
 /**
  * Tests for lossless view compose() and decompose() bidirectional conversion
  * Ensures that deltas can be composed into lossless views and decomposed back

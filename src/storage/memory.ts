@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import { Delta, DeltaID, DeltaFilter } from '../core/delta';
 import { DomainEntityID } from '../core/types';
-import { DeltaStorage, DeltaQueryStorage, DeltaQuery, StorageStats } from './interface';
+import { DeltaQueryStorage, DeltaQuery, StorageStats } from './interface';
 
 const debug = Debug('rz:storage:memory');
 

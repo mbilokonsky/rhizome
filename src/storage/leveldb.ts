@@ -2,7 +2,7 @@ import Debug from 'debug';
 import { Level } from 'level';
 import { Delta, DeltaID, DeltaFilter } from '../core/delta';
 import { DomainEntityID } from '../core/types';
-import { DeltaStorage, DeltaQueryStorage, DeltaQuery, StorageStats } from './interface';
+import { DeltaQueryStorage, DeltaQuery, StorageStats } from './interface';
 
 const debug = Debug('rz:storage:leveldb');
 
@@ -26,7 +26,14 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
     }
   }
 
+  private async ensureOpen(): Promise<void> {
+    if (this.db.status !== 'open') {
+      await this.db.open();
+    }
+  }
+
   async storeDelta(delta: Delta): Promise<void> {
+    await this.ensureOpen();
     debug(`Storing delta ${delta.id} to LevelDB`);
     
     const batch = this.db.batch();
@@ -63,11 +70,18 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
   }
 
   async getDelta(id: DeltaID): Promise<Delta | null> {
+    await this.ensureOpen();
     try {
       const deltaJson = await this.db.get(`delta:${id}`);
+      
+      // Handle case where LevelDB returns string "undefined" for missing keys
+      if (deltaJson === 'undefined' || deltaJson === undefined) {
+        return null;
+      }
+      
       return JSON.parse(deltaJson);
     } catch (error) {
-      if ((error as any).code === 'LEVEL_NOT_FOUND') {
+      if ((error as { code?: string }).code === 'LEVEL_NOT_FOUND') {
         return null;
       }
       throw error;
@@ -75,10 +89,11 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
   }
 
   async getAllDeltas(filter?: DeltaFilter): Promise<Delta[]> {
+    await this.ensureOpen();
     const deltas: Delta[] = [];
     
     // Iterate through all delta records
-    for await (const [key, value] of this.db.iterator({ 
+    for await (const [_key, value] of this.db.iterator({ 
       gte: 'delta:', 
       lt: 'delta:\xFF' 
     })) {
@@ -90,7 +105,7 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
           deltas.push(delta);
         }
       } catch (error) {
-        debug(`Error parsing delta from key ${key}:`, error);
+        debug(`Error parsing delta from key ${_key}:`, error);
       }
     }
 
@@ -98,10 +113,11 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
   }
 
   async getDeltasForEntity(entityId: DomainEntityID): Promise<Delta[]> {
+    await this.ensureOpen();
     const deltaIds: string[] = [];
     
     // Use entity index to find all deltas for this entity
-    for await (const [key, deltaId] of this.db.iterator({
+    for await (const [_key, deltaId] of this.db.iterator({
       gte: `entity:${entityId}:`,
       lt: `entity:${entityId}:\xFF`
     })) {
@@ -121,10 +137,11 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
   }
 
   async getDeltasByContext(entityId: DomainEntityID, context: string): Promise<Delta[]> {
+    await this.ensureOpen();
     const deltaIds: string[] = [];
     
     // Use context index to find deltas for this specific entity+context
-    for await (const [key, deltaId] of this.db.iterator({
+    for await (const [_key, deltaId] of this.db.iterator({
       gte: `context:${entityId}:${context}:`,
       lt: `context:${entityId}:${context}:\xFF`
     })) {
@@ -144,13 +161,14 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
   }
 
   async queryDeltas(query: DeltaQuery): Promise<Delta[]> {
+    await this.ensureOpen();
     let candidateDeltaIds: Set<string> | null = null;
 
     // Use indexes to narrow down candidates efficiently
     
     if (query.creator) {
       const creatorDeltaIds = new Set<string>();
-      for await (const [key, deltaId] of this.db.iterator({
+      for await (const [_key, deltaId] of this.db.iterator({
         gte: `creator:${query.creator}:`,
         lt: `creator:${query.creator}:\xFF`
       })) {
@@ -161,7 +179,7 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
 
     if (query.host) {
       const hostDeltaIds = new Set<string>();
-      for await (const [key, deltaId] of this.db.iterator({
+      for await (const [_key, deltaId] of this.db.iterator({
         gte: `host:${query.host}:`,
         lt: `host:${query.host}:\xFF`
       })) {
@@ -173,7 +191,7 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
     if (query.targetEntities && query.targetEntities.length > 0) {
       const entityDeltaIds = new Set<string>();
       for (const entityId of query.targetEntities) {
-        for await (const [key, deltaId] of this.db.iterator({
+        for await (const [_key, deltaId] of this.db.iterator({
           gte: `entity:${entityId}:`,
           lt: `entity:${entityId}:\xFF`
         })) {
@@ -186,7 +204,7 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
     // If no index queries were used, scan all deltas
     if (candidateDeltaIds === null) {
       candidateDeltaIds = new Set<string>();
-      for await (const [key, value] of this.db.iterator({
+      for await (const [key, _value] of this.db.iterator({
         gte: 'delta:',
         lt: 'delta:\xFF'
       })) {
@@ -237,13 +255,14 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
   }
 
   async getStats(): Promise<StorageStats> {
+    await this.ensureOpen();
     let totalDeltas = 0;
     const entities = new Set<DomainEntityID>();
     let oldestDelta: number | undefined;
     let newestDelta: number | undefined;
 
     // Count deltas and track entities
-    for await (const [key, value] of this.db.iterator({
+    for await (const [_key, value] of this.db.iterator({
       gte: 'delta:',
       lt: 'delta:\xFF'
     })) {
@@ -267,7 +286,7 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
           newestDelta = delta.timeCreated;
         }
       } catch (error) {
-        debug(`Error parsing delta for stats from key ${key}:`, error);
+        debug(`Error parsing delta for stats from key ${_key}:`, error);
       }
     }
 
@@ -300,15 +319,17 @@ export class LevelDBDeltaStorage implements DeltaQueryStorage {
 
   // LevelDB-specific methods
   async clearAll(): Promise<void> {
+    await this.ensureOpen();
     debug('Clearing all data from LevelDB');
     await this.db.clear();
   }
 
   async compact(): Promise<void> {
+    await this.ensureOpen();
     debug('Compacting LevelDB');
     // LevelDB compaction happens automatically, but we can trigger it
     // by iterating through all keys (this is a simple approach)
-    for await (const [key] of this.db.iterator()) {
+    for await (const [_key] of this.db.iterator()) {
       // Just iterating triggers compaction
     }
   }

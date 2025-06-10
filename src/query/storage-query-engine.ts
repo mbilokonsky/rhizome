@@ -7,7 +7,7 @@ import { Delta, DeltaFilter } from '../core/delta';
 
 const debug = Debug('rz:storage-query');
 
-export type JsonLogic = Record<string, any>;
+export type JsonLogic = Record<string, unknown>;
 
 export interface StorageQueryOptions {
   maxResults?: number;
@@ -25,7 +25,7 @@ export interface StorageQueryResult {
 export interface StorageEntityResult {
   entityId: DomainEntityID;
   deltas: Delta[];
-  properties: Record<string, any>; // Resolved properties for filtering
+  properties: Record<string, unknown>; // Resolved properties for filtering
 }
 
 /**
@@ -206,8 +206,8 @@ export class StorageQueryEngine {
   /**
    * Resolve entity properties from deltas for query filtering
    */
-  private resolveEntityProperties(deltas: Delta[], schema: ObjectSchema): Record<string, any> {
-    const properties: Record<string, any> = {};
+  private resolveEntityProperties(deltas: Delta[], schema: ObjectSchema): Record<string, unknown> {
+    const properties: Record<string, unknown> = {};
 
     // Group deltas by property context
     const propertyDeltas = new Map<string, Delta[]>();
@@ -234,27 +234,30 @@ export class StorageQueryEngine {
 
       // Apply simple resolution strategy based on property schema type
       switch (propertySchema.type) {
-        case 'primitive':
+        case 'primitive': {
           // Use last-write-wins for primitives
           const lastDelta = propDeltas.sort((a, b) => b.timeCreated - a.timeCreated)[0];
           properties[propertyId] = this.extractPrimitiveValue(lastDelta, propertyId);
           break;
+        }
 
-        case 'array':
+        case 'array': {
           // Collect all values as array
           const arrayValues = propDeltas
             .map(delta => this.extractPrimitiveValue(delta, propertyId))
             .filter(value => value !== null);
           properties[propertyId] = arrayValues;
           break;
+        }
 
-        case 'reference':
+        case 'reference': {
           // For references, include the target IDs
           const refValues = propDeltas
             .map(delta => this.extractReferenceValue(delta, propertyId))
             .filter(value => value !== null);
           properties[propertyId] = refValues;
           break;
+        }
 
         default:
           properties[propertyId] = propDeltas.length;
@@ -267,7 +270,7 @@ export class StorageQueryEngine {
   /**
    * Extract primitive value from a delta for a given property
    */
-  private extractPrimitiveValue(delta: Delta, propertyId: string): any {
+  private extractPrimitiveValue(delta: Delta, _propertyId: string): unknown {
     for (const pointer of delta.pointers) {
       if (pointer.localContext === 'value') {
         return pointer.target;
@@ -279,7 +282,7 @@ export class StorageQueryEngine {
   /**
    * Extract reference value (target ID) from a delta for a given property
    */
-  private extractReferenceValue(delta: Delta, propertyId: string): string | null {
+  private extractReferenceValue(delta: Delta, _propertyId: string): string | null {
     for (const pointer of delta.pointers) {
       if (pointer.localContext === 'value' && typeof pointer.target === 'string') {
         return pointer.target;
@@ -306,7 +309,7 @@ export class StorageQueryEngine {
   /**
    * Check if an entity matches a schema (basic validation)
    */
-  private entityMatchesSchema(properties: Record<string, any>, schema: ObjectSchema): boolean {
+  private entityMatchesSchema(properties: Record<string, unknown>, schema: ObjectSchema): boolean {
     const requiredProperties = schema.requiredProperties || [];
     
     for (const propertyId of requiredProperties) {

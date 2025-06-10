@@ -50,12 +50,13 @@ describe('Delta Storage', () => {
     runStorageTests(() => storage as DeltaQueryStorage);
   });
 
-  describe.skip('LevelDB Storage', () => {
+  describe('LevelDB Storage', () => {
     let storage: DeltaQueryStorage;
 
     beforeEach(async () => {
       storage = new LevelDBDeltaStorage('./test-data/leveldb-test');
       await (storage as LevelDBDeltaStorage).open();
+      await (storage as LevelDBDeltaStorage).clearAll();
     });
 
     afterEach(async () => {
@@ -81,7 +82,7 @@ describe('Delta Storage', () => {
 
     it('throws on unknown storage type', () => {
       expect(() => {
-        StorageFactory.create({ type: 'unknown' as any });
+        StorageFactory.create({ type: 'unknown' as 'memory' | 'leveldb' });
       }).toThrow('Unknown storage type: unknown');
     });
   });

@@ -1,143 +1,311 @@
-# Next Steps - LevelDB Storage Tests & Cleanup
+# Phase 4: Delta Patterns & Query Traversal - Implementation Plan
 
-This document provides context and instructions for completing the storage system implementation in the next Claude Code session.
+## Overview
 
-## Current Status ✅
+Phase 4 recognizes that in Rhizome, **deltas ARE relationships**. Instead of adding a relationship layer on top of deltas, we're creating tools to work with delta patterns more effectively. This phase focuses on formalizing common delta patterns, building query conveniences for traversing these patterns, and creating specialized resolvers that interpret deltas as familiar relational concepts.
 
-- **Directory reorganization**: COMPLETE ✅
-- **Storage abstraction**: COMPLETE ✅ 
-- **Memory storage**: COMPLETE ✅ (9/9 tests passing)
-- **LevelDB storage**: CODE COMPLETE ✅ (tests need fixing)
-- **Query engines**: COMPLETE ✅ (both lossless and storage-based)
-- **RhizomeNode integration**: COMPLETE ✅
-- **Build system**: COMPLETE ✅ (clean compilation)
-- **Test suite**: 21/22 suites passing, 174/186 tests passing
+## Core Insights
 
-## Immediate Tasks 🔧
+1. **Deltas are relationships**: Every delta with pointers already expresses relationships
+2. **Patterns, not structure**: We're recognizing patterns in how deltas connect entities
+3. **Perspective-driven**: Different views/resolvers can interpret the same deltas differently
+4. **No single truth**: Competing deltas are resolved by application-level lossy resolvers
+5. **Time-aware**: All queries are inherently temporal, showing different relationships at different times
 
-### 1. Fix LevelDB Storage Tests (Priority: HIGH)
+## Current State ✅
 
-**Issue**: LevelDB tests fail with "Database is not open" error
+- **All tests passing**: 21/21 suites, 183/183 tests (100%)
+- **Delta system**: Fully functional with pointers expressing relationships
+- **Negation system**: Can invalidate deltas (and thus relationships)
+- **Query system**: Basic traversal of lossless views
+- **Schema system**: Can describe entity structures
+- **Resolver system**: Application-level interpretation of deltas
 
-**Location**: `__tests__/storage.ts` (currently skipped on line 53)
+## Implementation Plan
 
-**Root Cause**: LevelDB requires explicit opening in newer versions
+### Step 1: Delta Pattern Recognition
 
-**Solution Strategy**:
-```typescript
-// In LevelDBDeltaStorage constructor or storeDelta method:
-async ensureOpen() {
-  if (this.db.status !== 'open') {
-    await this.db.open();
-  }
-}
+**Goal**: Formalize common patterns of deltas that represent familiar relationships
 
-// Call before any operation:
-await this.ensureOpen();
+**Tasks**:
+1. Create `src/patterns/delta-patterns.ts`:
+   - Define patterns for common relationship types
+   - Create pattern matching utilities
+   - Document pattern conventions
+
+2. Common patterns to recognize:
+   ```typescript
+   // One-to-one: A delta pointing from A to B with unique constraint
+   const AuthorshipPattern = {
+     name: 'authorship',
+     match: (delta) => 
+       delta.pointers.some(p => p.targetContext === 'author') &&
+       delta.pointers.some(p => p.targetContext === 'post'),
+     interpret: (delta) => ({
+       post: delta.pointers.find(p => p.targetContext === 'post').target,
+       author: delta.pointers.find(p => p.targetContext === 'author').target
+     })
+   };
+
+   // One-to-many: Multiple deltas pointing from many Bs to one A
+   const PostsByAuthorPattern = {
+     name: 'posts-by-author',
+     query: (authorId) => ({
+       pointers: { 
+         some: { 
+           target: authorId, 
+           targetContext: 'author' 
+         }
+       }
+     })
+   };
+   ```
+
+3. Pattern validation:
+   - Ensure deltas match expected patterns
+   - Provide clear feedback when patterns are violated
+   - Allow flexible pattern definitions
+
+### Step 2: Query Pattern Traversal
+
+**Goal**: Make it easy to traverse delta patterns in queries
+
+**Tasks**:
+1. Extend `QueryEngine` with pattern-aware methods:
+   ```typescript
+   // Find all deltas that establish a certain relationship
+   queryEngine.findRelationships('authorship', {
+     author: 'user-123'
+   });
+
+   // Traverse relationships in time
+   queryEngine.findRelationships('authorship', {
+     author: 'user-123',
+     asOf: timestamp // Time-travel query
+   });
+   ```
+
+2. Create traversal helpers:
+   ```typescript
+   // Follow a chain of relationships
+   queryEngine.traverse({
+     start: 'user-123',
+     follow: [
+       { pattern: 'authorship', direction: 'from' },
+       { pattern: 'comments', direction: 'to' }
+     ],
+     includeNegated: false // Perspective choice
+   });
+   ```
+
+3. Multi-perspective queries:
+   ```typescript
+   // Different views of the same deltas
+   queryEngine.query('Post', {}, {
+     perspectives: {
+       published: { includeNegated: false },
+       draft: { includeNegated: true },
+       historical: { asOf: timestamp }
+     }
+   });
+   ```
+
+### Step 3: Pattern-Aware Resolvers
+
+**Goal**: Create resolvers that interpret delta patterns as familiar concepts
+
+**Tasks**:
+1. Create `src/views/resolvers/pattern-resolver.ts`:
+   ```typescript
+   class PatternResolver {
+     // Interpret deltas matching certain patterns
+     resolveWithPatterns(entityId, patterns) {
+       const deltas = this.lossless.getDeltasForEntity(entityId);
+       
+       return {
+         entity: entityId,
+         relationships: patterns.map(pattern => ({
+           type: pattern.name,
+           targets: deltas
+             .filter(pattern.match)
+             .map(pattern.interpret)
+         }))
+       };
+     }
+   }
+   ```
+
+2. Specialized pattern resolvers:
+   - `ReferenceResolver`: Follows pointer patterns
+   - `TemporalResolver`: Shows relationships over time
+   - `CompetingValueResolver`: Handles multiple values for same relationship
+
+3. Resolver composition:
+   ```typescript
+   // Stack resolvers for different perspectives
+   const publishedView = new ResolverStack([
+     new NegationFilter(),
+     new TemporalResolver({ until: now }),
+     new LastWriteWins()
+   ]);
+   ```
+
+### Step 4: Delta Pattern Validation
+
+**Goal**: Validate that deltas follow expected patterns (without enforcing)
+
+**Tasks**:
+1. Create `src/features/pattern-validation.ts`:
+   ```typescript
+   // Validate but don't enforce
+   validateDeltaPattern(delta, pattern) {
+     const result = pattern.validate(delta);
+     if (!result.valid) {
+       // Emit warning, but still accept delta
+       this.emit('pattern-warning', {
+         delta,
+         pattern: pattern.name,
+         issues: result.issues
+       });
+     }
+     return result;
+   }
+   ```
+
+2. Pattern constraints as guidance:
+   - Required pointer contexts
+   - Expected value types
+   - Cardinality suggestions
+   - Temporal constraints
+
+3. Missing information detection:
+   ```typescript
+   // Detect incomplete patterns
+   detectMissingRelationships(entity, expectedPatterns) {
+     return expectedPatterns.filter(pattern => 
+       !this.hasMatchingDelta(entity, pattern)
+     );
+   }
+   ```
+
+### Step 5: Collection Pattern Helpers
+
+**Goal**: Make collections work naturally with delta patterns
+
+**Tasks**:
+1. Extend collections with pattern methods:
+   ```typescript
+   class PatternAwareCollection extends Collection {
+     // Create deltas that match patterns
+     relate(from, to, pattern) {
+       const delta = pattern.createDelta(from, to);
+       return this.rhizomeNode.acceptDelta(delta);
+     }
+
+     // Query using patterns
+     findRelated(entity, pattern) {
+       return this.queryEngine.findRelationships(pattern, {
+         [pattern.fromContext]: entity
+       });
+     }
+   }
+   ```
+
+2. Pattern-based operations:
+   - Batch relationship creation
+   - Relationship negation helpers
+   - Pattern-based cascades
+
+### Step 6: Temporal Pattern Queries
+
+**Goal**: Leverage time-travel for relationship history
+
+**Tasks**:
+1. Time-aware pattern queries:
+   ```typescript
+   // Show relationship changes over time
+   queryEngine.relationshipHistory('authorship', {
+     post: 'post-123',
+     timeRange: { from: t1, to: t2 }
+   });
+
+   // Find when relationships were established/negated
+   queryEngine.relationshipTimeline(entityId);
+   ```
+
+2. Temporal pattern analysis:
+   - Relationship duration
+   - Relationship conflicts over time
+   - Pattern evolution
+
+## File Structure
+
+**New files to create**:
+```
+src/
+├── patterns/
+│   ├── delta-patterns.ts       # Pattern definitions
+│   ├── pattern-matcher.ts      # Pattern matching utilities
+│   └── pattern-validators.ts   # Pattern validation
+├── query/
+│   └── pattern-query-engine.ts # Pattern-aware queries
+├── views/
+│   └── resolvers/
+│       ├── pattern-resolver.ts # Pattern interpretation
+│       └── temporal-resolver.ts # Time-aware resolution
+└── features/
+    └── pattern-validation.ts   # Soft validation
 ```
 
 **Files to modify**:
-- `src/storage/leveldb.ts` - Add auto-opening logic
-- `__tests__/storage.ts` - Remove `.skip` from line 53
+- `src/query/query-engine.ts` - Add pattern methods
+- `src/collections/collection-abstract.ts` - Add pattern helpers
+- `src/node.ts` - Wire up pattern features
 
-**Test command**: `npm test -- __tests__/storage.ts`
+## Testing Strategy
 
-### 2. Complete Linting Cleanup (Priority: MEDIUM)
+**New test files**:
+- `__tests__/delta-patterns.ts` - Pattern definition and matching
+- `__tests__/pattern-queries.ts` - Pattern-based traversal
+- `__tests__/pattern-validation.ts` - Soft validation behavior
+- `__tests__/temporal-patterns.ts` - Time-travel relationship queries
+- `__tests__/competing-relationships.ts` - Multiple relationship handling
 
-**Current lint issues**: 45 errors (mostly unused vars and `any` types)
+**Test scenarios**:
+1. Define and match delta patterns
+2. Query relationships using patterns
+3. Validate deltas against patterns (warnings only)
+4. Time-travel through relationship history
+5. Handle competing relationship deltas
+6. Detect missing relationships
+7. Test pattern-based cascading negations
 
-**Key files needing attention**:
-- `src/query/query-engine.ts` - Remove unused imports, fix `any` types
-- `src/query/storage-query-engine.ts` - Fix `any` types in JsonLogic
-- `src/storage/leveldb.ts` - Remove unused loop variables (prefix with `_`)
-- Various test files - Remove unused `RhizomeImports`
+## Success Criteria
 
-**Quick fixes**:
-```typescript
-// Instead of: for (const [key, value] of iterator)
-// Use: for (const [_key, value] of iterator)
+- [ ] Delta patterns are well-defined and matchable
+- [ ] Queries can traverse relationships via delta patterns
+- [ ] Pattern validation provides guidance without enforcement
+- [ ] Time-travel queries work with relationships
+- [ ] Competing relationships are handled gracefully
+- [ ] Missing relationships are detectable
+- [ ] Performance scales with pattern complexity
+- [ ] Developers find patterns intuitive to use
 
-// Instead of: JsonLogic = Record<string, any>
-// Use: JsonLogic = Record<string, unknown>
-```
+## Key Principles to Maintain
 
-### 3. Enable Relational Tests (Priority: LOW)
+1. **Deltas are relationships** - Never create a separate relationship system
+2. **Patterns are recognition** - We're recognizing what's already there
+3. **Perspective matters** - Same deltas, different interpretations
+4. **No enforcement** - Validation guides but doesn't restrict
+5. **Time is first-class** - All relationships exist in time
+6. **Conflicts are natural** - Multiple truths coexist until resolved by views
 
-**Currently skipped**: `__tests__/relational.ts` 
+## Next Session Tasks
 
-**Check**: Whether relational collection tests work with new directory structure
+1. Define core delta patterns in `delta-patterns.ts`
+2. Create pattern matching utilities
+3. Extend QueryEngine with pattern-aware methods
+4. Write tests for pattern recognition
+5. Document the delta-as-relationship philosophy
 
-## Context for Next Session 📝
-
-### Storage Architecture Overview
-
-The storage system now supports pluggable backends:
-
-```
-RhizomeNode
-├── lossless (in-memory views)
-├── deltaStorage (configurable backend)
-├── queryEngine (lossless-based, backward compatible)  
-└── storageQueryEngine (storage-based, new)
-```
-
-**Configuration via environment**:
-- `RHIZOME_STORAGE_TYPE=memory|leveldb` 
-- `RHIZOME_STORAGE_PATH=./data/rhizome`
-
-### Key Files & Their Purposes
-
-```
-src/
-├── storage/
-│   ├── interface.ts     # DeltaStorage + DeltaQueryStorage interfaces
-│   ├── memory.ts        # MemoryDeltaStorage (working ✅)
-│   ├── leveldb.ts       # LevelDBDeltaStorage (needs open() fix)
-│   ├── factory.ts       # StorageFactory for backend switching
-│   └── store.ts         # Legacy store (kept for compatibility)
-├── query/
-│   ├── query-engine.ts      # Original lossless-based (working ✅)
-│   └── storage-query-engine.ts # New storage-based (working ✅)
-└── node.ts              # Integrates both storage & query engines
-```
-
-### Test Strategy
-
-1. **Memory storage**: Fully working, use as reference
-2. **LevelDB storage**: Same interface, just needs DB opening
-3. **Storage factory**: Already tested and working
-4. **Query engines**: Both working with reorganized imports
-
-## Success Criteria 🎯
-
-**When complete, you should have**:
-- [ ] All storage tests passing (both memory and LevelDB)
-- [ ] Lint errors reduced to <10 (from current 45)
-- [ ] Documentation updated for storage backends
-- [ ] Optional: Relational tests re-enabled
-
-**Test command for validation**:
-```bash
-npm test                    # Should be 22/22 suites passing
-npm run lint               # Should have <10 errors
-npm run build              # Should compile cleanly (already working)
-```
-
-## Notes & Gotchas ⚠️
-
-1. **LevelDB opening**: The Level library changed APIs - databases need explicit opening
-2. **Import paths**: All fixed, but watch for any remaining `../` vs `./` issues  
-3. **TypeScript**: Using ES modules (`"type": "module"`) - imports must include file extensions if needed
-4. **Test isolation**: LevelDB tests should use unique DB paths to avoid conflicts
-5. **Cleanup**: LevelDB creates real files - tests should clean up temp directories
-
-## Phase 4 Readiness
-
-Once this storage work is complete, the codebase will be ready for **Phase 4: Relational Features** with:
-- ✅ Clean, organized directory structure
-- ✅ Pluggable storage backends (memory + persistent)
-- ✅ Dual query engines (lossless + storage-based)
-- ✅ Comprehensive test coverage
-- ✅ Solid architecture for relational schema expressions
-
-The storage abstraction provides the foundation needed for advanced relational features like foreign key constraints, join operations, and complex queries across collections.
+This approach embraces Rhizome's fundamental architecture where deltas ARE the relationships, making it easier to work with these patterns while respecting the system's perspective-driven, temporal nature.

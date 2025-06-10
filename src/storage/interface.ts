@@ -87,5 +87,5 @@ export interface DeltaQuery {
 export interface StorageConfig {
   type: 'memory' | 'leveldb' | 'sqlite' | 'postgres';
   path?: string; // for file-based storage
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
 }

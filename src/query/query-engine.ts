@@ -1,13 +1,13 @@
 import { apply } from 'json-logic-js';
 import Debug from 'debug';
 import { SchemaRegistry, SchemaID, ObjectSchema } from '../schema/schema';
-import { Lossless, LosslessViewOne, LosslessViewMany } from '../views/lossless';
+import { Lossless, LosslessViewOne, LosslessViewMany, CollapsedDelta } from '../views/lossless';
 import { DomainEntityID } from '../core/types';
-import { Delta, DeltaFilter } from '../core/delta';
+import { DeltaFilter } from '../core/delta';
 
 const debug = Debug('rz:query');
 
-export type JsonLogic = Record<string, any>;
+export type JsonLogic = Record<string, unknown>;
 
 export interface QueryOptions {
   maxResults?: number;
@@ -182,8 +182,8 @@ export class QueryEngine {
    * Convert a lossless view to a queryable object based on schema
    * Uses simple resolution strategies for now
    */
-  private losslessViewToQueryableObject(view: LosslessViewOne, schema: ObjectSchema): Record<string, any> {
-    const obj: Record<string, any> = {
+  private losslessViewToQueryableObject(view: LosslessViewOne, schema: ObjectSchema): Record<string, unknown> {
+    const obj: Record<string, unknown> = {
       id: view.id,
       _referencedAs: view.referencedAs
     };
@@ -199,28 +199,31 @@ export class QueryEngine {
 
       // Apply simple resolution strategy based on property schema type
       switch (propertySchema.type) {
-        case 'primitive':
+        case 'primitive': {
           // Use last-write-wins for primitives
           const lastDelta = deltas.sort((a, b) => b.timeCreated - a.timeCreated)[0];
           const primitiveValue = this.extractPrimitiveValue(lastDelta, propertyId);
           obj[propertyId] = primitiveValue;
           break;
+        }
 
-        case 'array':
+        case 'array': {
           // Collect all values as array
           const arrayValues = deltas
             .map(delta => this.extractPrimitiveValue(delta, propertyId))
             .filter(value => value !== null);
           obj[propertyId] = arrayValues;
           break;
+        }
 
-        case 'reference':
+        case 'reference': {
           // For references, include the target IDs
           const refValues = deltas
             .map(delta => this.extractReferenceValue(delta, propertyId))
             .filter(value => value !== null);
           obj[propertyId] = refValues;
           break;
+        }
 
         default:
           obj[propertyId] = deltas.length;
@@ -234,12 +237,12 @@ export class QueryEngine {
   /**
    * Extract primitive value from a delta for a given property
    */
-  private extractPrimitiveValue(delta: any, propertyId: string): any {
-    // Look for the value in deltas that target this property
-    // The delta should have a 'value' pointer containing the actual value
+  private extractPrimitiveValue(delta: CollapsedDelta, _propertyId: string): unknown {
+    // Look for the value in collapsed pointers
+    // CollapsedPointer is {[key: PropertyID]: PropertyTypes}
     for (const pointer of delta.pointers) {
-      if (pointer['value'] !== undefined) {
-        return pointer['value'];
+      if (pointer.value !== undefined) {
+        return pointer.value;
       }
     }
     return null;
@@ -248,11 +251,11 @@ export class QueryEngine {
   /**
    * Extract reference value (target ID) from a delta for a given property
    */
-  private extractReferenceValue(delta: any, propertyId: string): string | null {
+  private extractReferenceValue(delta: CollapsedDelta, _propertyId: string): string | null {
     // For references, we want the value pointer that contains the reference ID
     for (const pointer of delta.pointers) {
-      if (pointer['value'] !== undefined && typeof pointer['value'] === 'string') {
-        return pointer['value'];
+      if (pointer.value !== undefined && typeof pointer.value === 'string') {
+        return pointer.value;
       }
     }
     return null;
