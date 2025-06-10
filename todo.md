@@ -57,7 +57,12 @@ This document tracks work needed to achieve full specification compliance, organ
 - [x] Add HTTP API endpoints for querying
 - [x] Integrate QueryEngine into RhizomeNode
 
-### 3.2 Query Optimizations (Future)
+### 3.2 LevelDB Storage Layer
+- [x] Implement LevelDB storage for deltas
+- [x] Implement query engine interface against LevelDB
+- [x] Write tests ensuring parity between in-memory and LevelDB query capabilities
+
+### 3.3 Query Optimizations (Future)
 - [ ] Add index support for common queries
 - [ ] Implement query cost estimation
 - [ ] Add query result streaming
