@@ -4,6 +4,10 @@ import {randomUUID} from "crypto";
 // _ADDR refers to the interface address from the service's perspective
 
 export const LEVEL_DB_DIR = process.env.RHIZOME_LEVEL_DB_DIR ?? './data';
+
+// Storage configuration
+export const STORAGE_TYPE = process.env.RHIZOME_STORAGE_TYPE || 'memory'; // 'memory' | 'leveldb' | 'sqlite' | 'postgres'
+export const STORAGE_PATH = process.env.RHIZOME_STORAGE_PATH || './data/rhizome';
 export const CREATOR = process.env.USER!;
 export const PEER_ID = process.env.RHIZOME_PEER_ID || randomUUID();
 export const ADDRESS = process.env.RHIZOME_ADDRESS ?? 'localhost';

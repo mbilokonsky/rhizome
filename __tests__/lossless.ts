@@ -1,5 +1,5 @@
-import {Delta, DeltaFilter, DeltaV2} from '../src/delta';
-import {Lossless} from '../src/lossless';
+import {Delta, DeltaFilter, DeltaV2} from '../src/core';
+import {Lossless} from '../src/views';
 import {RhizomeNode} from '../src/node';
 
 describe('Lossless', () => {

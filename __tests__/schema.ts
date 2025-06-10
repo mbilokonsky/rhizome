@@ -6,10 +6,10 @@ import {
   CommonSchemas,
   ObjectSchema
 } from '../src/schema';
-import { DefaultSchemaRegistry } from '../src/schema-registry';
-import { TypedCollectionImpl, SchemaValidationError } from '../src/collection-typed';
+import { DefaultSchemaRegistry } from '../src/schema';
+import { TypedCollectionImpl, SchemaValidationError } from '../src/collections';
 import { RhizomeNode } from '../src/node';
-import { Delta } from '../src/delta';
+import { Delta } from '../src/core';
 
 describe('Schema System', () => {
   let schemaRegistry: DefaultSchemaRegistry;

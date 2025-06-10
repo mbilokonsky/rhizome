@@ -1,13 +1,13 @@
-import {RhizomeNode} from "../src/node";
-import {Lossless} from "../src/lossless";
-import {Delta} from "../src/delta";
 import {
+  RhizomeNode,
+  Lossless,
+  Delta,
   TimestampResolver,
   CreatorIdTimestampResolver,
   DeltaIdTimestampResolver,
   HostIdTimestampResolver,
   LexicographicTimestampResolver
-} from "../src/timestamp-resolvers";
+} from "../src";
 
 describe('Timestamp Resolvers', () => {
   let node: RhizomeNode;

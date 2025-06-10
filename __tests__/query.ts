@@ -1,8 +1,8 @@
-import { QueryEngine } from '../src/query-engine';
-import { Lossless } from '../src/lossless';
-import { DefaultSchemaRegistry } from '../src/schema-registry';
+import { QueryEngine } from '../src/query';
+import { Lossless } from '../src/views';
+import { DefaultSchemaRegistry } from '../src/schema';
 import { CommonSchemas, SchemaBuilder, PrimitiveSchemas } from '../src/schema';
-import { Delta } from '../src/delta';
+import { Delta } from '../src/core';
 import { RhizomeNode } from '../src/node';
 
 describe('Query Engine', () => {

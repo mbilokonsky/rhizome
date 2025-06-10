@@ -1,8 +1,5 @@
 import Debug from "debug";
-import {Delta} from "../src/delta";
-import {LastWriteWins} from "../src/last-write-wins";
-import {Lossless} from "../src/lossless";
-import {RhizomeNode} from "../src/node";
+import {Delta, LastWriteWins, Lossless, RhizomeNode} from "../src";
 const debug = Debug('test:last-write-wins');
 
 describe('Last write wins', () => {

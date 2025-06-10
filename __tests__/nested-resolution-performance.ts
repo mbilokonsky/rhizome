@@ -9,10 +9,10 @@
  */
 
 import { RhizomeNode } from '../src/node';
-import { Delta } from '../src/delta';
-import { DefaultSchemaRegistry } from '../src/schema-registry';
+import { Delta } from '../src/core';
+import { DefaultSchemaRegistry } from '../src/schema';
 import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, ArraySchemas } from '../src/schema';
-import { TypedCollectionImpl } from '../src/collection-typed';
+import { TypedCollectionImpl } from '../src/collections';
 
 describe('Nested Object Resolution Performance', () => {
   let node: RhizomeNode;

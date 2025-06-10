@@ -1,11 +1,12 @@
-import { DeltaV1, DeltaV2 } from "../src/delta";
 import {
+  DeltaV1,
+  DeltaV2,
   InvalidDeltaFormatError,
   MissingRequiredFieldError,
   InvalidPointerError,
   validateDeltaNetworkImageV1,
   validateDeltaNetworkImageV2
-} from "../src/delta-validation";
+} from "../src";
 
 describe("Delta Validation", () => {
   describe("Invalid Delta Formats", () => {

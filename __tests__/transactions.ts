@@ -1,7 +1,8 @@
-import { Delta } from '../src/delta';
-import { Lossless } from '../src/lossless';
+import * as RhizomeImports from "../src";
+import { Delta } from '../src/core';
+import { Lossless } from '../src/views';
 import { RhizomeNode } from '../src/node';
-import { DeltaFilter } from '../src/delta';
+import { DeltaFilter } from '../src/core';
 
 describe('Transactions', () => {
   let node: RhizomeNode;

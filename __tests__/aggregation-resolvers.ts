@@ -1,7 +1,7 @@
-import {RhizomeNode} from "../src/node";
-import {Lossless} from "../src/lossless";
-import {Delta} from "../src/delta";
 import {
+  RhizomeNode,
+  Lossless,
+  Delta,
   AggregationResolver,
   MinResolver,
   MaxResolver,
@@ -9,7 +9,7 @@ import {
   AverageResolver,
   CountResolver,
   AggregationType
-} from "../src/aggregation-resolvers";
+} from "../src";
 
 describe('Aggregation Resolvers', () => {
   let node: RhizomeNode;

@@ -1,8 +1,8 @@
 import express, {Router} from "express";
-import {Collection} from "../collection-abstract";
-import {Delta} from "../delta";
+import {Collection} from "../collections";
+import {Delta} from "../core";
 import {RhizomeNode} from "../node";
-import {JsonLogic} from "../query-engine";
+import {StorageJsonLogic} from "../query";
 
 export class HttpApi {
   router = Router();
@@ -158,7 +158,7 @@ export class HttpApi {
         const { schemaId } = req.params;
         const { filter, maxResults, deltaFilter } = req.body;
         
-        const options: any = {};
+        const options: { maxResults?: number; deltaFilter?: any } = {};
         if (maxResults) options.maxResults = maxResults;
         if (deltaFilter) {
           // Note: deltaFilter would need to be serialized/deserialized properly in a real implementation

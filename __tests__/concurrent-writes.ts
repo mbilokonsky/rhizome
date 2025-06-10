@@ -1,10 +1,14 @@
-import {RhizomeNode} from "../src/node";
-import {Lossless} from "../src/lossless";
-import {Delta} from "../src/delta";
-import {LastWriteWins} from "../src/last-write-wins";
-import {TimestampResolver} from "../src/timestamp-resolvers";
-import {SumResolver} from "../src/aggregation-resolvers";
-import {CustomResolver, LastWriteWinsPlugin, MajorityVotePlugin} from "../src/custom-resolvers";
+import {
+  RhizomeNode,
+  Lossless,
+  Delta,
+  LastWriteWins,
+  TimestampResolver,
+  SumResolver,
+  CustomResolver,
+  LastWriteWinsPlugin,
+  MajorityVotePlugin
+} from "../src";
 
 describe('Concurrent Write Scenarios', () => {
   let node: RhizomeNode;

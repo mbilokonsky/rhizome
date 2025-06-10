@@ -1,4 +1,4 @@
-import {DeltaV1, DeltaV2} from "../src/delta";
+import {DeltaV1, DeltaV2} from "../src";
 
 describe("Delta", () => {
   it("can convert DeltaV1 to DeltaV2", () => {

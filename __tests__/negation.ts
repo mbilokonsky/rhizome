@@ -1,7 +1,8 @@
-import { Delta } from '../src/delta';
-import { NegationHelper } from '../src/negation';
+import * as RhizomeImports from "../src";
+import { Delta } from '../src/core';
+import { NegationHelper } from '../src/features';
 import { RhizomeNode } from '../src/node';
-import { Lossless } from '../src/lossless';
+import { Lossless } from '../src/views';
 
 describe('Negation System', () => {
   let node: RhizomeNode;

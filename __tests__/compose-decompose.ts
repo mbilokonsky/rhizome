@@ -1,3 +1,4 @@
+import * as RhizomeImports from "../src";
 /**
  * Tests for lossless view compose() and decompose() bidirectional conversion
  * Ensures that deltas can be composed into lossless views and decomposed back
@@ -5,7 +6,7 @@
  */
 
 import { RhizomeNode } from '../src/node';
-import { Delta } from '../src/delta';
+import { Delta } from '../src/core';
 
 describe('Lossless View Compose/Decompose', () => {
   let node: RhizomeNode;

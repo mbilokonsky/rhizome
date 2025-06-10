@@ -1,7 +1,7 @@
-import {RhizomeNode} from "../src/node";
-import {Lossless} from "../src/lossless";
-import {Delta} from "../src/delta";
 import {
+  RhizomeNode,
+  Lossless,
+  Delta,
   CustomResolver,
   ResolverPlugin,
   LastWriteWinsPlugin,
@@ -9,10 +9,10 @@ import {
   ConcatenationPlugin,
   MajorityVotePlugin,
   MinPlugin,
-  MaxPlugin
-} from "../src/custom-resolvers";
-import {PropertyTypes} from "../src/types";
-import {CollapsedDelta} from "../src/lossless";
+  MaxPlugin,
+  PropertyTypes,
+  CollapsedDelta
+} from "../src";
 
 describe('Custom Resolvers', () => {
   let node: RhizomeNode;
