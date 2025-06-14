@@ -8,6 +8,7 @@
     "lint": "eslint",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "coverage": "./scripts/coverage.sh",
+    "coverage-report": "npm run test -- --coverage --coverageDirectory=coverage",
     "example-app": "node dist/examples/app.js"
   },
   "jest": {
