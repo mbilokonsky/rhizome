@@ -14,7 +14,8 @@ export interface ResolverPlugin<T = unknown> {
   update(currentState: T, newValue: PropertyTypes, delta: CollapsedDelta): T;
 
   // Resolve the final value from the accumulated state
-  resolve(state: T): PropertyTypes;
+  // Returns undefined if no valid value could be resolved
+  resolve(state: T): PropertyTypes | undefined;
 }
 
 // Configuration for custom resolver
@@ -108,7 +109,10 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
 
       for (const [propertyId, propertyState] of Object.entries(entity.properties)) {
         const resolvedValue = propertyState.plugin.resolve(propertyState.state);
-        entityResult.properties[propertyId] = resolvedValue;
+        // Only add the property if the resolved value is not undefined
+        if (resolvedValue !== undefined) {
+          entityResult.properties[propertyId] = resolvedValue;
+        }
       }
 
       // Only include entities that have at least one resolved property
@@ -248,8 +252,8 @@ export class MinPlugin implements ResolverPlugin<{ min?: number }> {
     return currentState;
   }
 
-  resolve(state: { min?: number }): PropertyTypes {
-    return state.min || 0;
+  resolve(state: { min?: number }): PropertyTypes | undefined {
+    return state.min;
   }
 }
 
@@ -269,7 +273,7 @@ export class MaxPlugin implements ResolverPlugin<{ max?: number }> {
     return currentState;
   }
 
-  resolve(state: { max?: number }): PropertyTypes {
-    return state.max || 0;
+  resolve(state: { max?: number }): PropertyTypes | undefined {
+    return state.max;
   }
 }
