@@ -124,12 +124,12 @@ export class QueryEngine {
       const entity = this.lossless.domainEntities.get(entityId);
       if (!entity) continue;
 
-      // Check if entity has deltas for any required property
-      const hasRequiredProperty = requiredProperties.some(propertyId => 
+      // Check if entity has deltas for all required property
+      const hasRequiredProperties = requiredProperties.every(propertyId => 
         entity.properties.has(propertyId)
       );
 
-      if (hasRequiredProperty) {
+      if (hasRequiredProperties) {
         candidateEntities.push(entityId);
       }
     }
