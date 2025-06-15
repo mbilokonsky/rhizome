@@ -1,4 +1,4 @@
-import { SchemaBuilder } from '../../src/schema';
+import { SchemaBuilder } from '../src/schema';
 
 /**
  * Common schemas used for testing purposes.

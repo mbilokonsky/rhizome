@@ -13,7 +13,7 @@ import { RhizomeNode } from '../src/node';
 import { Delta } from '../src/core';
 import { DefaultSchemaRegistry } from '../src/schema';
 import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas } from '../src/schema';
-import { CommonSchemas } from '../src/test-utils/schemas';
+import { CommonSchemas } from '../util/schemas';
 import { TypedCollectionImpl } from '../src/collections';
 
 describe('Nested Object Resolution', () => {
