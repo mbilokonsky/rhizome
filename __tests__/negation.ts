@@ -1,4 +1,3 @@
-import * as _RhizomeImports from "../src";
 import { Delta } from '../src/core';
 import { NegationHelper } from '../src/features';
 import { RhizomeNode } from '../src/node';
