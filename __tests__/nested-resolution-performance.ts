@@ -251,7 +251,7 @@ describe('Nested Object Resolution Performance', () => {
       while (currentView.nestedObjects.next && currentView.nestedObjects.next.length > 0) {
         currentView = currentView.nestedObjects.next[0];
         depth++;
-        if (depth >= 5) break; // Prevent infinite loop
+        if (depth >= 10) break; // Prevent infinite loop
       }
       
       expect(depth).toBeLessThanOrEqual(5);
