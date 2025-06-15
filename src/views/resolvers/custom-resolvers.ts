@@ -63,8 +63,10 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
     super(lossless);
   }
 
-  initializer(): CustomResolverAccumulator {
-    return {};
+  initializer(view: LosslessViewOne): CustomResolverAccumulator {
+    return {
+      [view.id]: { id: view.id, properties: {} }
+    };
   }
 
   reducer(acc: CustomResolverAccumulator, cur: LosslessViewOne): CustomResolverAccumulator {
@@ -118,30 +120,7 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
     return res;
   }
 
-  // Override resolve to build accumulator on-demand if needed
-  resolve(entityIds?: DomainEntityID[]): CustomResolverResult | undefined {
-    if (!entityIds) {
-      entityIds = Array.from(this.lossless.domainEntities.keys());
-    }
 
-    // If we don't have an accumulator, build it from the lossless view
-    if (!this.accumulator) {
-      this.accumulator = this.initializer();
-
-      const fullView = this.lossless.view(entityIds, this.deltaFilter);
-
-      for (const entityId of entityIds) {
-        const losslessViewOne = fullView[entityId];
-        if (losslessViewOne) {
-          this.accumulator = this.reducer(this.accumulator, losslessViewOne);
-        }
-      }
-    }
-
-    if (!this.accumulator) return undefined;
-
-    return this.resolver(this.accumulator);
-  }
 }
 
 // Built-in plugin implementations
