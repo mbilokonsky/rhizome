@@ -331,16 +331,28 @@ describe('Query Engine', () => {
       expect(Object.keys(result.entities)).toHaveLength(0);
     });
 
-    it('handles malformed JSON Logic expressions', async () => {
+    it('rejects invalid JSON Logic operators', async () => {
       await createUser('user1', 'Alice', 25);
       
+      // Should throw an error for invalid operator
+      await expect(
+        queryEngine.query('user', {
+          'invalid-operator': [{ 'var': 'age' }, 25]
+        })
+      ).rejects.toThrow('Invalid query operator: invalid-operator');
+    });
+
+    it('handles valid JSON Logic expressions with runtime errors', async () => {
+      await createUser('user1', 'Alice', 25);
+      
+      // This is a valid operator but will cause a runtime error due to type mismatch
       const result = await queryEngine.query('user', {
-        'invalid-operator': [{ 'var': 'age' }, 25]
+        '>': [{ 'var': 'name' }, 25] // Can't compare string and number with >
       });
 
-      // Should not crash, may return empty results or skip problematic entities
+      // Should still return a result but log the error
       expect(result).toBeDefined();
-      expect(typeof result.totalFound).toBe('number');
+      expect(result.totalFound).toBe(0); // No matches due to the error
     });
   });
 });

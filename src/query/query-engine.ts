@@ -1,4 +1,4 @@
-import { apply } from 'json-logic-js';
+import { apply, is_logic } from 'json-logic-js';
 import Debug from 'debug';
 import { SchemaRegistry, SchemaID, ObjectSchema } from '../schema/schema';
 import { Lossless, LosslessViewOne, LosslessViewMany, CollapsedDelta } from '../views/lossless';
@@ -6,6 +6,21 @@ import { DomainEntityID } from '../core/types';
 import { DeltaFilter } from '../core/delta';
 
 const debug = Debug('rz:query');
+
+// List of valid JSON Logic operators
+const VALID_OPERATORS = new Set([
+  '==', '===', '!=', '!==', '>', '>=', '<', '<=', '!', '!!',
+  'and', 'or', 'if', '?:', '??', '!!', '!', '!!', '!!', '!',
+  'var', 'missing', 'missing_some', 'in', 'cat', 'log', 'method', 'merge',
+  '+', '-', '*', '/', '%', 'min', 'max', 'map', 'reduce', 'filter', 'all', 'some', 'none'
+]);
+
+class InvalidQueryOperatorError extends Error {
+  constructor(operator: string) {
+    super(`Invalid query operator: ${operator}`);
+    this.name = 'InvalidQueryOperatorError';
+  }
+}
 
 export type JsonLogic = Record<string, unknown>;
 
@@ -29,12 +44,52 @@ export class QueryEngine {
   /**
    * Query entities by schema type with optional JSON Logic filter
    */
+  /**
+   * Validate JSON Logic operators in a filter
+   * @throws {InvalidQueryOperatorError} If an invalid operator is found
+   */
+  private validateJsonLogicOperators(logic: unknown): void {
+    if (!logic || typeof logic !== 'object') {
+      return;
+    }
+
+    const logicObj = logic as Record<string, unknown>;
+    const operator = Object.keys(logicObj)[0];
+    
+    // Check if this is an operator
+    if (is_logic(logic) && operator && !VALID_OPERATORS.has(operator)) {
+      throw new InvalidQueryOperatorError(operator);
+    }
+
+    // Recursively check nested logic
+    for (const value of Object.values(logicObj)) {
+      if (Array.isArray(value)) {
+        value.forEach(item => this.validateJsonLogicOperators(item));
+      } else if (value && typeof value === 'object') {
+        this.validateJsonLogicOperators(value);
+      }
+    }
+  }
+
   async query(
     schemaId: SchemaID, 
     filter?: JsonLogic, 
     options: QueryOptions = {}
   ): Promise<QueryResult> {
     debug(`Querying schema ${schemaId} with filter:`, filter);
+    
+    // Validate filter operators if provided
+    if (filter) {
+      try {
+        this.validateJsonLogicOperators(filter);
+      } catch (error) {
+        if (error instanceof InvalidQueryOperatorError) {
+          debug(`Invalid query operator: ${error.message}`);
+          throw error; // Re-throw to let the caller handle it
+        }
+        throw error;
+      }
+    }
 
     // 1. Find all entities that could match this schema
     const candidateEntityIds = this.discoverEntitiesBySchema(schemaId);
@@ -154,12 +209,14 @@ export class QueryEngine {
     }
 
     const filteredViews: LosslessViewMany = {};
+    let hasFilterErrors = false;
+    const filterErrors: string[] = [];
 
     for (const [entityId, view] of Object.entries(views)) {
-      // Convert lossless view to queryable object using schema
-      const queryableObject = this.losslessViewToQueryableObject(view, schema);
-      
       try {
+        // Convert lossless view to queryable object using schema
+        const queryableObject = this.losslessViewToQueryableObject(view, schema);
+        
         // Apply JSON Logic filter
         const matches = apply(filter, queryableObject);
         
@@ -170,9 +227,18 @@ export class QueryEngine {
           debug(`Entity ${entityId} does not match filter`);
         }
       } catch (error) {
-        debug(`Error applying filter to entity ${entityId}:`, error);
-        // Skip entities that cause filter errors
+        hasFilterErrors = true;
+        const errorMsg = `Error applying filter to entity ${entityId}: ${error instanceof Error ? error.message : String(error)}`;
+        filterErrors.push(errorMsg);
+        debug(errorMsg, error);
+        // Continue processing other entities
       }
+    }
+
+    // If we had any filter errors, log them as a warning
+    if (hasFilterErrors) {
+      console.warn(`Encountered ${filterErrors.length} filter errors. First error: ${filterErrors[0]}`);
+      debug('All filter errors:', filterErrors);
     }
 
     return filteredViews;
