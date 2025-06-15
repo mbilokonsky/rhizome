@@ -1,12 +1,16 @@
 import express, {Router} from "express";
-import {Collection} from "../collection-abstract";
-import {Delta} from "../delta";
+import {Collection} from "../collections";
+import {Delta, DeltaFilter} from "../core";
 import {RhizomeNode} from "../node";
 
 export class HttpApi {
   router = Router();
 
   constructor(readonly rhizomeNode: RhizomeNode) {
+    this.setupRoutes();
+  }
+
+  private setupRoutes() {
     // --------------- deltas ----------------
 
     // Serve list of all deltas accepted
@@ -55,6 +59,10 @@ export class HttpApi {
     this.router.get("/peers/count", (_req: express.Request, res: express.Response) => {
       res.json(this.rhizomeNode.peers.peers.length);
     });
+
+    // Initialize lossless and query endpoints
+    this.serveLossless();
+    this.serveQuery();
   }
 
   // serveCollection<T extends Collection>(collection: T) {
@@ -139,6 +147,118 @@ export class HttpApi {
         ...ent,
         isComplete: this.rhizomeNode.lossless.transactions.isComplete(id)
       });
+    });
+  }
+
+  serveQuery() {
+    // Query entities by schema with optional JSON Logic filter
+    this.router.post('/query/:schemaId', async (req: express.Request, res: express.Response) => {
+      try {
+        const { schemaId } = req.params;
+        const { filter, maxResults, deltaFilter } = req.body;
+        
+        const options: { maxResults?: number; deltaFilter?: DeltaFilter } = {};
+        if (maxResults) options.maxResults = maxResults;
+        if (deltaFilter) {
+          // Note: deltaFilter would need to be serialized/deserialized properly in a real implementation
+          console.warn('deltaFilter not supported in HTTP API yet');
+        }
+
+        const result = await this.rhizomeNode.queryEngine.query(schemaId, filter, options);
+        
+        res.json({
+          success: true,
+          data: result
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // Get a single entity by ID with schema validation
+    this.router.get('/query/:schemaId/:entityId', async (req: express.Request, res: express.Response) => {
+      try {
+        const { schemaId, entityId } = req.params;
+        
+        const result = await this.rhizomeNode.queryEngine.queryOne(schemaId, entityId);
+        
+        if (result) {
+          res.json({
+            success: true,
+            data: result
+          });
+        } else {
+          res.status(404).json({
+            success: false,
+            error: 'Entity not found or does not match schema'
+          });
+        }
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // Get query engine statistics
+    this.router.get('/query/stats', (_req: express.Request, res: express.Response) => {
+      try {
+        const stats = this.rhizomeNode.queryEngine.getStats();
+        res.json({
+          success: true,
+          data: stats
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // List all registered schemas
+    this.router.get('/schemas', (_req: express.Request, res: express.Response) => {
+      try {
+        const schemas = this.rhizomeNode.schemaRegistry.list();
+        res.json({
+          success: true,
+          data: schemas
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // Get a specific schema
+    this.router.get('/schemas/:schemaId', (req: express.Request, res: express.Response) => {
+      try {
+        const { schemaId } = req.params;
+        const schema = this.rhizomeNode.schemaRegistry.get(schemaId);
+        
+        if (schema) {
+          res.json({
+            success: true,
+            data: schema
+          });
+        } else {
+          res.status(404).json({
+            success: false,
+            error: 'Schema not found'
+          });
+        }
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     });
   }
 }

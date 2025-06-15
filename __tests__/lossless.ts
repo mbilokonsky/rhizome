@@ -1,5 +1,5 @@
-import {Delta, DeltaFilter, DeltaV2} from '../src/delta';
-import {Lossless} from '../src/lossless';
+import {Delta, DeltaFilter, DeltaV2} from '../src/core';
+import {Lossless} from '../src/views';
 import {RhizomeNode} from '../src/node';
 
 describe('Lossless', () => {
@@ -177,6 +177,69 @@ describe('Lossless', () => {
       });
     });
 
-    // TODO: Test with transactions, say A1 -- B -- A2
+    it('filter with transactions', () => {
+      const losslessT = new Lossless(node);
+      const transactionId = 'tx-filter-test';
+
+      // Declare transaction with 3 deltas
+      losslessT.ingestDelta(new Delta({
+        creator: 'system',
+        host: 'H',
+        pointers: [
+          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
+          { localContext: 'size', target: 3 }
+        ]
+      }));
+
+      // A1: First delta from creator A
+      losslessT.ingestDelta(new Delta({
+        creator: 'A',
+        host: 'H',
+        pointers: [
+          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
+          { localContext: 'step', target: 'process1', targetContext: 'status' },
+          { localContext: 'value', target: 'started' }
+        ]
+      }));
+
+      // B: Delta from creator B
+      losslessT.ingestDelta(new Delta({
+        creator: 'B',
+        host: 'H',
+        pointers: [
+          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
+          { localContext: 'step', target: 'process1', targetContext: 'status' },
+          { localContext: 'value', target: 'processing' }
+        ]
+      }));
+
+      // Transaction incomplete - nothing should show
+      const incompleteView = losslessT.view(['process1']);
+      expect(incompleteView.process1).toBeUndefined();
+
+      // A2: Second delta from creator A completes transaction
+      losslessT.ingestDelta(new Delta({
+        creator: 'A',
+        host: 'H',
+        pointers: [
+          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
+          { localContext: 'step', target: 'process1', targetContext: 'status' },
+          { localContext: 'value', target: 'completed' }
+        ]
+      }));
+
+      // All deltas visible now
+      const completeView = losslessT.view(['process1']);
+      expect(completeView.process1).toBeDefined();
+      expect(completeView.process1.propertyDeltas.status).toHaveLength(3);
+
+      // Filter by creator A only
+      const filterA: DeltaFilter = ({creator}) => creator === 'A';
+      const filteredView = losslessT.view(['process1'], filterA);
+      
+      expect(filteredView.process1).toBeDefined();
+      expect(filteredView.process1.propertyDeltas.status).toHaveLength(2);
+      expect(filteredView.process1.propertyDeltas.status.every(d => d.creator === 'A')).toBe(true);
+    });
   });
 });

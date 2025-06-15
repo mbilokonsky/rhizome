@@ -1,11 +1,11 @@
 import Debug from 'debug';
-import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS} from './config';
-import {DeltaStream} from './delta-stream';
+import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS, STORAGE_TYPE, STORAGE_PATH} from './config';
+import {DeltaStream, parseAddressList, PeerAddress, Peers, PubSub, RequestReply} from './network';
 import {HttpServer} from './http/index';
-import {Lossless} from './lossless';
-import {parseAddressList, PeerAddress, Peers} from './peers';
-import {PubSub} from './pub-sub';
-import {RequestReply} from './request-reply';
+import {Lossless} from './views';
+import {QueryEngine, StorageQueryEngine} from './query';
+import {DefaultSchemaRegistry} from './schema';
+import {DeltaQueryStorage, StorageFactory, StorageConfig} from './storage';
 const debug = Debug('rz:rhizome-node');
 
 export type RhizomeNodeConfig = {
@@ -21,6 +21,7 @@ export type RhizomeNodeConfig = {
   seedPeers: PeerAddress[];
   peerId: string;
   creator: string; // TODO each host should be able to support multiple users
+  storage?: StorageConfig; // Optional storage configuration
 };
 
 // So that we can run more than one instance in the same process (for testing)
@@ -32,6 +33,10 @@ export class RhizomeNode {
   deltaStream: DeltaStream;
   lossless: Lossless;
   peers: Peers;
+  queryEngine: QueryEngine;
+  storageQueryEngine: StorageQueryEngine;
+  schemaRegistry: DefaultSchemaRegistry;
+  deltaStorage: DeltaQueryStorage;
   myRequestAddr: PeerAddress;
   myPublishAddr: PeerAddress;
 
@@ -49,6 +54,10 @@ export class RhizomeNode {
       seedPeers: parseAddressList(SEED_PEERS),
       peerId: PEER_ID,
       creator: CREATOR,
+      storage: {
+        type: STORAGE_TYPE as 'memory' | 'leveldb',
+        path: STORAGE_PATH
+      },
       ...config
     };
     debug(`[${this.config.peerId}]`, 'Config', this.config);
@@ -66,11 +75,29 @@ export class RhizomeNode {
     this.deltaStream = new DeltaStream(this);
     this.peers = new Peers(this);
     this.lossless = new Lossless(this);
+    this.schemaRegistry = new DefaultSchemaRegistry();
+    
+    // Initialize storage backend
+    this.deltaStorage = StorageFactory.create(this.config.storage!);
+    
+    // Initialize query engines (both lossless-based and storage-based)
+    this.queryEngine = new QueryEngine(this.lossless, this.schemaRegistry);
+    this.storageQueryEngine = new StorageQueryEngine(this.deltaStorage, this.schemaRegistry);
   }
 
   async start(syncOnStart = false) {
     // Connect our lossless view to the delta stream
-    this.deltaStream.subscribeDeltas((delta) => this.lossless.ingestDelta(delta));
+    this.deltaStream.subscribeDeltas(async (delta) => {
+      // Ingest into lossless view
+      this.lossless.ingestDelta(delta);
+      
+      // Also store in persistent storage
+      try {
+        await this.deltaStorage.storeDelta(delta);
+      } catch (error) {
+        debug(`[${this.config.peerId}]`, 'Error storing delta to persistent storage:', error);
+      }
+    });
 
     // Bind ZeroMQ publish socket
     // TODO: Config option to enable zmq pubsub
@@ -111,6 +138,44 @@ export class RhizomeNode {
     await this.pubSub.stop();
     await this.requestReply.stop();
     await this.httpServer.stop();
+    
+    // Close storage
+    try {
+      await this.deltaStorage.close();
+      debug(`[${this.config.peerId}]`, 'Storage closed');
+    } catch (error) {
+      debug(`[${this.config.peerId}]`, 'Error closing storage:', error);
+    }
+    
     debug(`[${this.config.peerId}]`, 'Stopped');
+  }
+
+  /**
+   * Sync existing lossless view data to persistent storage
+   * Useful for migrating from memory-only to persistent storage
+   */
+  async syncToStorage(): Promise<void> {
+    debug(`[${this.config.peerId}]`, 'Syncing lossless view to storage');
+    
+    const allDeltas = this.deltaStream.deltasAccepted;
+    let synced = 0;
+    
+    for (const delta of allDeltas) {
+      try {
+        await this.deltaStorage.storeDelta(delta);
+        synced++;
+      } catch (error) {
+        debug(`[${this.config.peerId}]`, `Error syncing delta ${delta.id}:`, error);
+      }
+    }
+    
+    debug(`[${this.config.peerId}]`, `Synced ${synced}/${allDeltas.length} deltas to storage`);
+  }
+
+  /**
+   * Get storage statistics
+   */
+  async getStorageStats() {
+    return await this.deltaStorage.getStats();
   }
 }

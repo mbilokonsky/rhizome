@@ -1,5 +1,4 @@
-import {BasicCollection} from "../src/collection-basic";
-import {RhizomeNode, RhizomeNodeConfig} from "../src/node";
+import {BasicCollection, RhizomeNode, RhizomeNodeConfig} from "../src";
 
 const start = 5000;
 const range = 5000;

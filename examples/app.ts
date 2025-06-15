@@ -1,7 +1,5 @@
 import Debug from 'debug';
-import {BasicCollection} from '../src/collection-basic';
-import {Entity} from "../src/entity";
-import {RhizomeNode} from "../src/node";
+import {BasicCollection, Entity, RhizomeNode} from '../src';
 const debug = Debug('example-app');
 
 // As an app we want to be able to write and read data.
