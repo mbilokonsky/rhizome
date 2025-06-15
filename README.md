@@ -1,23 +1,5 @@
 See [spec.md](spec.md) for additional specification details about this project.
 
-# Concepts
-
-|               | Implemented | Notes                                                                    |
-| ------------- | ----------- | ------------------------------------------------------------------------ |
-| Peering       | Yes         | Implemented with ZeroMQ and/or Libp2p. Libp2p solves more problems.      |
-| Schemas       | Not really  | Currently very thin layer allowing TypedCollections                      |
-| Relationships | No          | Supporting relational algebra among domain entities                      |
-| Views         | Yes         | Lossless: Map the `targetContext`s as properties of domain entities.     |
-|               |             | Lossy: Use a delta filter and a resolver function to produce a view.     |
-|               |             | Currently using functions rather than JSON-Logic expressions.            |
-| Functions     | No          | Arbitrary subscribers to delta stream (that can also emit deltas?)       |
-| Tests         | Yes         | We are set up to run unit tests and multi-node tests                     |
-| Identity      | Sort of     | We have an identity service via Libp2p                                   |
-| Contexts      | No          | Each context may involve different lossy functions and delta filters     |
-| HTTP API      | Yes         | Basic peering info and entity CRUD                                       |
-
-If we express views and filter rules as JSON-Logic, we can easily include them in records.
-
 # Development / Demo
 
 ## Setup
@@ -156,7 +138,23 @@ EOF
 curl -s -X PUT -H 'content-type:application/json' -d @/tmp/user.json http://localhost:3000/api/user | jq
 ```
 
-# More About Concepts
+# Concepts
+
+|               | Implemented | Notes                                                                    |
+| ------------- | ----------- | ------------------------------------------------------------------------ |
+| Peering       | Yes         | Implemented with ZeroMQ and/or Libp2p. Libp2p solves more problems.      |
+| Schemas       | Not really  | Currently very thin layer allowing TypedCollections                      |
+| Relationships | No          | Supporting relational algebra among domain entities                      |
+| Views         | Yes         | Lossless: Map the `targetContext`s as properties of domain entities.     |
+|               |             | Lossy: Use a delta filter and a resolver function to produce a view.     |
+|               |             | Currently using functions rather than JSON-Logic expressions.            |
+| Functions     | No          | Arbitrary subscribers to delta stream (that can also emit deltas?)       |
+| Tests         | Yes         | We are set up to run unit tests and multi-node tests                     |
+| Identity      | Sort of     | We have an identity service via Libp2p                                   |
+| Contexts      | No          | Each context may involve different lossy functions and delta filters     |
+| HTTP API      | Yes         | Basic peering info and entity CRUD                                       |
+
+If we express views and filter rules as JSON-Logic, we can easily include them in records.
 
 ## Clocks?
 
