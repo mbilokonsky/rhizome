@@ -81,38 +81,140 @@ export class NegationHelper {
 
   /**
    * Check if a delta is negated by any negation deltas
+   * @param deltaId The ID of the delta to check
+   * @param deltas The list of all deltas to consider
+   * @returns True if the delta is effectively negated, false otherwise
    */
   static isDeltaNegated(deltaId: DeltaID, deltas: Delta[]): boolean {
-    return this.findNegationsFor(deltaId, deltas).length > 0;
-  }
-
-  /**
-   * Filter out negated deltas from a list
-   * Returns deltas that are not negated by any negation deltas in the list
-   */
-  static filterNegatedDeltas(deltas: Delta[]): Delta[] {
-    const negatedDeltaIds = new Set<DeltaID>();
+    // Create a map of delta ID to its negation status
+    const deltaStatus = new Map<DeltaID, boolean>();
+    // Create a map of delta ID to its negation deltas
+    const deltaToNegations = new Map<DeltaID, Delta[]>();
     
-    // First pass: collect all negated delta IDs
+    // First pass: collect all deltas and their negations
     for (const delta of deltas) {
       if (this.isNegationDelta(delta)) {
         const negatedId = this.getNegatedDeltaId(delta);
         if (negatedId) {
-          negatedDeltaIds.add(negatedId);
+          if (!deltaToNegations.has(negatedId)) {
+            deltaToNegations.set(negatedId, []);
+          }
+          deltaToNegations.get(negatedId)!.push(delta);
         }
       }
     }
 
-    // Second pass: filter out negated deltas and negation deltas themselves
+    // Function to determine if a delta is effectively negated
+    const isEffectivelyNegated = (currentDeltaId: DeltaID, visited: Set<DeltaID> = new Set()): boolean => {
+      // Avoid infinite recursion in case of cycles
+      if (visited.has(currentDeltaId)) {
+        return false; // If we've seen this delta before, assume it's not negated to break the cycle
+      }
+      
+      // Check if we've already determined this delta's status
+      if (deltaStatus.has(currentDeltaId)) {
+        return deltaStatus.get(currentDeltaId)!;
+      }
+      
+      // Get all negations targeting this delta
+      const negations = deltaToNegations.get(currentDeltaId) || [];
+      
+      // If there are no negations, the delta is not negated
+      if (negations.length === 0) {
+        deltaStatus.set(currentDeltaId, false);
+        return false;
+      }
+      
+      // Check each negation to see if it's effectively applied
+      // A negation is effective if it's not itself negated
+      for (const negation of negations) {
+        // If the negation delta is not itself negated, then the target is negated
+        if (!isEffectivelyNegated(negation.id, new Set([...visited, currentDeltaId]))) {
+          deltaStatus.set(currentDeltaId, true);
+          return true;
+        }
+      }
+      
+      // If all negations are themselves negated, the delta is not negated
+      deltaStatus.set(currentDeltaId, false);
+      return false;
+    };
+
+    // Check if the target delta is negated
+    return isEffectivelyNegated(deltaId);
+  }
+
+  /**
+   * Filter out negated deltas from a list, handling both direct and indirect negations
+   * Returns deltas that are not effectively negated by any chain of negations
+   */
+  static filterNegatedDeltas(deltas: Delta[]): Delta[] {
+    // Create a map of delta ID to its negation status
+    const deltaStatus = new Map<DeltaID, boolean>();
+    // Create a map of delta ID to its negation deltas
+    const deltaToNegations = new Map<DeltaID, NegationDelta[]>();
+    
+    // First pass: collect all deltas and their negations
+    for (const delta of deltas) {
+      if (this.isNegationDelta(delta)) {
+        const negatedId = this.getNegatedDeltaId(delta);
+        if (negatedId) {
+          if (!deltaToNegations.has(negatedId)) {
+            deltaToNegations.set(negatedId, []);
+          }
+          deltaToNegations.get(negatedId)!.push(delta);
+        }
+      }
+    }
+
+    // Function to determine if a delta is effectively negated
+    const isEffectivelyNegated = (deltaId: DeltaID, visited: Set<DeltaID> = new Set()): boolean => {
+      // Avoid infinite recursion in case of cycles
+      if (visited.has(deltaId)) {
+        return false; // If we've seen this delta before, assume it's not negated to break the cycle
+      }
+      
+      // Check if we've already determined this delta's status
+      if (deltaStatus.has(deltaId)) {
+        return deltaStatus.get(deltaId)!;
+      }
+      
+      // Get all negations targeting this delta
+      const negations = deltaToNegations.get(deltaId) || [];
+      
+      // If there are no negations, the delta is not negated
+      if (negations.length === 0) {
+        deltaStatus.set(deltaId, false);
+        return false;
+      }
+      
+      // Check each negation to see if it's effectively applied
+      // A negation is effective if it's not itself negated
+      for (const negation of negations) {
+        // If the negation delta is not itself negated, then the target is negated
+        if (!isEffectivelyNegated(negation.id, new Set([...visited, deltaId]))) {
+          deltaStatus.set(deltaId, true);
+          return true;
+        }
+      }
+      
+      // If all negations are themselves negated, the delta is not negated
+      deltaStatus.set(deltaId, false);
+      return false;
+    };
+
+    // Second pass: filter out effectively negated deltas and all negation deltas
     return deltas.filter(delta => {
-      // Exclude negation deltas themselves (they're metadata)
+      // Always exclude negation deltas (they're metadata)
       if (this.isNegationDelta(delta)) {
         return false;
       }
       
-      // Exclude deltas that have been negated
-      if (negatedDeltaIds.has(delta.id)) {
-        debug(`Filtering out negated delta ${delta.id}`);
+      // Check if this delta is effectively negated
+      const isNegated = isEffectivelyNegated(delta.id);
+      
+      if (isNegated) {
+        debug(`Filtering out effectively negated delta ${delta.id}`);
         return false;
       }
 
@@ -128,35 +230,156 @@ export class NegationHelper {
     negationDeltas: number;
     negatedDeltas: number;
     effectiveDeltas: number;
-    negatedDeltaIds: DeltaID[];
-    negationMap: Map<DeltaID, DeltaID[]>; // negated -> [negating deltas]
+    negationsByProperty: { [key: string]: { negated: number; total: number } };
+    negatedDeltaIds: string[];
+    negationMap: Map<DeltaID, DeltaID[]>;
   } {
     const negationDeltas = deltas.filter(d => this.isNegationDelta(d));
-    const negatedDeltaIds = new Set<DeltaID>();
     const negationMap = new Map<DeltaID, DeltaID[]>();
+    const deltaById = new Map<DeltaID, Delta>();
+    const properties = new Set<string>();
+    const negatedDeltaIds = new Set<string>();
 
-    for (const negDelta of negationDeltas) {
-      const negatedId = this.getNegatedDeltaId(negDelta);
-      if (negatedId) {
-        negatedDeltaIds.add(negatedId);
-        
-        if (!negationMap.has(negatedId)) {
-          negationMap.set(negatedId, []);
+    // Build maps and collect properties
+    for (const delta of deltas) {
+      deltaById.set(delta.id, delta);
+      
+      // Collect all properties referenced in the delta
+      if (delta.pointers) {
+        for (const pointer of delta.pointers) {
+          if (pointer.targetContext) {
+            properties.add(pointer.targetContext);
+          }
         }
-        negationMap.get(negatedId)!.push(negDelta.id);
+      }
+      
+      if (this.isNegationDelta(delta)) {
+        const negatedId = this.getNegatedDeltaId(delta);
+        if (negatedId) {
+          if (!negationMap.has(negatedId)) {
+            negationMap.set(negatedId, []);
+          }
+          negationMap.get(negatedId)!.push(delta.id);
+        }
       }
     }
 
-    const effectiveDeltas = deltas.length - negationDeltas.length - negatedDeltaIds.size;
+    // Track which deltas are effectively negated
+    const deltaStatus = new Map<DeltaID, boolean>();
+    
+    // Function to determine if a delta is effectively negated
+    const isEffectivelyNegated = (deltaId: DeltaID, visited: Set<DeltaID> = new Set()): boolean => {
+      // Avoid infinite recursion in case of cycles
+      if (visited.has(deltaId)) {
+        return false; // If we've seen this delta before, assume it's not negated to break the cycle
+      }
+      
+      // Check if we've already determined this delta's status
+      if (deltaStatus.has(deltaId)) {
+        return deltaStatus.get(deltaId)!;
+      }
+      
+      // Get all negations targeting this delta
+      const negations = negationMap.get(deltaId) || [];
+      
+      // If there are no negations, the delta is not negated
+      if (negations.length === 0) {
+        deltaStatus.set(deltaId, false);
+        return false;
+      }
+      
+      // Check each negation to see if it's effectively applied
+      // A negation is effective if it's not itself negated
+      for (const negationId of negations) {
+        // If the negation delta is not itself negated, then the target is negated
+        if (!isEffectivelyNegated(negationId, new Set([...visited, deltaId]))) {
+          deltaStatus.set(deltaId, true);
+          return true;
+        }
+      }
+      
+      // If all negations are themselves negated, the delta is not negated
+      deltaStatus.set(deltaId, false);
+      return false;
+    };
+
+    // First pass: determine status of all deltas
+    for (const delta of deltas) {
+      isEffectivelyNegated(delta.id);
+    }
+
+    // Calculate statistics
+    let effectiveDeltas = 0;
+    const negationsByProperty: { [key: string]: { negated: number; total: number } } = {};
+
+    // Initialize property counters
+    for (const prop of properties) {
+      negationsByProperty[prop] = { negated: 0, total: 0 };
+    }
+
+    // Second pass: count negated and effective deltas
+    for (const delta of deltas) {
+      const isNegation = this.isNegationDelta(delta);
+      const isNegated = deltaStatus.get(delta.id) || false;
+
+      if (isNegated) {
+        // For non-negation deltas, add them to the negated set
+        if (!isNegation) {
+          negatedDeltaIds.add(delta.id);
+        } else {
+          // For negation deltas, add the delta they negate (if it's not a negation delta)
+          const negatedId = this.getNegatedDeltaId(delta);
+          if (negatedId) {
+            const negatedDelta = deltaById.get(negatedId);
+            if (negatedDelta && !this.isNegationDelta(negatedDelta)) {
+              negatedDeltaIds.add(negatedId);
+            }
+          }
+        }
+      }
+
+      if (!isNegation) {
+        if (isNegated) {
+          // Already counted in negatedDeltaIds
+        } else {
+          effectiveDeltas++;
+        }
+      }
+    }
+
+    // Update property-based statistics
+    for (const delta of deltas) {
+      const isNegated = deltaStatus.get(delta.id) || false;
+      
+      if (delta.pointers) {
+        for (const pointer of delta.pointers) {
+          if (pointer.targetContext && negationsByProperty[pointer.targetContext] !== undefined) {
+            negationsByProperty[pointer.targetContext].total++;
+            if (isNegated) {
+              negationsByProperty[pointer.targetContext].negated++;
+            }
+          }
+        }
+      }
+    }
 
     return {
       totalDeltas: deltas.length,
       negationDeltas: negationDeltas.length,
       negatedDeltas: negatedDeltaIds.size,
       effectiveDeltas,
+      negationsByProperty,
       negatedDeltaIds: Array.from(negatedDeltaIds),
       negationMap
     };
+  }
+  
+  /**
+   * Helper to check if a delta with the given ID is a negation delta
+   */
+  private static isNegationDeltaById(deltaId: DeltaID, deltas: Delta[]): boolean {
+    const delta = deltas.find(d => d.id === deltaId);
+    return delta ? this.isNegationDelta(delta) : false;
   }
 
   /**

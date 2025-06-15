@@ -1,7 +1,10 @@
+import Debug from 'debug';
 import { Delta } from '../src/core';
 import { NegationHelper } from '../src/features';
 import { RhizomeNode } from '../src/node';
 import { Lossless } from '../src/views';
+
+const debug = Debug('rz:negation:test');
 
 describe('Negation System', () => {
   let node: RhizomeNode;
@@ -442,32 +445,6 @@ describe('Negation System', () => {
       expect(stats.negationDeltas).toBe(0); // No negations for this entity
     });
 
-    it('should handle multiple negations and un-negations', () => {
-      const originalDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'visible', target: 'item1', targetContext: 'visible' },
-          { localContext: 'value', target: true }
-        ]
-      });
-
-      const negation1 = NegationHelper.createNegation(originalDelta.id, 'mod1', 'host1');
-      const negation2 = NegationHelper.createNegation(originalDelta.id, 'mod2', 'host1');
-
-      lossless.ingestDelta(originalDelta);
-      lossless.ingestDelta(negation1);
-      lossless.ingestDelta(negation2);
-
-      // Delta should be thoroughly negated
-      const view = lossless.view(['item1']);
-      expect(view.item1).toBeUndefined();
-
-      const stats = lossless.getNegationStats('item1');
-      expect(stats.negatedDeltas).toBe(1);
-      expect(stats.negationDeltas).toBe(2);
-    });
-
     it('should handle self-referential entities in negations', () => {
       // Create a delta that references itself
       const selfRefDelta = new Delta({
@@ -486,6 +463,166 @@ describe('Negation System', () => {
 
       const view = lossless.view(['node1']);
       expect(view.node1).toBeUndefined(); // Should be negated
+    });
+
+    it('should handle multiple direct negations of the same delta', () => {
+      const testNode = new RhizomeNode();
+      const testLossless = new Lossless(testNode);
+      
+      // Create the original delta
+      const originalDelta = new Delta({
+        creator: 'user1',
+        host: 'host1',
+        pointers: [
+          { localContext: 'title', target: 'entity2', targetContext: 'title' },
+          { localContext: 'status', target: 'Draft' }
+        ]
+      });
+
+      // Create two negations of the same delta
+      const negation1 = NegationHelper.createNegation(originalDelta.id, 'user2', 'host1');
+      const negation2 = NegationHelper.createNegation(originalDelta.id, 'user3', 'host1');
+
+      // Process all deltas
+      testLossless.ingestDelta(originalDelta);
+      testLossless.ingestDelta(negation1);
+      testLossless.ingestDelta(negation2);
+
+      // Get the view after processing all deltas
+      const view = testLossless.view(['entity2']);
+      
+      // The original delta should be negated (not in view) because it has two direct negations
+      expect(view.entity2).toBeUndefined();
+
+      // Verify the stats
+      const stats = testLossless.getNegationStats('entity2');
+      expect(stats.negationDeltas).toBe(2);
+      expect(stats.negatedDeltas).toBe(1);
+      expect(stats.effectiveDeltas).toBe(0);
+    });
+
+    it('should handle complex negation chains', () => {
+      const testNode = new RhizomeNode();
+      const testLossless = new Lossless(testNode);
+      
+      // Create the original delta
+      const deltaA = new Delta({
+        creator: 'user1',
+        host: 'host1',
+        pointers: [
+          { localContext: 'content', target: 'entity3', targetContext: 'content' },
+          { localContext: 'text', target: 'Hello World' }
+        ]
+      });
+
+      // Create a chain of negations: B negates A, C negates B, D negates C
+      const deltaB = NegationHelper.createNegation(deltaA.id, 'user2', 'host1');
+      const deltaC = NegationHelper.createNegation(deltaB.id, 'user3', 'host1');
+      const deltaD = NegationHelper.createNegation(deltaC.id, 'user4', 'host1');
+
+      debug('Delta A (original): %s', deltaA.id);
+      debug('Delta B (negates A): %s', deltaB.id);
+      debug('Delta C (negates B): %s', deltaC.id);
+      debug('Delta D (negates C): %s', deltaD.id);
+
+      // Process all deltas in order
+      testLossless.ingestDelta(deltaA);
+      testLossless.ingestDelta(deltaB);
+      testLossless.ingestDelta(deltaC);
+      testLossless.ingestDelta(deltaD);
+
+      // Get the view after processing all deltas
+      const view = testLossless.view(['entity3']);
+      
+      // The original delta should be negated because:
+      // - B negates A
+      // - C negates B (so A is no longer negated)
+      // - D negates C (so B is no longer negated, and A is negated again by B)
+      expect(view.entity3).toBeUndefined();
+
+      // Get all deltas for the entity
+      const allDeltas = [deltaA, deltaB, deltaC, deltaD];
+      
+      // Get the stats
+      const stats = testLossless.getNegationStats('entity3');
+      const isANegated = NegationHelper.isDeltaNegated(deltaA.id, allDeltas);
+      const isBNegated = NegationHelper.isDeltaNegated(deltaB.id, allDeltas);
+      const isCNegated = NegationHelper.isDeltaNegated(deltaC.id, allDeltas);
+      const isDNegated = NegationHelper.isDeltaNegated(deltaD.id, allDeltas);
+      
+      debug('Delta statuses:');
+      debug('- A (%s): %s', deltaA.id, isANegated ? 'NEGATED' : 'ACTIVE');
+      debug('- B (%s): %s, negates: %s', deltaB.id, isBNegated ? 'NEGATED' : 'ACTIVE', NegationHelper.getNegatedDeltaId(deltaB));
+      debug('- C (%s): %s, negates: %s', deltaC.id, isCNegated ? 'NEGATED' : 'ACTIVE', NegationHelper.getNegatedDeltaId(deltaC));
+      debug('- D (%s): %s, negates: %s', deltaD.id, isDNegated ? 'NEGATED' : 'ACTIVE', NegationHelper.getNegatedDeltaId(deltaD));
+      
+      debug('Negation stats: %O', {
+        totalDeltas: stats.totalDeltas,
+        negationDeltas: stats.negationDeltas,
+        negatedDeltas: stats.negatedDeltas,
+        effectiveDeltas: stats.effectiveDeltas,
+        negationsByProperty: stats.negationsByProperty
+      });
+
+      // B, C, D are negation deltas
+      expect(stats.negationDeltas).toBe(3);
+      
+      // A and C are effectively negated
+      expect(isANegated).toBe(true);
+      expect(isCNegated).toBe(true);
+      
+      // B and D are not negated (they are negation deltas that are not themselves negated)
+      expect(isBNegated).toBe(false);
+      expect(isDNegated).toBe(false);
+      
+      // No deltas remain unnegated
+      expect(stats.effectiveDeltas).toBe(0);
+    });
+
+    it('should handle multiple independent negations', () => {
+      const testNode = new RhizomeNode();
+      const testLossless = new Lossless(testNode);
+      
+      // Create two independent deltas
+      const delta1 = new Delta({
+        creator: 'user1',
+        host: 'host1',
+        pointers: [
+          { localContext: 'item', target: 'entity4', targetContext: 'item' },
+          { localContext: 'name', target: 'Item 1' }
+        ]
+      });
+
+      const delta2 = new Delta({
+        creator: 'user2',
+        host: 'host1',
+        pointers: [
+          { localContext: 'item', target: 'entity4', targetContext: 'item' },
+          { localContext: 'name', target: 'Item 2' }
+        ]
+      });
+
+      // Create negations for both deltas
+      const negation1 = NegationHelper.createNegation(delta1.id, 'user3', 'host1');
+      const negation2 = NegationHelper.createNegation(delta2.id, 'user4', 'host1');
+
+      // Process all deltas
+      testLossless.ingestDelta(delta1);
+      testLossless.ingestDelta(delta2);
+      testLossless.ingestDelta(negation1);
+      testLossless.ingestDelta(negation2);
+
+      // Get the view after processing all deltas
+      const view = testLossless.view(['entity4']);
+      
+      // Both deltas should be negated
+      expect(view.entity4).toBeUndefined();
+
+      // Verify the stats
+      const stats = testLossless.getNegationStats('entity4');
+      expect(stats.negationDeltas).toBe(2);
+      expect(stats.negatedDeltas).toBe(2);
+      expect(stats.effectiveDeltas).toBe(0);
     });
   });
 });
