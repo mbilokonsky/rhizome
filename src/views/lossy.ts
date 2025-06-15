@@ -41,9 +41,30 @@ export abstract class Lossy<Accumulator, Result> {
   // apply a filter to the deltas composing that lossless view,
   // and then apply a supplied resolver function which receives
   // the filtered lossless view as input.
+  // Resolve the current state of the view
   resolve(entityIds?: DomainEntityID[]): Result | undefined {
     if (!entityIds) {
       entityIds = Array.from(this.lossless.domainEntities.keys());
+    }
+
+    // If we don't have an accumulator, build it from the lossless view
+    if (!this.accumulator) {
+      this.accumulator = {} as Accumulator;
+      
+      // Use the general view method to get the full view
+      const fullView = this.lossless.view(entityIds, this.deltaFilter);
+      
+      // Build the accumulator by reducing each entity's view
+      for (const entityId of entityIds) {
+        const losslessViewOne = fullView[entityId];
+        if (losslessViewOne) {
+          if (!this.accumulator) {
+            this.accumulator = this.initializer(losslessViewOne);
+          } else {
+            this.accumulator = this.reducer(this.accumulator, losslessViewOne);
+          }
+        }
+      }
     }
 
     if (!this.accumulator) return undefined;

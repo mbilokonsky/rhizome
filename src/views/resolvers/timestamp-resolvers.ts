@@ -72,8 +72,10 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
     super(lossless);
   }
 
-  initializer(): Accumulator {
-    return {};
+  initializer(view: LosslessViewOne): Accumulator {
+    return {
+      [view.id]: { id: view.id, properties: {} }
+    };
   }
 
   reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
@@ -124,31 +126,7 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
     return res;
   }
 
-  // Override resolve to build accumulator on-demand if needed
-  resolve(entityIds?: DomainEntityID[]): Result | undefined {
-    if (!entityIds) {
-      entityIds = Array.from(this.lossless.domainEntities.keys());
-    }
 
-    // If we don't have an accumulator, build it from the lossless view
-    if (!this.accumulator) {
-      this.accumulator = this.initializer();
-
-      // Use the general view method instead of viewSpecific
-      const fullView = this.lossless.view(entityIds, this.deltaFilter);
-
-      for (const entityId of entityIds) {
-        const losslessViewOne = fullView[entityId];
-        if (losslessViewOne) {
-          this.accumulator = this.reducer(this.accumulator, losslessViewOne);
-        }
-      }
-    }
-
-    if (!this.accumulator) return undefined;
-
-    return this.resolver(this.accumulator);
-  }
 }
 
 // Convenience classes for different tie-breaking strategies

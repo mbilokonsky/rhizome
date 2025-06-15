@@ -58,7 +58,7 @@ describe('Concurrent Write Scenarios', () => {
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
-      // Should resolve deterministically (likely based on delta processing order)
+      // Should resolve deterministically using the LastWriteWins resolver's tie-breaking algorithm
       expect(typeof result!['entity1'].properties.score).toBe('number');
       expect([100, 200]).toContain(result!['entity1'].properties.score);
     });

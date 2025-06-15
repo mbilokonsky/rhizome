@@ -70,66 +70,44 @@ export function lastValueFromDeltas(
 }
 
 export class LastWriteWins extends Lossy<Accumulator, Result> {
-  initializer(): Accumulator {
-    return {};
+  initializer(view: LosslessViewOne): Accumulator {
+    return {
+      [view.id]: { id: view.id, properties: {} }
+    };
   }
 
   reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
     if (!acc[cur.id]) {
-      acc[cur.id] = {id: cur.id, properties: {}};
+      acc[cur.id] = { id: cur.id, properties: {} };
     }
 
     for (const [key, deltas] of Object.entries(cur.propertyDeltas)) {
-      const {value, timeUpdated} = lastValueFromDeltas(key, deltas) || {};
-      if (!value || !timeUpdated) continue;
+      const { value, timeUpdated } = lastValueFromDeltas(key, deltas) || {};
+      if (!value || timeUpdated === undefined) continue;
 
-      if (timeUpdated > (acc[cur.id].properties[key]?.timeUpdated || 0)) {
-        acc[cur.id].properties[key] = {
-          value,
-          timeUpdated
-        };
+      const currentTime = acc[cur.id].properties[key]?.timeUpdated || 0;
+      if (timeUpdated > currentTime) {
+        acc[cur.id].properties[key] = { value, timeUpdated };
       }
     }
+    
     return acc;
-  };
+  }
 
   resolver(cur: Accumulator): Result {
-    const res: Result = {};
+    const result: Result = {};
 
-    for (const [id, ent] of Object.entries(cur)) {
-      res[id] = {id, properties: {}};
-      for (const [key, {value}] of Object.entries(ent.properties)) {
-        res[id].properties[key] = value;
-      }
+    for (const [id, entity] of Object.entries(cur)) {
+      result[id] = { 
+        id, 
+        properties: Object.fromEntries(
+          Object.entries(entity.properties)
+            .map(([key, { value }]) => [key, value])
+        )
+      };
     }
 
-    return res;
-  };
-
-  // Override resolve to build accumulator on-demand if needed
-  resolve(entityIds?: DomainEntityID[]): Result | undefined {
-    if (!entityIds) {
-      entityIds = Array.from(this.lossless.domainEntities.keys());
-    }
-
-    // If we don't have an accumulator, build it from the lossless view
-    if (!this.accumulator) {
-      this.accumulator = this.initializer();
-      
-      // Use the general view method
-      const fullView = this.lossless.view(entityIds, this.deltaFilter);
-      
-      for (const entityId of entityIds) {
-        const losslessViewOne = fullView[entityId];
-        if (losslessViewOne) {
-          this.accumulator = this.reducer(this.accumulator, losslessViewOne);
-        }
-      }
-    }
-
-    if (!this.accumulator) return undefined;
-
-    return this.resolver(this.accumulator);
+    return result;
   }
 }
 
