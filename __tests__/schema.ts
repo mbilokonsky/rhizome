@@ -3,10 +3,11 @@ import {
   PrimitiveSchemas, 
   ReferenceSchemas, 
   ArraySchemas,
-  CommonSchemas,
+  // CommonSchemas has been moved to ./test-utils/schemas
   ObjectSchema
 } from '../src/schema';
 import { DefaultSchemaRegistry } from '../src/schema';
+import { CommonSchemas } from '../src/test-utils/schemas';
 import { TypedCollectionImpl, SchemaValidationError } from '../src/collections';
 import { RhizomeNode } from '../src/node';
 import { Delta } from '../src/core';

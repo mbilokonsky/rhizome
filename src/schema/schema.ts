@@ -198,46 +198,8 @@ export class SchemaBuilder {
   }
 }
 
-// Common schema patterns
-export const CommonSchemas = {
-  // User schema with friends references
-  User: () => SchemaBuilder
-    .create('user')
-    .name('User')
-    .description('A user entity with profile information')
-    .property('name', PrimitiveSchemas.requiredString())
-    .property('email', PrimitiveSchemas.string())
-    .property('age', PrimitiveSchemas.number())
-    .property('active', PrimitiveSchemas.boolean())
-    .property('friends', ArraySchemas.of(ReferenceSchemas.to('user-summary', 2)))
-    .required('name')
-    .build(),
-    
-  // User summary schema for references to prevent infinite recursion
-  UserSummary: () => SchemaBuilder
-    .create('user-summary')
-    .name('User Summary')
-    .description('Abbreviated user information for references')
-    .property('name', PrimitiveSchemas.requiredString())
-    .property('email', PrimitiveSchemas.string())
-    .required('name')
-    .additionalProperties(false)
-    .build(),
-    
-  // Document schema
-  Document: () => SchemaBuilder
-    .create('document')
-    .name('Document')
-    .description('A document with metadata')
-    .property('title', PrimitiveSchemas.requiredString())
-    .property('content', PrimitiveSchemas.string())
-    .property('author', ReferenceSchemas.required('user-summary'))
-    .property('tags', ArraySchemas.of(PrimitiveSchemas.string()))
-    .property('created', PrimitiveSchemas.requiredNumber())
-    .property('published', PrimitiveSchemas.boolean())
-    .required('title', 'author', 'created')
-    .build()
-} as const;
+// Common schema patterns have been moved to __tests__/test-utils/schemas.ts
+// since they are only used for testing purposes.
 
 /**
  * Context for tracking resolution state during nested object resolution
