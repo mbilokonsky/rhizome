@@ -1,0 +1,25 @@
+FROM node:24
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first for better layer caching
+COPY package.json package-lock.json tsconfig.json ./
+
+# Install dependencies including devDependencies
+RUN npm ci --include=dev
+
+# Copy source files
+COPY src/ src/
+COPY markdown/ markdown/
+COPY examples/ examples/
+COPY util/ util/
+
+# Build the application
+RUN npm run build --verbose
+
+# Set environment variables
+ENV NODE_ENV=test
+
+# Command to run the application
+CMD ["node", "dist/examples/app.js"]
