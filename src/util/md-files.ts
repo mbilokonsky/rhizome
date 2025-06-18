@@ -1,5 +1,5 @@
 import Debug from "debug";
-import {FSWatcher, readdirSync, readFileSync, watch} from "fs";
+import {FSWatcher, readdirSync, readFileSync, watch, accessSync, constants} from "fs";
 import path, {join} from "path";
 import showdown from "showdown";
 import {RhizomeNode} from "../node";
@@ -48,9 +48,32 @@ export class MDFiles {
   }
 
   readReadme() {
-    const md = readFileSync('./README.md').toString();
+    let currentDir = process.cwd();
+    const root = path.parse(currentDir).root;
+    let readmePath: string | null = null;
+  
+    // Traverse up the directory tree until we find README.md or hit the root
+    while (currentDir !== root) {
+      const testPath = path.join(currentDir, 'README.md');
+      try {
+        // Using the imported accessSync function
+        accessSync(testPath, constants.F_OK);
+        readmePath = testPath;
+        break;
+      } catch (err) {
+        // Move up one directory
+        currentDir = path.dirname(currentDir);
+      }
+    }
+  
+    if (!readmePath) {
+      debug('No README.md found in any parent directory');
+      return;
+    }
+  
+    const md = readFileSync(readmePath).toString();
     const html = htmlDocFromMarkdown(md);
-    this.readme = {name: 'README', md, html};
+    this.readme = { name: 'README', md, html };
   }
 
   getReadmeHTML() {

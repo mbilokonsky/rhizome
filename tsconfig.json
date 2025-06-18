@@ -6,11 +6,19 @@
     "moduleResolution": "Node",
     "sourceMap": true,
     "baseUrl": ".",
+    "rootDir": ".",
     "outDir": "dist",
     "importsNotUsedAsValues": "remove",
     "strict": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "jest"],
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false
   },
   "include": [
     "src/**/*",

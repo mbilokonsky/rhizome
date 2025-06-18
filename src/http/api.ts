@@ -11,6 +11,14 @@ export class HttpApi {
   }
 
   private setupRoutes() {
+    // --------------- health ----------------
+
+    this.router.get("/health", (_req: express.Request, res: express.Response) => {
+      res.json({
+        status: "ok"
+      });
+    });
+
     // --------------- deltas ----------------
 
     // Serve list of all deltas accepted

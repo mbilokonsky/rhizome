@@ -1,4 +1,5 @@
-import { apply } from 'json-logic-js';
+import jsonLogic from 'json-logic-js';
+const { apply } = jsonLogic;
 
 console.log(apply({"map":[
   {"var":"integers"},

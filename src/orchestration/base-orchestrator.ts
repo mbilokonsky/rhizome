@@ -1,0 +1,58 @@
+import { NodeOrchestrator, NodeHandle, NodeConfig, NodeStatus } from './types';
+
+/**
+ * Base class for all orchestrator implementations
+ * Provides common functionality and ensures interface compliance
+ */
+export abstract class BaseOrchestrator implements NodeOrchestrator {
+  /**
+   * Start a new node with the given configuration
+   * Must be implemented by subclasses
+   */
+  abstract startNode(config: NodeConfig): Promise<NodeHandle>;
+
+  /**
+   * Stop a running node
+   * Must be implemented by subclasses
+   */
+  abstract stopNode(handle: NodeHandle): Promise<void>;
+
+  /**
+   * Get status of a node
+   * Must be implemented by subclasses
+   */
+  abstract getNodeStatus(handle: NodeHandle): Promise<NodeStatus>;
+
+  /**
+   * Connect two nodes
+   * Default implementation does nothing - should be overridden by subclasses
+   * that support direct node connections
+   */
+  async connectNodes(node1: NodeHandle, node2: NodeHandle): Promise<void> {
+    // Default implementation does nothing
+    console.warn('connectNodes not implemented for this orchestrator');
+  }
+
+  /**
+   * Create network partitions
+   * Default implementation does nothing - should be overridden by subclasses
+   * that support network partitioning
+   */
+  async partitionNetwork(partitions: { groups: string[][] }): Promise<void> {
+    // Default implementation does nothing
+    console.warn('partitionNetwork not implemented for this orchestrator');
+  }
+
+  /**
+   * Set resource limits for a node
+   * Default implementation does nothing - should be overridden by subclasses
+   * that support resource management
+   */
+  async setResourceLimits(
+    handle: NodeHandle,
+    limits: Partial<NodeConfig['resources']>
+  ): Promise<void> {
+    // Default implementation does nothing
+    console.warn('setResourceLimits not implemented for this orchestrator');
+  }
+}
