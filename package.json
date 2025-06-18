@@ -6,14 +6,14 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "lint": "eslint",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test": "jest",
     "coverage": "./scripts/coverage.sh",
     "coverage-report": "npm run test -- --coverage --coverageDirectory=coverage",
     "example-app": "node dist/examples/app.js"
   },
   "jest": {
     "testEnvironment": "node",
-    "preset": "ts-jest",
+    "preset": "ts-jest/presets/default",
     "roots": [
       "./__tests__/"
     ],
@@ -23,14 +23,10 @@
     "setupFilesAfterEnv": [
       "<rootDir>/__tests__/jest-setup.ts"
     ],
-    "extensionsToTreatAsEsm": [
-      ".ts"
-    ],
     "transform": {
       "^.+\\.tsx?$": [
         "ts-jest",
         {
-          "useESM": true,
           "tsconfig": "tsconfig.json"
         }
       ]

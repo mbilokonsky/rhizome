@@ -2,6 +2,11 @@ import { RhizomeNode, type RhizomeNodeConfig } from '../../node';
 import { PeerAddress } from '../../network';
 import { BaseOrchestrator } from '../base-orchestrator';
 import { NodeConfig, NodeHandle, NodeStatus, NetworkPartition } from '../types';
+import { getRandomPort } from '../docker-orchestrator/utils/port-utils';
+import { BasicCollection } from '../../collections/collection-basic';
+import Debug from 'debug';
+
+const debug = Debug('rz:test-orchestrator');
 
 /**
  * In-memory implementation of NodeOrchestrator for testing
@@ -11,18 +16,17 @@ export class TestOrchestrator extends BaseOrchestrator {
 
   async startNode(config: NodeConfig): Promise<NodeHandle> {
     const nodeId = config.id || `node-${Date.now()}`;
-    const httpPort = config.network?.port || 0; // 0 = auto-select port
-    const requestPort = config.network?.requestPort || 0;
+    // Use getRandomPort instead of 0 for auto-selection
+    const httpPort = config.network?.port || getRandomPort();
+    const requestPort = config.network?.requestPort || getRandomPort();
     
     // Map NodeConfig to RhizomeNodeConfig with all required properties
     const nodeConfig: RhizomeNodeConfig = {
       // Required network properties
-      requestBindAddr: '0.0.0.0',
       requestBindHost: '0.0.0.0',
       requestBindPort: requestPort,
-      publishBindAddr: '0.0.0.0',
       publishBindHost: '0.0.0.0',
-      publishBindPort: 0, // Auto-select port
+      publishBindPort: getRandomPort(), // Use a random port for publish socket
       httpAddr: '0.0.0.0',
       httpPort: httpPort,
       httpEnable: true,
@@ -46,9 +50,35 @@ export class TestOrchestrator extends BaseOrchestrator {
     };
 
     const node = new RhizomeNode(nodeConfig);
+    
+    // Create and connect a user collection
+    const userCollection = new BasicCollection('user');
+    // Connect the collection to the node before serving it
+    userCollection.rhizomeConnect(node);
+    // Now serve the collection through the HTTP API
+    node.httpServer.httpApi.serveCollection(userCollection);
+    
+    // Start the node and wait for all components to be ready
+    debug(`[${nodeId}] Starting node and waiting for it to be fully ready...`);
+    try {
+      await node.start({ waitForReady: true });
+      debug(`[${nodeId}] Node is fully started and ready`);
+    } catch (error) {
+      debug(`[${nodeId}] Error starting node:`, error);
+      throw error;
+    }
 
-    await node.start();
-
+    // Get the actual port the server is using
+    const serverAddress = node.httpServer.server?.address();
+    let actualPort = httpPort;
+    
+    // Handle different address types (string or AddressInfo)
+    if (serverAddress) {
+      actualPort = typeof serverAddress === 'string' 
+        ? httpPort 
+        : serverAddress.port || httpPort;
+    }
+    
     const handle: NodeHandle = {
       id: nodeId,
       config: {
@@ -56,17 +86,17 @@ export class TestOrchestrator extends BaseOrchestrator {
         id: nodeId,
         network: {
           ...config.network,
-          port: httpPort,
-          requestPort: requestPort,
-        },
+          port: actualPort,
+          requestPort: requestPort
+        }
       },
-      status: async () => this.getNodeStatus({ id: nodeId } as NodeHandle),
+      status: async () => this.getNodeStatus(handle),
+      getApiUrl: () => `http://localhost:${actualPort}/api`,
       stop: async () => {
         await node.stop();
         this.nodes.delete(nodeId);
       },
-      getRequestPort: () => config.network?.requestPort || 0,
-      getApiUrl: () => `http://localhost:${httpPort}/api`,
+      getRequestPort: () => requestPort,
     };
 
     this.nodes.set(nodeId, { handle, node });

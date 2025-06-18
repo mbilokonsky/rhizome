@@ -26,6 +26,8 @@ export interface NodeConfig {
   
   /** Storage configuration */
   storage?: {
+    /** Storage type */
+    type?: 'memory' | 'leveldb' | 'sqlite' | 'postgres';
     /** Path to data directory */
     path?: string;
     /** Maximum storage in MB */
@@ -38,12 +40,14 @@ export interface NodeConfig {
 
 export interface NodeStatus {
   id: string;
+  containerId?: string;
   status: 'starting' | 'running' | 'stopping' | 'stopped' | 'error';
   network?: {
     address: string;
     requestPort: number;
     httpPort: number;
     peers: string[];
+    networkId?: string;
   };
   resources?: {
     cpu: {
@@ -90,6 +94,9 @@ export interface NodeOrchestrator {
   
   /** Set resource limits for a node */
   setResourceLimits(handle: NodeHandle, limits: Partial<NodeConfig['resources']>): Promise<void>;
+  
+  /** Clean up all resources */
+  cleanup(): Promise<void>;
 }
 
 export type OrchestratorType = 'in-memory' | 'docker' | 'kubernetes';

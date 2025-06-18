@@ -8,7 +8,8 @@ export type SubscribedMessageHandler = (sender: PeerAddress, msg: string) => voi
 
 // TODO: Allow subscribing to multiple topics on one socket
 export class Subscription {
-  sock = new Subscriber();
+  private sock: Subscriber;
+  private isRunning = false;
   topic: string;
   publishAddr: PeerAddress;
   publishAddrStr: string;
@@ -20,6 +21,7 @@ export class Subscription {
     topic: string,
     cb: SubscribedMessageHandler,
   ) {
+    this.sock = new Subscriber();
     this.cb = cb;
     this.topic = topic;
     this.publishAddr = publishAddr;
@@ -27,20 +29,60 @@ export class Subscription {
   }
 
   async start() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    
     this.sock.connect(this.publishAddrStr);
     this.sock.subscribe(this.topic);
     debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `Subscribing to ${this.topic} topic on ZeroMQ ${this.publishAddrStr}`);
 
-    // Wait for ZeroMQ messages.
-    // This will block indefinitely.
-    for await (const [, sender, msg] of this.sock) {
-      const senderStr = PeerAddress.fromString(sender.toString());
-      const msgStr = msg.toString();
-      debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `ZeroMQ subscribtion received msg: ${msgStr}`);
-      this.cb(senderStr, msgStr);
+    // Set up message handler
+    const processMessage = async () => {
+      try {
+        if (!this.isRunning) return;
+        
+        // Use a promise race to handle both messages and the stop signal
+        const [topic, sender, msg] = await Promise.race([
+          this.sock.receive(),
+          new Promise<[Buffer, Buffer, Buffer]>(() => {}).then(() => { 
+            if (!this.isRunning) throw new Error('Subscription stopped'); 
+            return [Buffer.alloc(0), Buffer.alloc(0), Buffer.alloc(0)]; 
+          })
+        ]);
+        
+        if (!this.isRunning) return;
+        
+        const senderStr = PeerAddress.fromString(sender.toString());
+        const msgStr = msg.toString();
+        debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `ZeroMQ subscription received msg: ${msgStr}`);
+        this.cb(senderStr, msgStr);
+        
+        // Process next message
+        process.nextTick(processMessage);
+      } catch (error) {
+        if (this.isRunning) {
+          debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `Error in subscription:`, error);
+          // Attempt to restart the message processing
+          if (this.isRunning) {
+            process.nextTick(processMessage);
+          }
+        }
+      }
+    };
+    
+    // Start processing messages
+    process.nextTick(processMessage);
+  }
+  
+  close() {
+    if (!this.isRunning) return;
+    this.isRunning = false;
+    try {
+      this.sock.close();
+      debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `Closed subscription for topic ${this.topic}`);
+    } catch (error) {
+      debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `Error closing subscription:`, error);
     }
-
-    debug(`[${this.pubSub.rhizomeNode.config.peerId}]`, `Done waiting for subscription socket for topic ${this.topic}`);
   }
 }
 
@@ -53,8 +95,8 @@ export class PubSub {
   constructor(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
 
-    const {publishBindAddr, publishBindPort} = this.rhizomeNode.config;
-    this.publishAddrStr = `tcp://${publishBindAddr}:${publishBindPort}`;
+    const {publishBindHost, publishBindPort} = this.rhizomeNode.config;
+    this.publishAddrStr = `tcp://${publishBindHost}:${publishBindPort}`;
   }
 
   async startZmq() {
@@ -85,16 +127,33 @@ export class PubSub {
     return subscription;
   }
 
-  async stop() {
-    if (this.publishSock) {
-      await this.publishSock.unbind(this.publishAddrStr);
-      this.publishSock.close();
-      // Free the memory by taking the old object out of scope.
-      this.publishSock = undefined;
-    }
+  /**
+   * Check if the PubSub is running
+   * @returns boolean indicating if the publisher socket is active
+   */
+  isRunning(): boolean {
+    return !!this.publishSock;
+  }
 
+  async stop() {
+    // First close all subscriptions
     for (const subscription of this.subscriptions) {
-      subscription.sock.close();
+      subscription.close();
+    }
+    this.subscriptions = [];
+    
+    // Then close the publisher socket
+    if (this.publishSock) {
+      try {
+        await this.publishSock.unbind(this.publishAddrStr);
+        this.publishSock.close();
+        debug(`[${this.rhizomeNode.config.peerId}]`, 'Unbound and closed publisher socket');
+      } catch (error) {
+        debug(`[${this.rhizomeNode.config.peerId}]`, 'Error closing publisher socket:', error);
+      } finally {
+        // Free the memory by taking the old object out of scope.
+        this.publishSock = undefined;
+      }
     }
   }
 }

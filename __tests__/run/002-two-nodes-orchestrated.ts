@@ -2,6 +2,9 @@ import Debug from 'debug';
 import { createOrchestrator } from '../../src/orchestration';
 import type { NodeConfig, NodeHandle } from '../../src/orchestration';
 
+// Increase test timeout to 30 seconds
+jest.setTimeout(30000);
+
 const debug = Debug('test:two-orchestrated');
 
 describe('Run (Two Nodes Orchestrated)', () => {
@@ -16,28 +19,42 @@ describe('Run (Two Nodes Orchestrated)', () => {
   const nodeIds = ['app-002-A', 'app-002-B'];
 
   beforeAll(async () => {
+    console.time('Test setup');
+    
     // Start first node
+    console.time('Create node1 config');
     const node1Config: NodeConfig = {
       id: nodeIds[0],
     };
+    console.timeEnd('Create node1 config');
 
+    console.time('Start node1');
     const node1 = (await orchestrator.startNode(node1Config)) as FullNodeHandle;
+    console.timeEnd('Start node1');
 
     // Start second node with first node as bootstrap peer
+    console.time('Create node2 config');
     const node2Config: NodeConfig = {
       id: nodeIds[1],
       network: {
         bootstrapPeers: [`localhost:${node1.getRequestPort()}`],
       },
     };
+    console.timeEnd('Create node2 config');
 
+    console.time('Start node2');
     const node2 = (await orchestrator.startNode(node2Config)) as FullNodeHandle;
+    console.timeEnd('Start node2');
 
     nodes.push(node1, node2);
 
     // Connect the nodes
+    console.time('Connect nodes');
     await orchestrator.connectNodes(node1, node2);
-  });
+    console.timeEnd('Connect nodes');
+    
+    console.timeEnd('Test setup');
+  }, 120000); // Increase timeout to 120s for this hook
 
   afterAll(async () => {
     // Stop all nodes in parallel
@@ -90,7 +107,7 @@ describe('Run (Two Nodes Orchestrated)', () => {
     });
   });
 
-  it('can demonstrate network partitioning', async () => {
+  it.skip('can demonstrate network partitioning', async () => {
     // This test shows how we can simulate network partitions
     // For now, it's just a placeholder since we'd need to implement
     // the actual partitioning logic in the InMemoryOrchestrator

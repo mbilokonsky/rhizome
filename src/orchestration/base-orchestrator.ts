@@ -55,4 +55,14 @@ export abstract class BaseOrchestrator implements NodeOrchestrator {
     // Default implementation does nothing
     console.warn('setResourceLimits not implemented for this orchestrator');
   }
+
+  /**
+   * Clean up all resources
+   * Default implementation does nothing - should be overridden by subclasses
+   * that need to clean up resources
+   */
+  async cleanup(): Promise<void> {
+    // Default implementation does nothing
+    console.warn('cleanup not implemented for this orchestrator');
+  }
 }
