@@ -61,7 +61,7 @@ export class TestOrchestrator extends BaseOrchestrator {
     // Start the node and wait for all components to be ready
     debug(`[${nodeId}] Starting node and waiting for it to be fully ready...`);
     try {
-      await node.start({ waitForReady: true });
+      await node.start();
       debug(`[${nodeId}] Node is fully started and ready`);
     } catch (error) {
       debug(`[${nodeId}] Error starting node:`, error);

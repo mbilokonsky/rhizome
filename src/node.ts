@@ -83,16 +83,13 @@ export class RhizomeNode {
 
   /**
    * Start the node components
-   * @param options.startupOptions Options for node startup
-   * @param options.waitForReady Whether to wait for all components to be fully ready (default: false)
    * @param options.syncOnStart Whether to sync with peers on startup (default: false)
-   * @returns Promise that resolves when the node is started (and ready if waitForReady is true)
+   * @returns Promise that resolves when the node is fully started and ready
    */
   async start({
-    waitForReady = false,
     syncOnStart = false
-  }: { waitForReady?: boolean; syncOnStart?: boolean } = {}): Promise<void> {
-    debug(`[${this.config.peerId}]`, `Starting node${waitForReady ? ' (waiting for ready)' : ''}...`);
+  }: { syncOnStart?: boolean } = {}): Promise<void> {
+    debug(`[${this.config.peerId}]`, 'Starting node (waiting for ready)...');
     
     // Connect our lossless view to the delta stream
     this.deltaStream.subscribeDeltas(async (delta) => {
@@ -115,11 +112,7 @@ export class RhizomeNode {
     
     // Start HTTP server if enabled
     if (this.config.httpEnable && this.httpServer) {
-      if (waitForReady) {
-        await this.httpServer.startAndWait();
-      } else {
-        this.httpServer.start();
-      }
+      await this.httpServer.startAndWait();
     }
 
     // Initialize network components
@@ -132,7 +125,7 @@ export class RhizomeNode {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
     
-    debug(`[${this.config.peerId}]`, `Node started${waitForReady ? ' and ready' : ''}`);
+    debug(`[${this.config.peerId}]`, 'Node started and ready');
   }
 
   async stop() {

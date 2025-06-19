@@ -172,7 +172,6 @@ export class Lossless {
   viewSpecific(entityId: DomainEntityID, deltaIds: DeltaID[], deltaFilter?: DeltaFilter): LosslessViewOne | undefined {
     const combinedFilter = (delta: Delta) => {
       if (!deltaIds.includes(delta.id)) {
-        debug(`[${this.rhizomeNode.config.peerId}]`, `Excluding delta ${delta.id} because it's not in the requested list of deltas`);
         return false;
       }
       if (!deltaFilter) return true;
