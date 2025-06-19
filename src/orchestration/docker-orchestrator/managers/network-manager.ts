@@ -1,12 +1,15 @@
-import Docker, { Network, NetworkInspectInfo, DockerOptions } from 'dockerode';
+import Debug from 'debug';
+import Docker, { Network, NetworkInspectInfo } from 'dockerode';
 import { INetworkManager } from './interfaces';
+
+const debug = Debug('rz:docker:network-manager');
 
 export class NetworkManager implements INetworkManager {
   private networks: Map<string, Network> = new Map();
   private docker: Docker;
 
-  constructor(dockerOptions?: DockerOptions) {
-    this.docker = new Docker(dockerOptions);
+  constructor() {
+    this.docker = new Docker();
   }
 
   async createNetwork(nodeId: string): Promise<Network> {
@@ -25,7 +28,7 @@ export class NetworkManager implements INetworkManager {
       this.networks.set(nodeId, network);
       return network;
     } catch (error) {
-      console.error(`Error creating network for node ${nodeId}:`, error);
+      debug(`Error creating network for node ${nodeId}: %o`, error);
       throw error;
     }
   }
@@ -43,7 +46,7 @@ export class NetworkManager implements INetworkManager {
         }
       }
     } catch (error) {
-      console.warn(`Failed to remove network ${networkId}:`, error);
+      debug(`Failed to remove network ${networkId}: %o`, error);
       throw error;
     }
   }
@@ -62,7 +65,7 @@ export class NetworkManager implements INetworkManager {
         }
       });
     } catch (error) {
-      console.error(`Failed to connect container ${containerId} to network ${networkId}:`, error);
+      debug(`Failed to connect container ${containerId} to network ${networkId}: %o`, error);
       throw error;
     }
   }
@@ -72,7 +75,7 @@ export class NetworkManager implements INetworkManager {
       const network = this.docker.getNetwork(networkId);
       await network.disconnect({ Container: containerId });
     } catch (error) {
-      console.warn(`Failed to disconnect container ${containerId} from network ${networkId}:`, error);
+      debug(`Failed to disconnect container ${containerId} from network ${networkId}: %o`, error);
       throw error;
     }
   }
@@ -93,7 +96,7 @@ export class NetworkManager implements INetworkManager {
       const network = this.docker.getNetwork(networkId);
       return await network.inspect();
     } catch (error) {
-      console.error(`Failed to get network info for ${networkId}:`, error);
+      debug(`Failed to get network info for ${networkId}: %o`, error);
       throw error;
     }
   }
@@ -104,22 +107,22 @@ export class NetworkManager implements INetworkManager {
     // Process networks in sequence to avoid overwhelming the Docker daemon
     for (const [nodeId, network] of networks.entries()) {
       try {
-        console.log(`[Cleanup] Removing network for node ${nodeId}...`);
+        debug(`[Cleanup] Removing network for node ${nodeId}...`);
         
         // First, inspect the network to see if it has any connected containers
         try {
           const networkInfo = await this.getNetworkInfo(network.id);
           if (networkInfo.Containers && Object.keys(networkInfo.Containers).length > 0) {
-            console.warn(`[Cleanup] Network ${nodeId} still has ${Object.keys(networkInfo.Containers).length} connected containers`);
+            debug(`[Cleanup] Network ${nodeId} still has ${Object.keys(networkInfo.Containers).length} connected containers`);
             
             // Try to disconnect all containers from the network first
             for (const containerId of Object.keys(networkInfo.Containers)) {
               try {
-                console.log(`[Cleanup] Disconnecting container ${containerId} from network ${nodeId}...`);
+                debug(`[Cleanup] Disconnecting container ${containerId} from network ${nodeId}...`);
                 await this.disconnectFromNetwork(containerId, network.id);
-                console.log(`[Cleanup] Successfully disconnected container ${containerId} from network ${nodeId}`);
+                debug(`[Cleanup] Successfully disconnected container ${containerId} from network ${nodeId}`);
               } catch (disconnectError) {
-                console.warn(`[Cleanup] Failed to disconnect container ${containerId} from network ${nodeId}:`, disconnectError);
+                debug(`[Cleanup] Failed to disconnect container ${containerId} from network ${nodeId}: %o`, disconnectError);
                 // Continue with network removal even if disconnect failed
               }
               
@@ -128,30 +131,30 @@ export class NetworkManager implements INetworkManager {
             }
           }
         } catch (inspectError) {
-          console.warn(`[Cleanup] Failed to inspect network ${nodeId} before removal:`, inspectError);
+          debug(`[Cleanup] Failed to inspect network ${nodeId} before removal: %o`, inspectError);
           // Continue with removal even if inspect failed
         }
         
         // Now remove the network
         await this.removeNetwork(network.id);
-        console.log(`[Cleanup] Successfully removed network for node ${nodeId}`);
+        debug(`[Cleanup] Successfully removed network for node ${nodeId}`);
         
         // Verify the network is actually gone
         try {
-          const networkInfo = await this.getNetworkInfo(network.id);
-          console.warn(`[Cleanup] Network ${nodeId} still exists after removal`);
+          await this.getNetworkInfo(network.id);
+          debug(`[Cleanup] Network ${nodeId} still exists after removal`);
           cleanupErrors.push({ 
             resource: `network:${nodeId}`, 
             error: new Error('Network still exists after removal') 
           });
         } catch (inspectError) {
           // Expected - network should not exist anymore
-          console.log(`[Cleanup] Verified network ${nodeId} has been removed`);
+          debug(`[Cleanup] Verified network ${nodeId} has been removed`);
         }
         
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
-        console.error(`[Cleanup] Error cleaning up network ${nodeId}:`, err);
+        debug(`[Cleanup] Error cleaning up network ${nodeId}: %o`, err);
         cleanupErrors.push({ resource: `network:${nodeId}`, error: err });
       }
       

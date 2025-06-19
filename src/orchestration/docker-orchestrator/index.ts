@@ -8,6 +8,9 @@ import { ResourceManager } from './managers/resource-manager';
 import { StatusManager } from './managers/status-manager';
 import { ImageManager } from './managers/image-manager';
 import { getRandomPort } from './utils/port-utils';
+import Debug from 'debug';
+
+const debug = Debug('rz:docker:orchestrator');
 
 const DEFAULT_OPTIONS: DockerOrchestratorOptions = {
   image: 'rhizome-node-test',
@@ -33,13 +36,12 @@ export class DockerOrchestrator extends BaseOrchestrator {
     super();
     this.options = { ...DEFAULT_OPTIONS, ...options };
     
-    // Initialize Docker client in managers
-    const dockerOptions = this.options.dockerOptions || {};
-    this.containerManager = new ContainerManager(dockerOptions);
-    this.networkManager = new NetworkManager(dockerOptions);
+    // Initialize managers
+    this.containerManager = new ContainerManager();
+    this.networkManager = new NetworkManager();
     this.resourceManager = new ResourceManager();
     this.statusManager = new StatusManager();
-    this.imageManager = new ImageManager(dockerOptions);
+    this.imageManager = new ImageManager();
   }
 
   /**
@@ -117,7 +119,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
         await this.containerManager.removeContainer(container);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(`Error managing container ${nodeId}:`, errorMessage);
+        debug(`Error managing container ${nodeId}: %s`, errorMessage);
         // Continue with cleanup even if container operations fail
       }
       
@@ -128,7 +130,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
           await this.networkManager.removeNetwork(network.id);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          console.warn(`Error removing network for node ${nodeId}:`, errorMessage);
+          debug(`Error removing network for node ${nodeId}: %s`, errorMessage);
         } finally {
           this.networks.delete(nodeId);
         }
@@ -141,10 +143,10 @@ export class DockerOrchestrator extends BaseOrchestrator {
       this.containers.delete(nodeId);
       this.nodeHandles.delete(nodeId);
       
-      console.log(`Stopped and cleaned up node ${nodeId}`);
+      debug(`Stopped and cleaned up node ${nodeId}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Error during cleanup of node ${nodeId}:`, errorMessage);
+      debug(`Error during cleanup of node ${nodeId}: %s`, errorMessage);
       throw new Error(`Failed to stop node ${nodeId}: ${errorMessage}`);
     }
   }
@@ -164,7 +166,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
         (logStream as { end: () => void }).end();
       }
     } catch (error) {
-      console.warn(`Error cleaning up log stream for node ${nodeId}:`, error);
+      debug(`Error cleaning up log stream for node ${nodeId}: %o`, error);
     } finally {
       this.containerLogStreams.delete(nodeId);
     }
@@ -200,7 +202,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
       return await this.statusManager.getNodeStatus(handle, container);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Error getting status for node ${handle.id}:`, errorMessage);
+      debug(`Error getting status for node ${handle.id}: %s`, errorMessage);
       
       return {
         id: handle.id,
@@ -229,7 +231,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
     // 1. Create separate networks for each partition
     // 2. Connect containers to their respective partition networks
     // 3. Disconnect them from other networks
-    console.warn('Network partitioning not fully implemented');
+    debug('Network partitioning not fully implemented');
   }
 
   /**
@@ -252,9 +254,9 @@ export class DockerOrchestrator extends BaseOrchestrator {
         memorySwap: limits.memory // Default to same as memory limit if not specified
       });
       
-      console.log(`Updated resource limits for node ${handle.id}:`, limits);
+      debug(`Updated resource limits for node %s: %o`, handle.id, limits);
     } catch (error) {
-      console.error(`Failed to update resource limits for node ${handle.id}:`, error);
+      debug(`Failed to update resource limits for node ${handle.id}: %o`, error);
       throw new Error(`Failed to update resource limits: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -296,7 +298,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
       // Update the network ID in the second handle
       dockerHandle2.networkId = networkId;
     } catch (error) {
-      console.error(`Error connecting nodes ${handle1.id} and ${handle2.id}:`, error);
+      debug(`Error connecting nodes ${handle1.id} and ${handle2.id}: %o`, error);
       throw error;
     }
   }
@@ -308,7 +310,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
    * @private
    */
   private async cleanupFailedStart(nodeId: string): Promise<void> {
-    console.log(`Cleaning up failed start for node ${nodeId}...`);
+    debug(`Cleaning up failed start for node ${nodeId}...`);
     
     // Get references to resources before starting cleanup
     const container = this.containers.get(nodeId);
@@ -337,23 +339,23 @@ export class DockerOrchestrator extends BaseOrchestrator {
       
       // Log any errors that occurred during cleanup
       if (containerErrors.length > 0) {
-        console.warn(`Encountered ${containerErrors.length} error(s) while cleaning up containers for node ${nodeId}:`);
+        debug(`Encountered ${containerErrors.length} error(s) while cleaning up containers for node ${nodeId}:`);
         containerErrors.forEach(({ resource, error }) => {
           console.warn(`- ${resource}:`, error instanceof Error ? error.message : 'Unknown error');
         });
       }
       
       if (networkErrors.length > 0) {
-        console.warn(`Encountered ${networkErrors.length} error(s) while cleaning up networks for node ${nodeId}:`);
+        debug(`Encountered ${networkErrors.length} error(s) while cleaning up networks for node ${nodeId}:`);
         networkErrors.forEach(({ resource, error }) => {
           console.warn(`- ${resource}:`, error instanceof Error ? error.message : 'Unknown error');
         });
       }
       
-      console.log(`Completed cleanup for node ${nodeId}`);
+      debug(`Completed cleanup for node ${nodeId}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Unexpected error during cleanup of node ${nodeId}:`, errorMessage);
+      debug(`Unexpected error during cleanup of node ${nodeId}: %s`, errorMessage);
     } finally {
       // Always clean up internal state, even if errors occurred
       this.containers.delete(nodeId);
@@ -379,7 +381,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
     try {
       return await this.containerManager.getContainer(containerId);
     } catch (error) {
-      console.warn(`Failed to get container ${containerId}:`, error);
+      debug(`Failed to get container ${containerId}: %o`, error);
       return undefined;
     }
   }
@@ -388,7 +390,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
    * Clean up all resources
    */
   async cleanup(): Promise<void> {
-    console.log('Starting cleanup of all resources...');
+    debug('Starting cleanup of all resources...');
     
     // Create copies of the maps to avoid modification during iteration
     const containersToCleanup = new Map(this.containers);
@@ -396,35 +398,35 @@ export class DockerOrchestrator extends BaseOrchestrator {
     
     try {
       // First, clean up all containers
-      console.log('Stopping and removing all containers...');
+      debug('Stopping and removing all containers...');
       const containerErrors = await this.containerManager.cleanupContainers(containersToCleanup);
       
       // Wait a short time to ensure all container cleanup is complete
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Then clean up all networks
-      console.log('Removing all networks...');
+      debug('Removing all networks...');
       const networkErrors = await this.networkManager.cleanupNetworks(networksToCleanup);
       
       // Log any errors that occurred during cleanup
       if (containerErrors.length > 0) {
-        console.warn(`Encountered ${containerErrors.length} error(s) while cleaning up containers:`);
+        debug(`Encountered ${containerErrors.length} error(s) while cleaning up containers:`);
         containerErrors.forEach(({ resource, error }) => {
           console.warn(`- ${resource}:`, error instanceof Error ? error.message : 'Unknown error');
         });
       }
       
       if (networkErrors.length > 0) {
-        console.warn(`Encountered ${networkErrors.length} error(s) while cleaning up networks:`);
+        debug(`Encountered ${networkErrors.length} error(s) while cleaning up networks:`);
         networkErrors.forEach(({ resource, error }) => {
           console.warn(`- ${resource}:`, error instanceof Error ? error.message : 'Unknown error');
         });
       }
       
-      console.log('Completed cleanup of all resources');
+      debug('Completed cleanup of all resources');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Unexpected error during cleanup:', errorMessage);
+      debug('Unexpected error during cleanup: %s', errorMessage);
       throw error; // Re-throw to allow callers to handle the error
     } finally {
       // Always clear internal state, even if errors occurred

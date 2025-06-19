@@ -1,6 +1,9 @@
 import Docker, { Container } from 'dockerode';
 import { IStatusManager } from './interfaces';
 import { NodeHandle, NodeStatus } from '../../types';
+import Debug from 'debug';
+
+const debug = Debug('rz:docker:status-manager');
 
 const DEFAULT_MAX_ATTEMPTS = 8;
 const DEFAULT_DELAY_MS = 1000;
@@ -13,7 +16,7 @@ export class StatusManager implements IStatusManager {
     maxAttempts: number = DEFAULT_MAX_ATTEMPTS,
     initialDelayMs: number = DEFAULT_DELAY_MS
   ): Promise<void> {
-    console.log(`[waitForNodeReady] Starting with port ${port}, maxAttempts: ${maxAttempts}, initialDelayMs: ${initialDelayMs}`);
+    debug(`[waitForNodeReady] Starting with port ${port}, maxAttempts: ${maxAttempts}, initialDelayMs: ${initialDelayMs}`);
     let lastError: Error | null = null;
     let attempt = 0;
     let delay = initialDelayMs;
@@ -23,7 +26,7 @@ export class StatusManager implements IStatusManager {
       const attemptStartTime = Date.now();
       
       try {
-        console.log(`[Attempt ${attempt}/${maxAttempts}] Verifying container is running...`);
+        debug(`[Attempt ${attempt}/${maxAttempts}] Verifying container is running...`);
         
         // Add timeout to verifyContainerRunning
         const verifyPromise = this.verifyContainerRunning(container);
@@ -32,10 +35,10 @@ export class StatusManager implements IStatusManager {
         );
         
         await Promise.race([verifyPromise, timeoutPromise]);
-        console.log(`[Attempt ${attempt}/${maxAttempts}] Container is running`);
+        debug(`[Attempt ${attempt}/${maxAttempts}] Container is running`);
         
         const healthUrl = `http://localhost:${port}/api/health`;
-        console.log(`[Attempt ${attempt}/${maxAttempts}] Checking health at: ${healthUrl}`);
+        debug(`[Attempt ${attempt}/${maxAttempts}] Checking health at: ${healthUrl}`);
         
         // Add timeout to health check
         const healthCheckPromise = this.healthCheck(healthUrl);
@@ -46,7 +49,7 @@ export class StatusManager implements IStatusManager {
         const response = await Promise.race([healthCheckPromise, healthCheckTimeout]);
         
         if (response.ok) {
-          console.log(`✅ Node is ready! (Attempt ${attempt}/${maxAttempts})`);
+          debug(`✅ Node is ready! (Attempt ${attempt}/${maxAttempts})`);
           return; // Success!
         }
         
@@ -56,12 +59,12 @@ export class StatusManager implements IStatusManager {
         lastError = error instanceof Error ? error : new Error(errorMessage);
         
         const attemptDuration = Date.now() - attemptStartTime;
-        console.warn(`[Attempt ${attempt}/${maxAttempts}] Failed after ${attemptDuration}ms: ${errorMessage}`);
+        debug(`[Attempt ${attempt}/${maxAttempts}] Failed after ${attemptDuration}ms: %s`, errorMessage);
         
         // Log container state on error
         try {
           const containerInfo = await container.inspect();
-          console.log(`[Container State] Status: ${containerInfo.State.Status}, Running: ${containerInfo.State.Running}, ExitCode: ${containerInfo.State.ExitCode}`);
+          debug(`[Container State] Status: ${containerInfo.State.Status}, Running: ${containerInfo.State.Running}, ExitCode: ${containerInfo.State.ExitCode}`);
           
           // Log recent container logs on error
           if (containerInfo.State.Running) {
@@ -72,20 +75,20 @@ export class StatusManager implements IStatusManager {
                 tail: 20,
                 timestamps: true,
               });
-              console.log(`[Container Logs] Last 20 lines:\n${logs.toString()}`);
+              debug(`[Container Logs] Last 20 lines:\n${logs.toString()}`);
             } catch (logError) {
-              console.warn('Failed to get container logs:', logError);
+              debug('Failed to get container logs: %o', logError);
             }
           }
         } catch (inspectError) {
-          console.warn('Failed to inspect container:', inspectError);
+          debug('Failed to inspect container: %o', inspectError);
         }
         
         // Exponential backoff with jitter, but don't wait if we're out of attempts
         if (attempt < maxAttempts) {
           const jitter = Math.random() * 1000; // Add up to 1s of jitter
           const backoff = Math.min(delay + jitter, MAX_BACKOFF_MS);
-          console.log(`[Backoff] Waiting ${Math.round(backoff)}ms before next attempt...`);
+          debug(`[Backoff] Waiting ${Math.round(backoff)}ms before next attempt...`);
           await new Promise(resolve => setTimeout(resolve, backoff));
           delay = Math.min(delay * 2, MAX_BACKOFF_MS); // Double the delay for next time, up to max
         }
@@ -94,7 +97,7 @@ export class StatusManager implements IStatusManager {
     
     // If we get here, all attempts failed
     const errorMessage = `Node did not become ready after ${maxAttempts} attempts. Last error: ${lastError?.message || 'Unknown error'}`;
-    console.error('❌', errorMessage);
+    debug('❌ %s', errorMessage);
     
     // Final attempt to get container logs before failing
     try {
@@ -105,11 +108,9 @@ export class StatusManager implements IStatusManager {
         timestamps: true,
         follow: false
       });
-      console.error('=== FINAL CONTAINER LOGS ===');
-      console.error(logs.toString());
-      console.error('=== END CONTAINER LOGS ===');
+      debug('=== FINAL CONTAINER LOGS ===\n%s\n=== END CONTAINER LOGS ===', logs.toString());
     } catch (logError) {
-      console.error('Failed to get final container logs:', logError);
+      debug('Failed to get final container logs: %o', logError);
     }
     
     throw new Error(errorMessage);
@@ -154,9 +155,49 @@ export class StatusManager implements IStatusManager {
   }
 
   private async verifyContainerRunning(container: Container): Promise<void> {
-    const info = await container.inspect();
-    if (!info.State.Running) {
-      throw new Error(`Container is not running. Status: ${info.State.Status}`);
+    debug('[verifyContainerRunning] Checking container status...');
+    
+    try {
+      const data = await container.inspect();
+      debug('[verifyContainerRunning] Container inspect data:', JSON.stringify({
+        Id: data.Id,
+        Name: data.Name,
+        State: data.State,
+        Config: {
+          Image: data.Config?.Image,
+          Env: data.Config?.Env?.filter(env => env.startsWith('NODE_') || env.startsWith('DEBUG')),
+          Cmd: data.Config?.Cmd
+        },
+        HostConfig: {
+          Memory: data.HostConfig?.Memory,
+          NanoCpus: data.HostConfig?.NanoCpus,
+          NetworkMode: data.HostConfig?.NetworkMode
+        }
+      }, null, 2));
+      
+      if (!data.State.Running) {
+        const errorMessage = `Container is not running. Status: ${data.State.Status}, ExitCode: ${data.State.ExitCode}, Error: ${data.State.Error}`;
+        debug(`[verifyContainerRunning] ${errorMessage}`);
+        
+        // Try to get container logs for more context
+        try {
+          const logs = await container.logs({
+            stdout: true,
+            stderr: true,
+            tail: 50 // Get last 50 lines of logs
+          });
+          debug('[verifyContainerRunning] Container logs:', logs.toString());
+        } catch (logError) {
+          debug('[verifyContainerRunning] Failed to get container logs:', logError);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      debug('[verifyContainerRunning] Container is running');
+    } catch (error) {
+      debug('[verifyContainerRunning] Error checking container status:', error);
+      throw error;
     }
   }
 
@@ -248,7 +289,7 @@ export class StatusManager implements IStatusManager {
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.warn(`Failed to get container stats for ${container.id}:`, errorMessage);
+        debug(`Failed to get container stats for ${container.id}: %s`, errorMessage);
         // Update status with error but don't return yet
         status.status = 'error';
         status.error = `Failed to get container stats: ${errorMessage}`;
@@ -257,7 +298,7 @@ export class StatusManager implements IStatusManager {
       return status;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Error getting node status for ${handle.id}:`, errorMessage);
+      debug(`Error getting node status for ${handle.id}: %s`, errorMessage);
       
       return {
         ...errorStatus,

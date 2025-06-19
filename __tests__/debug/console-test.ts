@@ -1,12 +1,20 @@
-// Simple test to check if console output works in Jest
-console.log('=== CONSOLE LOG TEST ===');
-console.log('This is a test log message');
-console.error('This is a test error message');
-console.warn('This is a test warning message');
+import Debug from 'debug';
 
-describe('Console Test', () => {
-  it('should output to console', () => {
-    console.log('Test log from inside test');
+// Set up debug instances for different log levels
+const debug = Debug('rz:test:console');
+const debugError = Debug('rz:test:console:error');
+const debugWarn = Debug('rz:test:console:warn');
+
+// Test debug output
+// Note: These will only show if DEBUG=rz:* is set in the environment
+debug('=== DEBUG LOG TEST ===');
+debug('This is a test debug message');
+debugError('This is a test error message');
+debugWarn('This is a test warning message');
+
+describe('Debug Test', () => {
+  it('should output debug messages when DEBUG is enabled', () => {
+    debug('Test debug message from inside test');
     expect(true).toBe(true);
   });
 });

@@ -17,7 +17,7 @@ describe('Run', () => {
     apps[0].config.seedPeers.push(apps[1].myRequestAddr);
     apps[1].config.seedPeers.push(apps[0].myRequestAddr);
 
-    await Promise.all(apps.map((app) => app.start(false)));
+    await Promise.all(apps.map((app) => app.start({ waitForReady: false })));
   });
 
   afterAll(async () => {

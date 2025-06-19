@@ -7,9 +7,6 @@ export interface DockerNodeHandle extends NodeHandle {
 }
 
 export interface DockerOrchestratorOptions {
-  /** Custom Docker client options */
-  dockerOptions?: Docker.DockerOptions;
-  
   /** 
    * Docker image to use for containers
    * Defaults to 'rhizome-node' if not specified

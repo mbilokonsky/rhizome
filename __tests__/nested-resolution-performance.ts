@@ -8,7 +8,10 @@
  * - Circular reference handling at scale
  */
 
+import Debug from 'debug';
 import { RhizomeNode } from '../src/node';
+
+const debug = Debug('rz:test:nested-resolution-performance');
 import { Delta } from '../src/core';
 import { DefaultSchemaRegistry } from '../src/schema';
 import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, ArraySchemas } from '../src/schema';
@@ -124,7 +127,7 @@ describe('Nested Object Resolution Performance', () => {
       }
 
       const setupTime = performance.now() - startSetup;
-      console.log(`Setup time for ${userCount} users with relationships: ${setupTime.toFixed(2)}ms`);
+      debug(`Setup time for ${userCount} users with relationships: ${setupTime.toFixed(2)}ms`);
 
       // Test resolution performance for a user with many connections
       const testUserId = userIds[50]; // Pick a user in the middle
@@ -141,7 +144,7 @@ describe('Nested Object Resolution Performance', () => {
       );
 
       const resolutionTime = performance.now() - startResolution;
-      console.log(`Resolution time for user with many connections: ${resolutionTime.toFixed(2)}ms`);
+      debug(`Resolution time for user with many connections: ${resolutionTime.toFixed(2)}ms`);
 
       // Verify the resolution worked
       expect(nestedView.id).toBe(testUserId);
@@ -155,7 +158,7 @@ describe('Nested Object Resolution Performance', () => {
       const totalNestedObjects = Object.values(nestedView.nestedObjects).reduce(
         (total, arr) => total + (arr?.length || 0), 0
       );
-      console.log('Total nested objects resolved:', totalNestedObjects);
+      debug('Total nested objects resolved: %o', totalNestedObjects);
       
       // The test user should have friends, followers, and possibly a mentor
       expect(Object.keys(nestedView.nestedObjects).length).toBeGreaterThan(0);
@@ -218,7 +221,7 @@ describe('Nested Object Resolution Performance', () => {
       }
 
       const setupTime = performance.now() - startSetup;
-      console.log(`Setup time for chain of ${chainLength} users: ${setupTime.toFixed(2)}ms`);
+      debug(`Setup time for chain of ${chainLength} users: ${setupTime.toFixed(2)}ms`);
 
       // Test resolution from the start of the chain
       const firstUserId = userIds[0];
@@ -235,7 +238,7 @@ describe('Nested Object Resolution Performance', () => {
       );
 
       const resolutionTime = performance.now() - startResolution;
-      console.log(`Resolution time for deep chain (maxDepth=5): ${resolutionTime.toFixed(2)}ms`);
+      debug(`Resolution time for deep chain (maxDepth=5): ${resolutionTime.toFixed(2)}ms`);
 
       // Verify the resolution worked and respected depth limits
       expect(nestedView.id).toBe(firstUserId);
@@ -255,7 +258,7 @@ describe('Nested Object Resolution Performance', () => {
       }
       
       expect(depth).toBeLessThanOrEqual(5);
-      console.log(`Actual resolved depth: ${depth}`);
+      debug(`Actual resolved depth: ${depth}`);
     });
 
     it('should handle circular references in large graphs without performance degradation', async () => {
@@ -318,7 +321,7 @@ describe('Nested Object Resolution Performance', () => {
       }
 
       const setupTime = performance.now() - startSetup;
-      console.log(`Setup time for circular graph with ${userCount} users: ${setupTime.toFixed(2)}ms`);
+      debug(`Setup time for circular graph with ${userCount} users: ${setupTime.toFixed(2)}ms`);
 
       // Test resolution performance with circular references
       const testUserId = userIds[0];
@@ -335,7 +338,7 @@ describe('Nested Object Resolution Performance', () => {
       );
 
       const resolutionTime = performance.now() - startResolution;
-      console.log(`Resolution time for circular graph (maxDepth=3): ${resolutionTime.toFixed(2)}ms`);
+      debug(`Resolution time for circular graph (maxDepth=3): ${resolutionTime.toFixed(2)}ms`);
 
       // Verify the resolution completed without hanging
       expect(nestedView.id).toBe(testUserId);
@@ -352,7 +355,7 @@ describe('Nested Object Resolution Performance', () => {
         expect(nestedView.nestedObjects.connections.length).toBeLessThanOrEqual(3);
       }
       
-      console.log(`Connections resolved: ${nestedView.nestedObjects.connections?.length || 0}`);
+      debug(`Connections resolved: ${nestedView.nestedObjects.connections?.length || 0}`);
     });
   });
 });

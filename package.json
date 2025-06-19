@@ -24,12 +24,19 @@
       "<rootDir>/__tests__/jest-setup.ts"
     ],
     "transform": {
-      "^.+\\.tsx?$": [
+      "^\\.tsx?$": [
         "ts-jest",
         {
           "tsconfig": "tsconfig.json"
         }
       ]
+    },
+    "detectOpenHandles": true,
+    "forceExit": true,
+    "verbose": true,
+    "testEnvironmentOptions": {
+      "NODE_ENV": "test",
+      "DEBUG": "rz:*"
     }
   },
   "author": "Taliesin (Ladd) <ladd@dgov.io>",

@@ -4,6 +4,9 @@ import { promises as fs } from 'fs';
 import * as tar from 'tar-fs';
 import { Headers } from 'tar-fs';
 import { IImageManager } from './interfaces';
+import Debug from 'debug';
+
+const debug = Debug('rz:docker:image-manager');
 
 // Global promise to track test image build
 let testImageBuildPromise: Promise<void> | null = null;
@@ -11,8 +14,8 @@ let testImageBuildPromise: Promise<void> | null = null;
 export class ImageManager implements IImageManager {
   private docker: Docker;
 
-  constructor(dockerOptions?: DockerOptions) {
-    this.docker = new Docker(dockerOptions);
+  constructor() {
+    this.docker = new Docker();
   }
 
   /**
@@ -20,17 +23,17 @@ export class ImageManager implements IImageManager {
    */
   async buildTestImage(imageName: string = 'rhizome-node-test'): Promise<void> {
     if (testImageBuildPromise) {
-      console.log('Test image build in progress, reusing existing build promise...');
+      debug('Test image build in progress, reusing existing build promise...');
       return testImageBuildPromise;
     }
 
-    console.log('Building test Docker image...');
+    debug('Building test Docker image...');
     const dockerfilePath = path.join(process.cwd(), 'Dockerfile.test');
     
     // Verify Dockerfile exists
     try {
       await fs.access(dockerfilePath);
-      console.log(`Found Dockerfile at: ${dockerfilePath}`);
+      debug(`Found Dockerfile at: %s`, dockerfilePath);
     } catch (err) {
       throw new Error(`Dockerfile not found at ${dockerfilePath}: ${err}`);
     }
@@ -57,7 +60,7 @@ export class ImageManager implements IImageManager {
       }
     });
     
-    console.log('Created build context tar stream');
+    debug('Created build context tar stream');
     
     testImageBuildPromise = new Promise<void>((resolve, reject) => {
       const logMessages: string[] = [];
@@ -123,7 +126,7 @@ export class ImageManager implements IImageManager {
           } catch (e) {
             const errorMsg = `Error processing build output: ${e}\nRaw output: ${chunkStr}`;
             log(`❌ ${errorMsg}`);
-            console.error(errorMsg);
+            debug('Docker build error: %s', errorMsg);
           }
         });
         

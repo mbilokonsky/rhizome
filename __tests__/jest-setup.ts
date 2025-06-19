@@ -1,3 +1,6 @@
+// Set up environment variables for tests
+process.env.DEBUG = 'rz:*';
+
 // Extend the global Jest namespace
 declare global {
   namespace jest {

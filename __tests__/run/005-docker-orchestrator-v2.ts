@@ -1,7 +1,11 @@
 import Docker from 'dockerode';
 import { describe, it, beforeAll, afterAll, expect, jest } from '@jest/globals';
+import Debug from 'debug';
+
+const debug = Debug('rz:test:docker-orchestrator-v2');
 import { createOrchestrator } from '../../src/orchestration';
 import type { NodeOrchestrator, NodeConfig, NodeHandle, NodeStatus } from '../../src/orchestration';
+import { ImageManager } from '../../src/orchestration/docker-orchestrator/managers/image-manager';
 
 // Extend the NodeOrchestrator type to include the docker client for DockerOrchestrator
 interface DockerOrchestrator extends NodeOrchestrator {
@@ -37,7 +41,7 @@ describe('Docker Orchestrator V2', () => {
   let node2Port: number;
 
   beforeAll(async () => {
-    console.log('Setting up Docker client and orchestrator...');
+    debug('Setting up Docker client and orchestrator...');
     
     // Initialize Docker client
     docker = new Docker();
@@ -45,15 +49,15 @@ describe('Docker Orchestrator V2', () => {
     // Verify Docker is running
     try {
       await docker.ping();
-      console.log('✅ Docker daemon is responding');
+      debug('Docker daemon is responding');
     } catch (error) {
-      console.error('❌ Docker daemon is not responding:', error);
+      debug('Docker daemon is not responding: %o', error);
       throw error;
     }
     
     // Initialize the orchestrator with the Docker client and test image
     orchestrator = createOrchestrator('docker') as DockerOrchestrator;
-    console.log('✅ Docker orchestrator initialized');
+    debug('Docker orchestrator initialized');
     
     // Create a basic node config for testing
     nodePort = 3000 + Math.floor(Math.random() * 1000);
@@ -67,39 +71,42 @@ describe('Docker Orchestrator V2', () => {
       }
     };
     
-    console.log(`Test node configured with ID: ${nodeConfig.id}, port: ${nodePort}`);
-  }, 300000); // 5 minute timeout for setup
+    debug(`Test node configured with ID: ${nodeConfig.id}, port: ${nodePort}`);
+
+    const imageManager = new ImageManager();
+    await imageManager.buildTestImage();
+  }); // 30 second timeout
 
   afterAll(async () => {
-    console.log('Starting test cleanup...');
+    debug('Starting test cleanup...');
     const cleanupPromises: Promise<unknown>[] = [];
     
     // Helper function to clean up a node with retries
     const cleanupNode = async (nodeToClean: NodeHandle | null, nodeName: string) => {
       if (!nodeToClean) return;
       
-      console.log(`[${nodeName}] Starting cleanup for node ${nodeToClean.id}...`);
+      debug(`[${nodeName}] Starting cleanup for node ${nodeToClean.id}...`);
       try {
         // First try the normal stop
         await orchestrator.stopNode(nodeToClean).catch(error => {
-          console.warn(`[${nodeName}] Warning stopping node normally:`, error.message);
+          debug(`[${nodeName}] Warning stopping node normally: %s`, error.message);
           throw error; // Will be caught by outer catch
         });
-        console.log(`✅ [${nodeName}] Node ${nodeToClean.id} stopped gracefully`);
+        debug(`[${nodeName}] Node ${nodeToClean.id} stopped gracefully`);
       } catch (error) {
-        console.error(`❌ [${nodeName}] Error stopping node ${nodeToClean.id}:`, error);
+        debug(`[${nodeName}] Error stopping node ${nodeToClean.id}: %o`, error);
         
         // If normal stop fails, try force cleanup
         try {
-          console.log(`[${nodeName}] Attempting force cleanup for node ${nodeToClean.id}...`);
+          debug(`[${nodeName}] Attempting force cleanup for node ${nodeToClean.id}...`);
           const container = orchestrator.docker.getContainer(`rhizome-${nodeToClean.id}`);
           await container.stop({ t: 1 }).catch(() => {
-            console.warn(`[${nodeName}] Container stop timed out, forcing removal...`);
+            debug(`[${nodeName}] Container stop timed out, forcing removal...`);
           });
           await container.remove({ force: true });
-          console.log(`✅ [${nodeName}] Node ${nodeToClean.id} force-removed`);
+          debug(`[${nodeName}] Node ${nodeToClean.id} force-removed`);
         } catch (forceError) {
-          console.error(`❌ [${nodeName}] Force cleanup failed for node ${nodeToClean.id}:`, forceError);
+          debug(`[${nodeName}] Force cleanup failed for node ${nodeToClean.id}: %o`, forceError);
         }
       }
     };
@@ -115,11 +122,11 @@ describe('Docker Orchestrator V2', () => {
 
     // Wait for all node cleanups to complete before cleaning up networks
     if (cleanupPromises.length > 0) {
-      console.log('Waiting for node cleanups to complete...');
+      debug('Waiting for node cleanups to complete...');
       await Promise.race([
         Promise.all(cleanupPromises),
         new Promise(resolve => setTimeout(() => {
-          console.warn('Node cleanup timed out, proceeding with network cleanup...');
+          debug('Node cleanup timed out, proceeding with network cleanup...');
           resolve(null);
         }, 30000)) // 30s timeout for node cleanup
       ]);
@@ -127,11 +134,11 @@ describe('Docker Orchestrator V2', () => {
     
     // Clean up any dangling networks using NetworkManager
     try {
-      console.log('Cleaning up networks...');
+      debug('Cleaning up networks...');
       // Get the network manager from the orchestrator
       const networkManager = (orchestrator as any).networkManager;
       if (!networkManager) {
-        console.warn('Network manager not available for cleanup');
+        debug('Network manager not available for cleanup');
         return;
       }
       
@@ -143,20 +150,20 @@ describe('Docker Orchestrator V2', () => {
       // Log any cleanup errors
       cleanupResults.forEach(({ resource, error }: { resource: string; error: Error }) => {
         if (error) {
-          console.error(`❌ Failed to clean up network ${resource || 'unknown'}:`, error.message);
+          debug(`Failed to clean up network ${resource || 'unknown'}: %s`, error.message);
         } else {
-          console.log(`✅ Successfully cleaned up network ${resource || 'unknown'}`);
+          debug(`Successfully cleaned up network ${resource || 'unknown'}`);
         }
       });
     } catch (error) {
-      console.error('Error during network cleanup:', error);
+      debug('Error during network cleanup: %o', error);
     }
     
-    console.log('✅ All test cleanups completed');
+    debug('All test cleanups completed');
   }, 120000); // 2 minute timeout for afterAll
 
   it('should start and stop a node', async () => {
-    console.log('Starting test: should start and stop a node');
+    debug('Starting test: should start and stop a node');
     
     // Create a new config with a unique ID for this test
     const testNodeConfig = {
@@ -169,17 +176,17 @@ describe('Docker Orchestrator V2', () => {
     };
     
     // Start a node
-    console.log('Starting node...');
+    debug('Starting node...');
     const testNode = await orchestrator.startNode(testNodeConfig);
     expect(testNode).toBeDefined();
     expect(testNode.id).toBeDefined();
-    console.log(`✅ Node started with ID: ${testNode.id}`);
+    debug(`✅ Node started with ID: ${testNode.id}`);
     
     try {
       // Verify the node is running
       const status = await testNode.status();
       expect(status).toBeDefined();
-      console.log(`Node status: ${JSON.stringify(status)}`);
+      debug('Node status: %o', status);
       
       // Verify we can access the health endpoint
       const apiUrl = testNode.getApiUrl?.();
@@ -191,21 +198,21 @@ describe('Docker Orchestrator V2', () => {
       }
       
       // Stop the node
-      console.log('Stopping node...');
+      debug('Stopping node...');
       await orchestrator.stopNode(testNode);
-      console.log('✅ Node stopped');
+      debug('Node stopped');
     } finally {
       // Ensure node is cleaned up even if test fails
       try {
         await orchestrator.stopNode(testNode).catch(() => {});
       } catch (e) {
-        console.warn('Error during node cleanup:', e);
+        debug('Error during node cleanup: %o', e);
       }
     }
   }, 30000); // 30 second timeout for this test
 
   it('should enforce resource limits', async () => {
-    console.log('Starting test: should enforce resource limits');
+    debug('Starting test: should enforce resource limits');
     
     // Create a new node with a unique ID for this test
     const testNodeConfig = {
@@ -226,7 +233,7 @@ describe('Docker Orchestrator V2', () => {
     try {
       // Start the node with resource limits
       testNode = await orchestrator.startNode(testNodeConfig);
-      console.log(`✅ Node started with ID: ${testNode.id}`);
+      debug(`Node started with ID: ${testNode.id}`);
       
       // Get container info to verify resource limits
       const status = await testNode.status() as ExtendedNodeStatus;
@@ -251,7 +258,7 @@ describe('Docker Orchestrator V2', () => {
       const containerInfo = await container.inspect();
       
       // Log container info for debugging
-      console.log('Container info:', {
+      debug('Container info: %o', {
         Memory: containerInfo.HostConfig?.Memory,
         NanoCpus: containerInfo.HostConfig?.NanoCpus,
         CpuQuota: containerInfo.HostConfig?.CpuQuota,
@@ -275,14 +282,14 @@ describe('Docker Orchestrator V2', () => {
         expect(actualCpuNano).toBe(expectedCpuNano);
       }
       
-      console.log('✅ Resource limits verified');
+      debug('Resource limits verified');
     } finally {
       // Clean up the test node
       if (testNode) {
         try {
           await orchestrator.stopNode(testNode);
         } catch (e) {
-          console.warn('Error cleaning up test node:', e);
+          debug('Error cleaning up test node: %o', e);
         }
       }
     }
@@ -291,7 +298,7 @@ describe('Docker Orchestrator V2', () => {
   it('should expose API endpoints', async () => {
     // Set a longer timeout for this test (5 minutes)
     jest.setTimeout(300000);
-    console.log('Starting test: should expose API endpoints');
+    debug('Starting test: should expose API endpoints');
     
     // Create a new node with a unique ID for this test
     const testNodeConfig = {
@@ -305,9 +312,9 @@ describe('Docker Orchestrator V2', () => {
     };
     
     // Start the node
-    console.log('Attempting to start node with config:', JSON.stringify(testNodeConfig, null, 2));
+    debug('Attempting to start node with config: %o', testNodeConfig);
     const node = await orchestrator.startNode(testNodeConfig);
-    console.log(`✅ Node started with ID: ${node.id}`);
+    debug(`Node started with ID: ${node.id}`);
     
     const apiUrl = node.getApiUrl?.();
     // Helper function to test API endpoint with retries
@@ -316,7 +323,7 @@ describe('Docker Orchestrator V2', () => {
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`Attempt ${attempt}/${maxRetries} - Testing ${endpoint}`);
+          debug(`Attempt ${attempt}/${maxRetries} - Testing ${endpoint}`);
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 5000);
           const response = await fetch(`${apiUrl}${endpoint}`, {
@@ -329,7 +336,7 @@ describe('Docker Orchestrator V2', () => {
           clearTimeout(timeout);
           
           if (response.status === expectedStatus) {
-            console.log(`✅ ${endpoint} returned status ${response.status}`);
+            debug(`${endpoint} returned status ${response.status}`);
             return await response.json().catch(() => ({}));
           }
           
@@ -337,7 +344,7 @@ describe('Docker Orchestrator V2', () => {
           throw new Error(`Expected status ${expectedStatus}, got ${response.status}: ${errorText}`);
         } catch (error) {
           lastError = error as Error;
-          console.warn(`Attempt ${attempt} failed:`, error);
+          debug(`Attempt ${attempt} failed: %o`, error);
           
           if (attempt < maxRetries) {
             await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
@@ -350,12 +357,12 @@ describe('Docker Orchestrator V2', () => {
     
     try {
       // Test the health endpoint
-      console.log('Testing health endpoint...');
+      debug('Testing health endpoint...');
       const healthData = await testApiEndpoint('/health');
       expect(healthData).toHaveProperty('status');
       expect(healthData.status).toBe('ok');
       
-      console.log('✅ All API endpoints verified');
+      debug('All API endpoints verified');
     } catch (error) {
       // Log container logs if available
       try {
@@ -365,9 +372,9 @@ describe('Docker Orchestrator V2', () => {
           stderr: true,
           tail: 100
         });
-        console.error('Container logs:', logs.toString('utf8'));
+        debug('Container logs: %s', logs.toString('utf8'));
       } catch (logError) {
-        console.error('Failed to get container logs:', logError);
+        debug('Failed to get container logs: %o', logError);
       }
       
       throw error;
@@ -375,7 +382,7 @@ describe('Docker Orchestrator V2', () => {
   });
 
   it.skip('should connect two nodes', async () => {
-    console.log('Starting test: should connect two nodes');
+    debug('Starting test: should connect two nodes');
     
     // Create unique configs for both nodes
     const node1Port = 3000 + Math.floor(Math.random() * 1000);
@@ -415,9 +422,9 @@ describe('Docker Orchestrator V2', () => {
     
     try {
       // Start first node
-      console.log('Starting node 1...');
+      debug('Starting node 1...');
       node1 = await orchestrator.startNode(node1Config);
-      console.log(`✅ Node 1 started with ID: ${node1.id}`);
+      debug(`Node 1 started with ID: ${node1.id}`);
       
       // Get node 1's status and API URL
       const status1 = await node1.status() as ExtendedNodeStatus;
@@ -430,9 +437,9 @@ describe('Docker Orchestrator V2', () => {
       }
       
       // Start second node
-      console.log('Starting node 2...');
+      debug('Starting node 2...');
       node2 = await orchestrator.startNode(node2Config);
-      console.log(`✅ Node 2 started with ID: ${node2.id}`);
+      debug(`Node 2 started with ID: ${node2.id}`);
       
       // Get node 2's status
       const status2 = await node2.status() as ExtendedNodeStatus;
@@ -442,7 +449,7 @@ describe('Docker Orchestrator V2', () => {
       expect(status1).toBeDefined();
       expect(status2).toBeDefined();
       // TODO: this status check is inadequate
-      console.log('✅ Both nodes are running');
+      debug('Both nodes are running');
       
       // Helper function to wait for peers
       const waitForPeers = async (nodeHandle: NodeHandle, expectedPeerCount = 1, maxAttempts = 10) => {
@@ -451,18 +458,18 @@ describe('Docker Orchestrator V2', () => {
           const peerCount = status.network?.peers?.length || 0;
           
           if (peerCount >= expectedPeerCount) {
-            console.log(`✅ Found ${peerCount} peers after ${i + 1} attempts`);
+            debug(`Found ${peerCount} peers after ${i + 1} attempts`);
             return true;
           }
           
-          console.log(`Waiting for peers... (attempt ${i + 1}/${maxAttempts})`);
+          debug(`Waiting for peers... (attempt ${i + 1}/${maxAttempts})`);
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
         return false;
       };
       
       // Wait for nodes to discover each other
-      console.log('Waiting for nodes to discover each other...');
+      debug('Waiting for nodes to discover each other...');
       const node1Discovered = await waitForPeers(node1);
       const node2Discovered = await waitForPeers(node2);
       
@@ -471,16 +478,16 @@ describe('Docker Orchestrator V2', () => {
       const finalStatus2 = await node2.status() as ExtendedNodeStatus;
       
       // Log peer information
-      console.log('Node 1 discovered:', node1Discovered);
-      console.log('Node 2 discovered:', node2Discovered);
-      console.log('Node 1 peers:', finalStatus1.network?.peers || 'none');
-      console.log('Node 2 peers:', finalStatus2.network?.peers || 'none');
-      console.log('Node 1 bootstrapPeers:', finalStatus1.network?.bootstrapPeers || 'none');
-      console.log('Node 2 bootstrapPeers:', finalStatus2.network?.bootstrapPeers || 'none');
+      debug('Node 1 discovered: %o', node1Discovered);
+      debug('Node 2 discovered: %o', node2Discovered);
+      debug('Node 1 peers: %o', finalStatus1.network?.peers || 'none');
+      debug('Node 2 peers: %o', finalStatus2.network?.peers || 'none');
+      debug('Node 1 bootstrapPeers: %o', finalStatus1.network?.bootstrapPeers || 'none');
+      debug('Node 2 bootstrapPeers: %o', finalStatus2.network?.bootstrapPeers || 'none');
       
       // Log the addresses for debugging
-      console.log('Node 1 address:', finalStatus1.network?.address);
-      console.log('Node 2 address:', finalStatus2.network?.address);
+      debug('Node 1 address: %o', finalStatus1.network?.address);
+      debug('Node 2 address: %o', finalStatus2.network?.address);
       
       // Verify both nodes have network configuration
       expect(finalStatus1.network).toBeDefined();
@@ -490,32 +497,32 @@ describe('Docker Orchestrator V2', () => {
       
       // For now, we'll just verify that both nodes are running and have network info
       // In a real test, you would want to verify actual communication between nodes
-      console.log('✅ Both nodes are running with network configuration');
+      debug('✅ Both nodes are running with network configuration');
       
     } finally {
       // Clean up nodes
       const cleanupPromises = [];
       
       if (node1) {
-        console.log('Stopping node 1...');
+        debug('Stopping node 1...');
         cleanupPromises.push(
           orchestrator.stopNode(node1).catch(e => 
-            console.warn('Error stopping node 1:', e)
+            debug('Error stopping node 1: %o', e)
           )
         );
       }
       
       if (node2) {
-        console.log('Stopping node 2...');
+        debug('Stopping node 2...');
         cleanupPromises.push(
           orchestrator.stopNode(node2).catch(e => 
-            console.warn('Error stopping node 2:', e)
+            debug('Error stopping node 2: %o', e)
           )
         );
       }
       
       await Promise.all(cleanupPromises);
-      console.log('✅ Both nodes stopped');
+      debug('✅ Both nodes stopped');
     }
     
     // Note: In a real test with actual peer connections, we would verify the connection

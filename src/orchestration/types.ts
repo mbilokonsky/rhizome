@@ -22,6 +22,8 @@ export interface NodeConfig {
     cpu?: number;
     /** Memory limit in MB */
     memory?: number;
+    /** Memory swap limit in MB (defaults to 2x memory if not specified) */
+    memorySwap?: number;
   };
   
   /** Storage configuration */
