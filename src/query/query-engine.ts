@@ -1,4 +1,5 @@
-import { apply, is_logic } from 'json-logic-js';
+import jsonLogic from 'json-logic-js';
+const { apply, is_logic } = jsonLogic;
 import Debug from 'debug';
 import { SchemaRegistry, SchemaID, ObjectSchema } from '../schema/schema';
 import { Lossless, LosslessViewOne, LosslessViewMany, CollapsedDelta } from '../views/lossless';

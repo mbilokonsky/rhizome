@@ -74,8 +74,8 @@ export class RequestReply {
 
   constructor(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
-    const {requestBindAddr, requestBindPort} = this.rhizomeNode.config;
-    this.requestBindAddrStr = `tcp://${requestBindAddr}:${requestBindPort}`;
+    const {requestBindHost, requestBindPort} = this.rhizomeNode.config;
+    this.requestBindAddrStr = `tcp://${requestBindHost}:${requestBindPort}`;
   }
 
   // Listen for incoming requests

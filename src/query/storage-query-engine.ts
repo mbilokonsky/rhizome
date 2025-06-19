@@ -1,4 +1,5 @@
-import { apply } from 'json-logic-js';
+import jsonLogic from 'json-logic-js';
+const { apply } = jsonLogic;
 import Debug from 'debug';
 import { SchemaRegistry, SchemaID, ObjectSchema } from '../schema';
 import { DeltaQueryStorage, DeltaQuery } from '../storage/interface';

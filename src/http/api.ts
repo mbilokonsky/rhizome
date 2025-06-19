@@ -1,7 +1,10 @@
+import Debug from 'debug';
 import express, {Router} from "express";
 import {Collection} from "../collections";
 import {Delta, DeltaFilter} from "../core";
 import {RhizomeNode} from "../node";
+
+const debug = Debug('rz:http:api');
 
 export class HttpApi {
   router = Router();
@@ -11,6 +14,14 @@ export class HttpApi {
   }
 
   private setupRoutes() {
+    // --------------- health ----------------
+
+    this.router.get("/health", (_req: express.Request, res: express.Response) => {
+      res.json({
+        status: "ok"
+      });
+    });
+
     // --------------- deltas ----------------
 
     // Serve list of all deltas accepted
@@ -161,7 +172,7 @@ export class HttpApi {
         if (maxResults) options.maxResults = maxResults;
         if (deltaFilter) {
           // Note: deltaFilter would need to be serialized/deserialized properly in a real implementation
-          console.warn('deltaFilter not supported in HTTP API yet');
+          debug('deltaFilter not supported in HTTP API yet');
         }
 
         const result = await this.rhizomeNode.queryEngine.query(schemaId, filter, options);

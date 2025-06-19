@@ -9,10 +9,8 @@ import {DeltaQueryStorage, StorageFactory, StorageConfig} from './storage';
 const debug = Debug('rz:rhizome-node');
 
 export type RhizomeNodeConfig = {
-  requestBindAddr: string;
   requestBindHost: string;
   requestBindPort: number;
-  publishBindAddr: string;
   publishBindHost: string;
   publishBindPort: number;
   httpAddr: string;
@@ -42,10 +40,8 @@ export class RhizomeNode {
 
   constructor(config?: Partial<RhizomeNodeConfig>) {
     this.config = {
-      requestBindAddr: REQUEST_BIND_ADDR,
       requestBindHost: REQUEST_BIND_HOST,
       requestBindPort: REQUEST_BIND_PORT,
-      publishBindAddr: PUBLISH_BIND_ADDR,
       publishBindHost: PUBLISH_BIND_HOST,
       publishBindPort: PUBLISH_BIND_PORT,
       httpAddr: HTTP_API_ADDR,
@@ -85,7 +81,16 @@ export class RhizomeNode {
     this.storageQueryEngine = new StorageQueryEngine(this.deltaStorage, this.schemaRegistry);
   }
 
-  async start(syncOnStart = false) {
+  /**
+   * Start the node components
+   * @param options.syncOnStart Whether to sync with peers on startup (default: false)
+   * @returns Promise that resolves when the node is fully started and ready
+   */
+  async start({
+    syncOnStart = false
+  }: { syncOnStart?: boolean } = {}): Promise<void> {
+    debug(`[${this.config.peerId}]`, 'Starting node (waiting for ready)...');
+    
     // Connect our lossless view to the delta stream
     this.deltaStream.subscribeDeltas(async (delta) => {
       // Ingest into lossless view
@@ -100,44 +105,38 @@ export class RhizomeNode {
     });
 
     // Bind ZeroMQ publish socket
-    // TODO: Config option to enable zmq pubsub
     await this.pubSub.startZmq();
-
+    
     // Bind ZeroMQ request socket
-    // TODO: request/reply via libp2p?
-    // TODO: config options to enable request/reply, or configure available commands
     this.requestReply.start();
-
-    // Start HTTP server
-    if (this.config.httpEnable) {
-      this.httpServer.start();
+    
+    // Start HTTP server if enabled
+    if (this.config.httpEnable && this.httpServer) {
+      await this.httpServer.startAndWait();
     }
 
-    {
-      // Wait a short time for sockets to initialize
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Subscribe to seed peers
-      this.peers.subscribeToSeeds();
-
-      // Wait a short time for sockets to initialize
-      // await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+    // Initialize network components
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    this.peers.subscribeToSeeds();
 
     if (syncOnStart) {
       // Ask all peers for all deltas
       this.peers.askAllPeersForDeltas();
-
-      // Wait to receive all deltas
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
+    
+    debug(`[${this.config.peerId}]`, 'Node started and ready');
   }
 
   async stop() {
     this.peers.stop();
     await this.pubSub.stop();
     await this.requestReply.stop();
-    await this.httpServer.stop();
+    
+    // Stop the HTTP server if it was started
+    if (this.config.httpEnable && this.httpServer) {
+      await this.httpServer.stop();
+    }
     
     // Close storage
     try {

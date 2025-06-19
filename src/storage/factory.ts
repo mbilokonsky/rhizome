@@ -1,6 +1,9 @@
+import Debug from 'debug';
 import { DeltaStorage, DeltaQueryStorage, StorageConfig } from './interface';
 import { MemoryDeltaStorage } from './memory';
 import { LevelDBDeltaStorage } from './leveldb';
+
+const debug = Debug('rz:storage:factory');
 
 /**
  * Factory for creating delta storage instances based on configuration
@@ -56,10 +59,10 @@ export class StorageFactory {
   ): Promise<void> {
     const batchSize = options.batchSize || 1000;
     
-    console.log('Starting storage migration...');
+    debug('Starting storage migration...');
     
     const allDeltas = await source.getAllDeltas();
-    console.log(`Found ${allDeltas.length} deltas to migrate`);
+    debug(`Found %d deltas to migrate`, allDeltas.length);
     
     // Migrate in batches to avoid memory issues
     for (let i = 0; i < allDeltas.length; i += batchSize) {
@@ -69,19 +72,21 @@ export class StorageFactory {
         await target.storeDelta(delta);
       }
       
-      console.log(`Migrated ${Math.min(i + batchSize, allDeltas.length)} / ${allDeltas.length} deltas`);
+      debug('Migrated %d / %d deltas', Math.min(i + batchSize, allDeltas.length), allDeltas.length);
     }
     
-    console.log('Migration completed successfully');
+    debug('Migration completed successfully');
     
     // Verify migration
     const sourceStats = await source.getStats();
     const targetStats = await target.getStats();
     
     if (sourceStats.totalDeltas !== targetStats.totalDeltas) {
-      throw new Error(`Migration verification failed: source has ${sourceStats.totalDeltas} deltas, target has ${targetStats.totalDeltas}`);
+      const errorMsg = `Migration verification failed: source has ${sourceStats.totalDeltas} deltas, target has ${targetStats.totalDeltas}`;
+      debug(errorMsg);
+      throw new Error(errorMsg);
     }
     
-    console.log(`Migration verified: ${targetStats.totalDeltas} deltas migrated successfully`);
+    debug('Migration verified: %d deltas migrated successfully', targetStats.totalDeltas);
   }
 }
