@@ -305,8 +305,19 @@ export class DockerOrchestrator extends BaseOrchestrator {
 
 
   /**
-   * Clean up resources if node startup fails
-   * @param nodeId ID of the node that failed to start
+   * Cleans up resources for a specific node that failed to start properly.
+   * 
+   * This method is automatically called when a node fails to start during the `startNode` process.
+   * It handles cleanup of both the container and network resources associated with the failed node,
+   * and ensures all internal state is properly cleaned up.
+   * 
+   * @remarks
+   * - Runs container and network cleanup in parallel for efficiency
+   * - Handles errors gracefully by logging them without rethrowing
+   * - Cleans up internal state for just the specified node
+   * - Used internally by the orchestrator during error handling
+   * 
+   * @param nodeId - The unique identifier of the node that failed to start
    * @private
    */
   private async cleanupFailedStart(nodeId: string): Promise<void> {
@@ -387,7 +398,19 @@ export class DockerOrchestrator extends BaseOrchestrator {
   }
 
   /**
-   * Clean up all resources
+   * Cleans up all resources managed by this orchestrator.
+   * 
+   * This method should be called during shutdown or when you need to completely tear down
+   * all containers and networks created by this orchestrator instance.
+   * 
+   * @remarks
+   * - Stops and removes all containers first
+   * - Then removes all networks (sequential execution)
+   * - Clears all internal state including node handles and log streams
+   * - Throws any errors that occur during cleanup
+   * - Should be called when the orchestrator is being shut down
+   * 
+   * @throws {Error} If any error occurs during the cleanup process
    */
   async cleanup(): Promise<void> {
     debug('Starting cleanup of all resources...');
