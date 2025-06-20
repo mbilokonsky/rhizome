@@ -158,7 +158,7 @@ describe('DeltaBuilder', () => {
         .buildV2();
 
       // Check for transaction ID in V2 pointers
-      expect(delta.pointers['_transaction']).toBe(txId);
+      expect(delta.pointers['_transaction']).toEqual({ [txId]: 'deltas' });
     });
 
     it('should support negation', () => {

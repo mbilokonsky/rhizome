@@ -1,22 +1,19 @@
 import {Delta, DeltaFilter, DeltaV2} from '../src/core';
 import {Lossless} from '../src/views';
 import {RhizomeNode} from '../src/node';
+import {createDelta} from '../src/core/delta-builder';
 
 describe('Lossless', () => {
   const node = new RhizomeNode();
 
   it('creates a lossless view of keanu as neo in the matrix', () => {
-    const delta = new DeltaV2({
-      creator: 'a',
-      host: 'h',
-      pointers: {
-        actor: {"keanu": "roles"},
-        role: {"neo": "actor"},
-        film: {"the_matrix": "cast"},
-        base_salary: 1000000,
-        salary_currency: "usd"
-      }
-    }).toV1();
+    const delta = createDelta('a', 'h')
+      .addPointer('actor', 'keanu', 'roles')
+      .addPointer('role', 'neo', 'actor')
+      .addPointer('film', 'the_matrix', 'cast')
+      .addPointer('base_salary', 1000000)
+      .addPointer('salary_currency', 'usd')
+      .buildV1();
 
     expect(delta.pointers).toMatchObject([{
       localContext: "actor",
@@ -95,17 +92,13 @@ describe('Lossless', () => {
   });
 
   it('accepts DeltaV2 instances', () => {
-    const delta = new DeltaV2({
-      creator: 'a',
-      host: 'h',
-      pointers: {
-        actor: {"keanu": "roles"},
-        role: {"neo": "actor"},
-        film: {"the_matrix": "cast"},
-        base_salary: 1000000,
-        salary_currency: "usd"
-      }
-    });
+    const delta = createDelta('a', 'h')
+      .addPointer('actor', 'keanu', 'roles')
+      .addPointer('role', 'neo', 'actor')
+      .addPointer('film', 'the_matrix', 'cast')
+      .addPointer('base_salary', 1000000)
+      .addPointer('salary_currency', 'usd')
+      .buildV2();
 
     const lossless = new Lossless(node);
 
@@ -167,26 +160,20 @@ describe('Lossless', () => {
     const lossless = new Lossless(node);
 
     beforeAll(() => {
-      lossless.ingestDelta(new Delta({
-        creator: 'A',
-        host: 'H',
-        pointers: [{
-          localContext: "1",
-          target: "ace",
-          targetContext: "value"
-        }]
-      }));
+      // First delta
+      lossless.ingestDelta(
+        createDelta('A', 'H')
+          .addPointer('1', 'ace', 'value')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'B',
-        host: 'H',
-        pointers: [{
+      // Second delta
+      lossless.ingestDelta(
+        createDelta('B', 'H')
           // 10 11j 12q 13k 14a
-          localContext: "14",
-          target: "ace",
-          targetContext: "value"
-        }]
-      }));
+          .addPointer('14', 'ace', 'value')
+          .buildV1()
+      );
 
       expect(lossless.view()).toMatchObject({
         ace: {
@@ -251,51 +238,42 @@ describe('Lossless', () => {
       const transactionId = 'tx-filter-test';
 
       // Declare transaction with 3 deltas
-      losslessT.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'H',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 3 }
-        ]
-      }));
+      losslessT.ingestDelta(
+        createDelta('system', 'H')
+          .declareTransaction(transactionId, 3)
+          .buildV1()
+      );
 
       // A1: First delta from creator A
-      losslessT.ingestDelta(new Delta({
-        creator: 'A',
-        host: 'H',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'step', target: 'process1', targetContext: 'status' },
-          { localContext: 'value', target: 'started' }
-        ]
-      }));
+      losslessT.ingestDelta(
+        createDelta('A', 'H')
+          .inTransaction(transactionId)
+          .addPointer('step', 'process1', 'status')
+          .addPointer('value', 'started')
+          .buildV1()
+      );
 
       // B: Delta from creator B
-      losslessT.ingestDelta(new Delta({
-        creator: 'B',
-        host: 'H',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'step', target: 'process1', targetContext: 'status' },
-          { localContext: 'value', target: 'processing' }
-        ]
-      }));
+      losslessT.ingestDelta(
+        createDelta('B', 'H')
+          .inTransaction(transactionId)
+          .addPointer('step', 'process1', 'status')
+          .addPointer('value', 'processing')
+          .buildV1()
+      );
 
       // Transaction incomplete - nothing should show
       const incompleteView = losslessT.view(['process1']);
       expect(incompleteView.process1).toBeUndefined();
 
       // A2: Second delta from creator A completes transaction
-      losslessT.ingestDelta(new Delta({
-        creator: 'A',
-        host: 'H',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'step', target: 'process1', targetContext: 'status' },
-          { localContext: 'value', target: 'completed' }
-        ]
-      }));
+      losslessT.ingestDelta(
+        createDelta('A', 'H')
+          .inTransaction(transactionId)
+          .addPointer('step', 'process1', 'status')
+          .addPointer('value', 'completed')
+          .buildV1()
+      );
 
       // All deltas visible now
       const completeView = losslessT.view(['process1']);

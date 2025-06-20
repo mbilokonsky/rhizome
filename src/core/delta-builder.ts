@@ -51,6 +51,18 @@ export class DeltaBuilder {
     this.transactionId = transactionId;
     return this;
   }
+  
+  /**
+   * Declare a transaction with a size
+   * @param transactionId The ID of the transaction
+   * @param size The size of the transaction
+   * @returns 
+   */
+  declareTransaction(transactionId: string, size: number): this {
+    this.addPointer('_transaction', transactionId, 'size');
+    this.addPointer('size', size)
+    return this;
+  }
 
   /**
    * Mark this delta as a negation of another delta
@@ -99,7 +111,7 @@ export class DeltaBuilder {
     const pointers = { ...this.pointers };
     
     if (this.transactionId) {
-      pointers['_transaction'] = this.transactionId;
+      pointers['_transaction'] = { [this.transactionId]: 'deltas' };
     }
 
     if (this.isNegation && this.negatedDeltaId) {
