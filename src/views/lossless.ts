@@ -3,7 +3,7 @@
 
 import Debug from 'debug';
 import EventEmitter from 'events';
-import {Delta, DeltaFilter, DeltaID, DeltaNetworkImageV1} from '../core/delta';
+import {Delta, DeltaFilter, DeltaID, DeltaNetworkImageV1, DeltaV2} from '../core/delta';
 import {RhizomeNode} from '../node';
 import {Transactions} from '../features/transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "../core/types";
@@ -34,7 +34,11 @@ class LosslessEntity {
 
   constructor(readonly lossless: Lossless, readonly id: DomainEntityID) {}
 
-  addDelta(delta: Delta) {
+  addDelta(delta: Delta | DeltaV2) {
+    // Convert DeltaV2 to DeltaV1 if needed
+    if (delta instanceof DeltaV2) {
+      delta = delta.toV1();
+    }
     const targetContexts = delta.pointers
       .filter(({target}) => target === this.id)
       .map(({targetContext}) => targetContext)
@@ -87,7 +91,12 @@ export class Lossless {
     });
   }
 
-  ingestDelta(delta: Delta): TransactionID | undefined {
+  ingestDelta(delta: Delta | DeltaV2): TransactionID | undefined {
+    // Convert DeltaV2 to DeltaV1 if needed
+    if (delta instanceof DeltaV2) {
+      delta = delta.toV1();
+    }
+    
     // Store delta for negation processing
     this.allDeltas.set(delta.id, delta);
 

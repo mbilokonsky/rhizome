@@ -94,6 +94,75 @@ describe('Lossless', () => {
     });
   });
 
+  it('accepts DeltaV2 instances', () => {
+    const delta = new DeltaV2({
+      creator: 'a',
+      host: 'h',
+      pointers: {
+        actor: {"keanu": "roles"},
+        role: {"neo": "actor"},
+        film: {"the_matrix": "cast"},
+        base_salary: 1000000,
+        salary_currency: "usd"
+      }
+    });
+
+    const lossless = new Lossless(node);
+
+    lossless.ingestDelta(delta);
+
+    expect(lossless.view()).toMatchObject({
+      keanu: {
+        referencedAs: ["actor"],
+        propertyDeltas: {
+          roles: [{
+            creator: "a",
+            host: "h",
+            pointers: [
+              {actor: "keanu"},
+              {role: "neo"},
+              {film: "the_matrix"},
+              {base_salary: 1000000},
+              {salary_currency: "usd"},
+            ],
+          }],
+        },
+      },
+      neo: {
+        referencedAs: ["role"],
+        propertyDeltas: {
+          actor: [{
+            creator: "a",
+            host: "h",
+            pointers: [
+              {actor: "keanu"},
+              {role: "neo"},
+              {film: "the_matrix"},
+              {base_salary: 1000000},
+              {salary_currency: "usd"},
+            ],
+          }],
+        },
+      },
+      the_matrix: {
+        referencedAs: ["film"],
+        propertyDeltas: {
+          cast: [{
+            creator: "a",
+            host: "h",
+            pointers: [
+              {actor: "keanu"},
+              {role: "neo"},
+              {film: "the_matrix"},
+              {base_salary: 1000000},
+              {salary_currency: "usd"},
+            ],
+          }],
+        },
+      },
+    });
+  });
+
   describe('can filter deltas', () => {
     const lossless = new Lossless(node);
 
@@ -242,4 +311,5 @@ describe('Lossless', () => {
       expect(filteredView.process1.propertyDeltas.status.every(d => d.creator === 'A')).toBe(true);
     });
   });
+
 });
