@@ -1,4 +1,4 @@
-import { createDelta, DeltaBuilder } from '../src/core/delta-builder';
+import { createDelta } from '../src/core/delta-builder';
 import { DeltaV1, DeltaV2 } from '../src/core/delta';
 import { Lossless } from '../src/views/lossless';
 import { RhizomeNode } from '../src/node';
@@ -11,11 +11,10 @@ describe('DeltaBuilder', () => {
 
   describe('V1 Deltas', () => {
     it('should create a basic V1 delta', () => {
-      const builder = new DeltaBuilder(creator, host, 'v1');
-      const delta = builder
+      const delta = createDelta(creator, host)
         .addPointer('name', 'Test Delta', 'title')
         .addPointer('description', 'A test delta', 'description')
-        .build();
+        .buildV1();
 
       expect(delta).toBeInstanceOf(DeltaV1);
       expect(delta.id).toBeDefined();
@@ -29,21 +28,45 @@ describe('DeltaBuilder', () => {
       });
     });
 
-    it.only('should create a V1 delta with setProperty', () => {
-      const delta = createDelta(creator, host, 'v1')
+    it('should create a V1 delta with setProperty', () => {
+      const delta = createDelta(creator, host)
         .setProperty('entity-1', 'name', 'Test Entity')
-        .build();
+        .buildV1();
 
       expect(delta).toBeInstanceOf(DeltaV1);
-      expect(delta.pointers).toContainEqual({
-        localContext: 'name',
-        target: 'Test Entity',
-        targetContext: 'name'
-      });
       expect(delta.pointers).toContainEqual({
         localContext: 'entity',
         target: 'entity-1',
         targetContext: 'name'
+      });
+      expect(delta.pointers).toContainEqual({
+        localContext: 'name',
+        target: 'Test Entity',
+      });
+
+      // Verify that the entity property resolves correctly
+      const lossless = new Lossless(node);
+      lossless.ingestDelta(delta);
+      const lossy = new LastWriteWins(lossless);
+      const result = lossy.resolve();
+      expect(result).toBeDefined();
+      expect(result!['entity-1'].properties.name).toBe('Test Entity');
+    });
+
+    it('should create a V1 delta with setProperty and entityLabel', () => {
+      const delta = createDelta(creator, host)
+        .setProperty('entity-1', 'name', 'Test Entity', 'user')
+        .buildV1();
+
+      expect(delta).toBeInstanceOf(DeltaV1);
+      expect(delta.pointers).toContainEqual({
+        localContext: 'user',
+        target: 'entity-1',
+        targetContext: 'name'
+      });
+      expect(delta.pointers).toContainEqual({
+        localContext: 'name',
+        target: 'Test Entity',
       });
 
       // Verify that the entity property resolves correctly
@@ -56,9 +79,9 @@ describe('DeltaBuilder', () => {
     });
 
     it('should create a V1 delta with relationships', () => {
-      const delta = createDelta(creator, host, 'v1')
+      const delta = createDelta(creator, host)
         .relate('user-1', 'follows', 'user-2')
-        .build();
+        .buildV1();
 
       expect(delta.pointers).toContainEqual({
         localContext: 'follows',
@@ -75,8 +98,7 @@ describe('DeltaBuilder', () => {
 
   describe('V2 Deltas', () => {
     it('should create a basic V2 delta', () => {
-      const builder = new DeltaBuilder(creator, host, 'v2');
-      const delta = builder
+      const delta = createDelta(creator, host)
         .addPointer('name', 'Test Delta V2', 'title')
         .buildV2();
 
@@ -89,7 +111,7 @@ describe('DeltaBuilder', () => {
     });
 
     it('should create a V2 delta with setProperty', () => {
-      const delta = createDelta(creator, host, 'v2')
+      const delta = createDelta(creator, host)
         .setProperty('entity-1', 'name', 'Test Entity')
         .buildV2();
 
@@ -98,7 +120,7 @@ describe('DeltaBuilder', () => {
     });
 
     it('should create a V2 delta with relationships', () => {
-      const delta = createDelta(creator, host, 'v2')
+      const delta = createDelta(creator, host)
         .relate('user-1', 'follows', 'user-2')
         .buildV2();
 
@@ -112,7 +134,7 @@ describe('DeltaBuilder', () => {
       const customId = 'custom-delta-id';
       const delta = createDelta(creator, host)
         .withId(customId)
-        .build();
+        .buildV1();
 
       expect(delta.id).toBe(customId);
     });
@@ -121,7 +143,7 @@ describe('DeltaBuilder', () => {
       const txId = 'tx-123';
       const delta = createDelta(creator, host)
         .inTransaction(txId)
-        .build();
+        .buildV1();
 
       // Check for transaction ID in pointers
       const txPointer = delta.pointers.find(p => p.localContext === '_transaction');
@@ -131,7 +153,7 @@ describe('DeltaBuilder', () => {
 
     it('should support transactions in V2', () => {
       const txId = 'tx-123';
-      const delta = createDelta(creator, host, 'v2')
+      const delta = createDelta(creator, host)
         .inTransaction(txId)
         .buildV2();
 
@@ -143,7 +165,7 @@ describe('DeltaBuilder', () => {
       const negatedId = 'delta-to-negate';
       const delta = createDelta(creator, host)
         .negate(negatedId)
-        .build();
+        .buildV1();
 
       // Check for negation in pointers
       const negationPointer = delta.pointers.find(p => p.localContext === '_negation');
@@ -155,7 +177,7 @@ describe('DeltaBuilder', () => {
       const timestamp = Date.now();
       const delta = createDelta(creator, host)
         .withTimestamp(timestamp)
-        .build();
+        .buildV1();
 
       expect(delta.timeCreated).toBe(timestamp);
     });
