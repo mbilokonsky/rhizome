@@ -9,6 +9,7 @@ import {Transactions} from '../features/transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "../core/types";
 import {Negation} from '../features/negation';
 import {NegationHelper} from '../features/negation';
+import { createDelta } from '../core/delta-builder';
 const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
@@ -199,31 +200,35 @@ export class Lossless {
       for (const delta of deltas) {
         if (!seenDeltaIds.has(delta.id)) {
           seenDeltaIds.add(delta.id);
-          // Convert CollapsedDelta back to Delta
-          const fullDelta = new Delta({
-            id: delta.id,
-            creator: delta.creator,
-            host: delta.host,
-            timeCreated: delta.timeCreated,
-            pointers: delta.pointers.map(pointer => {
-              // Convert back to V1 pointer format for Delta constructor
-              const pointerEntries = Object.entries(pointer);
-              if (pointerEntries.length === 1) {
-                const [localContext, target] = pointerEntries[0];
-                if (typeof target === 'string' && this.domainEntities.has(target)) {
-                  // This is a reference pointer to an entity
-                  // The targetContext is the property ID this delta appears under
-                  return { localContext, target, targetContext: propertyId };
-                } else {
-                  // Scalar pointer
-                  return { localContext, target: target as PropertyTypes };
-                }
+          
+          // Create a new delta using DeltaBuilder
+          const builder = createDelta(delta.creator, delta.host)
+            .withId(delta.id)
+            .withTimestamp(delta.timeCreated);
+          
+          // Add all pointers from the collapsed delta
+          for (const pointer of delta.pointers) {
+            const pointerEntries = Object.entries(pointer);
+            if (pointerEntries.length === 1) {
+              const [localContext, target] = pointerEntries[0];
+              if (target === null || target === undefined) {
+                continue; // Skip null/undefined targets
               }
-              // Fallback for unexpected pointer structure
-              return { localContext: 'unknown', target: 'unknown' };
-            })
-          });
-          allDeltas.push(fullDelta);
+              if (typeof target === 'string' && this.domainEntities.has(target)) {
+                // This is a reference pointer to an entity
+                builder.addPointer(localContext, target, propertyId);
+              } else if (typeof target === 'string' || typeof target === 'number' || typeof target === 'boolean') {
+                // Scalar pointer with valid type
+                builder.addPointer(localContext, target);
+              } else {
+                // For other types (objects, arrays), convert to string
+                builder.addPointer(localContext, JSON.stringify(target));
+              }
+            }
+          }
+          
+          // Build the delta and add to results
+          allDeltas.push(builder.buildV1());
         }
       }
     }
