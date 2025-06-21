@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import { Delta } from '../src/core';
+import { createDelta } from '../src/core/delta-builder';
 import { NegationHelper } from '../src/features';
 import { RhizomeNode } from '../src/node';
 import { Lossless } from '../src/views';
@@ -17,14 +17,9 @@ describe('Negation System', () => {
 
   describe('Negation Helper', () => {
     it('should create negation deltas correctly', () => {
-      const originalDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'name', target: 'entity1', targetContext: 'name' },
-          { localContext: 'value', target: 'Alice' }
-        ]
-      });
+      const originalDelta = createDelta('user1', 'host1')
+        .setProperty('entity1', 'name', 'Alice')
+        .buildV1();
 
       const negationDelta = NegationHelper.createNegation(
         originalDelta.id,
@@ -32,23 +27,20 @@ describe('Negation System', () => {
         'host1'
       );
 
-      expect(negationDelta.isNegation).toBe(true);
-      expect(negationDelta.negatedDeltaId).toBe(originalDelta.id);
       expect(negationDelta.creator).toBe('moderator');
       expect(negationDelta.pointers).toHaveLength(1);
       expect(negationDelta.pointers[0]).toEqual({
-        localContext: 'negates',
+        localContext: '_negates',
         target: originalDelta.id,
         targetContext: 'negated_by'
       });
+      expect(NegationHelper.isNegationDelta(negationDelta)).toBe(true);
     });
 
     it('should identify negation deltas', () => {
-      const regularDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [{ localContext: 'name', target: 'entity1', targetContext: 'name' }]
-      });
+      const regularDelta = createDelta('user1', 'host1')
+        .setProperty('entity1', 'name', 'Entity 1')
+        .buildV1();
 
       const negationDelta = NegationHelper.createNegation(
         'delta-to-negate',
@@ -71,27 +63,21 @@ describe('Negation System', () => {
       const extractedId = NegationHelper.getNegatedDeltaId(negationDelta);
       expect(extractedId).toBe(targetDeltaId);
 
-      const regularDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [{ localContext: 'name', target: 'entity1', targetContext: 'name' }]
-      });
+      const regularDelta = createDelta('user1', 'host1')
+        .setProperty('entity1', 'name', 'Entity 1')
+        .buildV1();
 
       expect(NegationHelper.getNegatedDeltaId(regularDelta)).toBeNull();
     });
 
     it('should find negations for specific deltas', () => {
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [{ localContext: 'name', target: 'entity1', targetContext: 'name' }]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .setProperty('entity1', 'name', 'Entity 1')
+        .buildV1();
 
-      const delta2 = new Delta({
-        creator: 'user2',
-        host: 'host1',
-        pointers: [{ localContext: 'age', target: 'entity1', targetContext: 'age' }]
-      });
+      const delta2 = createDelta('user2', 'host1')
+        .setProperty('entity1', 'age', 25)
+        .buildV1();
 
       const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
       const negation2 = NegationHelper.createNegation(delta1.id, 'mod2', 'host1');
@@ -110,17 +96,13 @@ describe('Negation System', () => {
     });
 
     it('should check if deltas are negated', () => {
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [{ localContext: 'name', target: 'entity1', targetContext: 'name' }]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .setProperty('entity1', 'name', 'Entity 1')
+        .buildV1();
 
-      const delta2 = new Delta({
-        creator: 'user2',
-        host: 'host1',
-        pointers: [{ localContext: 'age', target: 'entity1', targetContext: 'age' }]
-      });
+      const delta2 = createDelta('user2', 'host1')
+        .setProperty('entity1', 'age', 25)
+        .buildV1();
 
       const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
       const allDeltas = [delta1, delta2, negation1];
@@ -130,23 +112,17 @@ describe('Negation System', () => {
     });
 
     it('should filter out negated deltas', () => {
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [{ localContext: 'name', target: 'entity1', targetContext: 'name' }]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .setProperty('entity1', 'name', 'Entity 1')
+        .buildV1();
 
-      const delta2 = new Delta({
-        creator: 'user2',
-        host: 'host1',
-        pointers: [{ localContext: 'age', target: 'entity1', targetContext: 'age' }]
-      });
+      const delta2 = createDelta('user2', 'host1')
+        .setProperty('entity1', 'age', 25)
+        .buildV1();
 
-      const delta3 = new Delta({
-        creator: 'user3',
-        host: 'host1',
-        pointers: [{ localContext: 'email', target: 'entity1', targetContext: 'email' }]
-      });
+      const delta3 = createDelta('user3', 'host1')
+        .setProperty('entity1', 'email', 'entity1@example.com')
+        .buildV1();
 
       const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
       const negation2 = NegationHelper.createNegation(delta2.id, 'mod2', 'host1');
@@ -160,17 +136,13 @@ describe('Negation System', () => {
     });
 
     it('should provide negation statistics', () => {
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [{ localContext: 'name', target: 'entity1', targetContext: 'name' }]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .setProperty('entity1', 'name', 'Entity 1')
+        .buildV1();
 
-      const delta2 = new Delta({
-        creator: 'user2',
-        host: 'host1',
-        pointers: [{ localContext: 'age', target: 'entity1', targetContext: 'age' }]
-      });
+      const delta2 = createDelta('user2', 'host1')
+        .setProperty('entity1', 'age', 25)
+        .buildV1();
 
       const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
       const allDeltas = [delta1, delta2, negation1];
@@ -189,22 +161,18 @@ describe('Negation System', () => {
       const baseTime = Date.now();
 
       // Create deltas with specific timestamps
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: baseTime,
-        pointers: [{ localContext: 'status', target: 'doc1', targetContext: 'status' }]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .withTimestamp(baseTime)
+        .setProperty('entity1', 'status', 'active')
+        .buildV1();
 
       const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
       negation1.timeCreated = baseTime + 1000; // 1 second later
 
-      const delta2 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: baseTime + 2000, // 2 seconds later
-        pointers: [{ localContext: 'status', target: 'doc1', targetContext: 'status' }]
-      });
+      const delta2 = createDelta('user1', 'host1')
+        .withTimestamp(baseTime + 2000)
+        .setProperty('entity1', 'status', 'inactive')
+        .buildV1();
 
       const negation2 = NegationHelper.createNegation(delta2.id, 'mod1', 'host1');
       negation2.timeCreated = baseTime + 3000; // 3 seconds later
@@ -220,14 +188,9 @@ describe('Negation System', () => {
   describe('Lossless View Integration', () => {
     it('should filter negated deltas in lossless views', () => {
       // Create original delta
-      const originalDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'name', target: 'user123', targetContext: 'name' },
-          { localContext: 'value', target: 'Alice' }
-        ]
-      });
+      const originalDelta = createDelta('user1', 'host1')
+        .setProperty('user123', 'name', 'Alice')
+        .buildV1();
 
       // Create negation delta
       const negationDelta = NegationHelper.createNegation(
@@ -238,14 +201,9 @@ describe('Negation System', () => {
       
 
       // Create another non-negated delta
-      const nonNegatedDelta = new Delta({
-        creator: 'user2',
-        host: 'host1',
-        pointers: [
-          { localContext: 'age', target: 'user123', targetContext: 'age' },
-          { localContext: 'value', target: 25 }
-        ]
-      });
+      const nonNegatedDelta = createDelta('user2', 'host1')
+        .setProperty('user123', 'age', 25)
+        .buildV1();
 
       // Ingest all deltas
       lossless.ingestDelta(originalDelta);
@@ -263,14 +221,9 @@ describe('Negation System', () => {
     });
 
     it('should handle multiple negations of the same delta', () => {
-      const originalDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'content', target: 'post1', targetContext: 'content' },
-          { localContext: 'value', target: 'Original content' }
-        ]
-      });
+      const originalDelta = createDelta('user1', 'host1')
+        .setProperty('post1', 'content', 'Original content')
+        .buildV1();
 
       const negation1 = NegationHelper.createNegation(originalDelta.id, 'mod1', 'host1');
       const negation2 = NegationHelper.createNegation(originalDelta.id, 'mod2', 'host1');
@@ -286,23 +239,13 @@ describe('Negation System', () => {
     });
 
     it('should provide negation statistics for entities', () => {
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'title', target: 'article1', targetContext: 'title' },
-          { localContext: 'value', target: 'Original Title' }
-        ]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .setProperty('article1', 'title', 'Original Title')
+        .buildV1();
 
-      const delta2 = new Delta({
-        creator: 'user2',
-        host: 'host1',
-        pointers: [
-          { localContext: 'content', target: 'article1', targetContext: 'content' },
-          { localContext: 'value', target: 'Article content' }
-        ]
-      });
+      const delta2 = createDelta('user2', 'host1')
+        .setProperty('article1', 'content', 'Article content')
+        .buildV1();
 
       const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
 
@@ -321,14 +264,9 @@ describe('Negation System', () => {
     });
 
     it('should retrieve negation deltas for entities', () => {
-      const originalDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'status', target: 'task1', targetContext: 'status' },
-          { localContext: 'value', target: 'pending' }
-        ]
-      });
+      const originalDelta = createDelta('user1', 'host1')
+        .setProperty('task1', 'status', 'pending')
+        .buildV1();
 
       const negationDelta = NegationHelper.createNegation(
         originalDelta.id,
@@ -349,25 +287,16 @@ describe('Negation System', () => {
       const transactionId = 'tx-negation';
 
       // Create transaction declaration
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 2 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .declareTransaction(transactionId, 2)
+        .buildV1()
+      );
 
       // Create original delta in transaction
-      const originalDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'comment', target: 'post1', targetContext: 'comments' },
-          { localContext: 'text', target: 'Inappropriate comment' }
-        ]
-      });
+      const originalDelta = createDelta('user1', 'host1')
+        .declareTransaction(transactionId, 2)
+        .setProperty('post1', 'comments', 'Inappropriate comment')
+        .buildV1();
 
       // Create negation delta in same transaction
       const negationDelta = NegationHelper.createNegation(originalDelta.id, 'moderator', 'host1');
@@ -389,30 +318,20 @@ describe('Negation System', () => {
       const baseTime = Date.now();
 
       // User posts content
-      const postDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: baseTime,
-        pointers: [
-          { localContext: 'content', target: 'post1', targetContext: 'content' },
-          { localContext: 'value', target: 'Original post' }
-        ]
-      });
+      const postDelta = createDelta('user1', 'host1')
+        .withTimestamp(baseTime)
+        .setProperty('post1', 'content', 'Original post')
+        .buildV1();
 
       // Moderator negates it
       const negationDelta = NegationHelper.createNegation(postDelta.id, 'moderator', 'host1');
       negationDelta.timeCreated = baseTime + 1000;
 
       // User edits content (after negation)
-      const editDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: baseTime + 2000,
-        pointers: [
-          { localContext: 'content', target: 'post1', targetContext: 'content' },
-          { localContext: 'value', target: 'Edited post' }
-        ]
-      });
+      const editDelta = createDelta('user1', 'host1')
+        .withTimestamp(baseTime + 2000)
+        .setProperty('post1', 'content', 'Edited post')
+        .buildV1();
 
       lossless.ingestDelta(postDelta);
       lossless.ingestDelta(negationDelta);
@@ -447,14 +366,10 @@ describe('Negation System', () => {
 
     it('should handle self-referential entities in negations', () => {
       // Create a delta that references itself
-      const selfRefDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'parent', target: 'node1', targetContext: 'parent' },
-          { localContext: 'child', target: 'node1' } // Self-reference
-        ]
-      });
+      const selfRefDelta = createDelta('user1', 'host1')
+        .setProperty('node1', 'parent', 'node1')
+        .setProperty('node1', 'child', 'node1') // Self-reference
+        .buildV1();
 
       const negationDelta = NegationHelper.createNegation(selfRefDelta.id, 'admin', 'host1');
 
@@ -470,14 +385,9 @@ describe('Negation System', () => {
       const testLossless = new Lossless(testNode);
       
       // Create the original delta
-      const originalDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'title', target: 'entity2', targetContext: 'title' },
-          { localContext: 'status', target: 'Draft' }
-        ]
-      });
+      const originalDelta = createDelta('user1', 'host1')
+        .setProperty('entity2', 'title', 'Draft')
+        .buildV1();
 
       // Create two negations of the same delta
       const negation1 = NegationHelper.createNegation(originalDelta.id, 'user2', 'host1');
@@ -506,14 +416,9 @@ describe('Negation System', () => {
       const testLossless = new Lossless(testNode);
       
       // Create the original delta
-      const deltaA = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'content', target: 'entity3', targetContext: 'content' },
-          { localContext: 'text', target: 'Hello World' }
-        ]
-      });
+      const deltaA = createDelta('user1', 'host1')
+        .setProperty('entity3', 'content', 'Hello World')
+        .buildV1();
 
       // Create a chain of negations: B negates A, C negates B, D negates C
       const deltaB = NegationHelper.createNegation(deltaA.id, 'user2', 'host1');
@@ -584,23 +489,13 @@ describe('Negation System', () => {
       const testLossless = new Lossless(testNode);
       
       // Create two independent deltas
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'item', target: 'entity4', targetContext: 'item' },
-          { localContext: 'name', target: 'Item 1' }
-        ]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .setProperty('entity4', 'item', 'Item 1')
+        .buildV1();
 
-      const delta2 = new Delta({
-        creator: 'user2',
-        host: 'host1',
-        pointers: [
-          { localContext: 'item', target: 'entity4', targetContext: 'item' },
-          { localContext: 'name', target: 'Item 2' }
-        ]
-      });
+      const delta2 = createDelta('user2', 'host1')
+        .setProperty('entity4', 'item', 'Item 2')
+        .buildV1();
 
       // Create negations for both deltas
       const negation1 = NegationHelper.createNegation(delta1.id, 'user3', 'host1');

@@ -3,12 +3,13 @@
 
 import Debug from 'debug';
 import EventEmitter from 'events';
-import {Delta, DeltaFilter, DeltaID, DeltaNetworkImageV1} from '../core/delta';
+import {Delta, DeltaFilter, DeltaID, DeltaNetworkImageV1, DeltaV2} from '../core/delta';
 import {RhizomeNode} from '../node';
 import {Transactions} from '../features/transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "../core/types";
 import {Negation} from '../features/negation';
 import {NegationHelper} from '../features/negation';
+import { createDelta } from '../core/delta-builder';
 const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
@@ -34,7 +35,11 @@ class LosslessEntity {
 
   constructor(readonly lossless: Lossless, readonly id: DomainEntityID) {}
 
-  addDelta(delta: Delta) {
+  addDelta(delta: Delta | DeltaV2) {
+    // Convert DeltaV2 to DeltaV1 if needed
+    if (delta instanceof DeltaV2) {
+      delta = delta.toV1();
+    }
     const targetContexts = delta.pointers
       .filter(({target}) => target === this.id)
       .map(({targetContext}) => targetContext)
@@ -87,7 +92,12 @@ export class Lossless {
     });
   }
 
-  ingestDelta(delta: Delta): TransactionID | undefined {
+  ingestDelta(delta: Delta | DeltaV2): TransactionID | undefined {
+    // Convert DeltaV2 to DeltaV1 if needed
+    if (delta instanceof DeltaV2) {
+      delta = delta.toV1();
+    }
+    
     // Store delta for negation processing
     this.allDeltas.set(delta.id, delta);
 
@@ -114,10 +124,10 @@ export class Lossless {
             // Add negation delta to the entity
             // For negation deltas, we need to add them to a special property
             // since they don't directly target the entity
-            let negationDeltas = ent.properties.get('_negations');
+            let negationDeltas = ent.properties.get('_negates');
             if (!negationDeltas) {
               negationDeltas = new Set<Delta>();
-              ent.properties.set('_negations', negationDeltas);
+              ent.properties.set('_negates', negationDeltas);
             }
             negationDeltas.add(delta);
           }
@@ -190,31 +200,35 @@ export class Lossless {
       for (const delta of deltas) {
         if (!seenDeltaIds.has(delta.id)) {
           seenDeltaIds.add(delta.id);
-          // Convert CollapsedDelta back to Delta
-          const fullDelta = new Delta({
-            id: delta.id,
-            creator: delta.creator,
-            host: delta.host,
-            timeCreated: delta.timeCreated,
-            pointers: delta.pointers.map(pointer => {
-              // Convert back to V1 pointer format for Delta constructor
-              const pointerEntries = Object.entries(pointer);
-              if (pointerEntries.length === 1) {
-                const [localContext, target] = pointerEntries[0];
-                if (typeof target === 'string' && this.domainEntities.has(target)) {
-                  // This is a reference pointer to an entity
-                  // The targetContext is the property ID this delta appears under
-                  return { localContext, target, targetContext: propertyId };
-                } else {
-                  // Scalar pointer
-                  return { localContext, target: target as PropertyTypes };
-                }
+          
+          // Create a new delta using DeltaBuilder
+          const builder = createDelta(delta.creator, delta.host)
+            .withId(delta.id)
+            .withTimestamp(delta.timeCreated);
+          
+          // Add all pointers from the collapsed delta
+          for (const pointer of delta.pointers) {
+            const pointerEntries = Object.entries(pointer);
+            if (pointerEntries.length === 1) {
+              const [localContext, target] = pointerEntries[0];
+              if (target === null || target === undefined) {
+                continue; // Skip null/undefined targets
               }
-              // Fallback for unexpected pointer structure
-              return { localContext: 'unknown', target: 'unknown' };
-            })
-          });
-          allDeltas.push(fullDelta);
+              if (typeof target === 'string' && this.domainEntities.has(target)) {
+                // This is a reference pointer to an entity
+                builder.addPointer(localContext, target, propertyId);
+              } else if (typeof target === 'string' || typeof target === 'number' || typeof target === 'boolean') {
+                // Scalar pointer with valid type
+                builder.addPointer(localContext, target);
+              } else {
+                // For other types (objects, arrays), convert to string
+                builder.addPointer(localContext, JSON.stringify(target));
+              }
+            }
+          }
+          
+          // Build the delta and add to results
+          allDeltas.push(builder.buildV1());
         }
       }
     }
@@ -349,8 +363,8 @@ export class Lossless {
     }
 
     for (const [property, deltas] of ent.properties.entries()) {
-      // Skip the special _negations property in the per-property stats
-      if (property === '_negations') {
+      // Skip the special _negates property in the per-property stats
+      if (property === '_negates') {
         totalDeltas += deltas.size;
         totalNegationDeltas += deltas.size;
         continue;
@@ -384,7 +398,7 @@ export class Lossless {
     const ent = this.domainEntities.get(entityId);
     if (!ent) return [];
 
-    const negationProperty = ent.properties.get('_negations');
+    const negationProperty = ent.properties.get('_negates');
     if (!negationProperty) return [];
 
     return Array.from(negationProperty);

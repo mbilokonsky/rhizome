@@ -5,7 +5,7 @@
  */
 
 import { RhizomeNode } from '../src/node';
-import { Delta } from '../src/core';
+import { createDelta } from '../src/core/delta-builder';
 
 describe('Lossless View Compose/Decompose', () => {
   let node: RhizomeNode;
@@ -18,22 +18,14 @@ describe('Lossless View Compose/Decompose', () => {
     it('should compose and decompose simple entity deltas correctly', () => {
       // Create simple entity deltas
       const nameDeltas = [
-        new Delta({
-          creator: 'test-creator',
-          host: 'test-host',
-          pointers: [
-            { localContext: 'users', target: 'alice', targetContext: 'name' },
-            { localContext: 'name', target: 'Alice Smith' }
-          ]
-        }),
-        new Delta({
-          creator: 'test-creator',
-          host: 'test-host',
-          pointers: [
-            { localContext: 'users', target: 'alice', targetContext: 'email' },
-            { localContext: 'email', target: 'alice@example.com' }
-          ]
-        })
+        createDelta('test-creator', 'test-host')
+          .addPointer('users', 'alice', 'name')
+          .addPointer('name', 'Alice Smith')
+          .buildV1(),
+        createDelta('test-creator', 'test-host')
+          .addPointer('users', 'alice', 'email')
+          .addPointer('email', 'alice@example.com')
+          .buildV1()
       ];
 
       // Ingest the deltas
@@ -73,17 +65,13 @@ describe('Lossless View Compose/Decompose', () => {
 
     it('should handle multi-pointer relationship deltas correctly', () => {
       // Create a complex relationship delta
-      const relationshipDelta = new Delta({
-        creator: 'test-creator',
-        host: 'test-host',
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'relationships' },
-          { localContext: 'partner', target: 'bob' },
-          { localContext: 'type', target: 'friendship' },
-          { localContext: 'since', target: '2020-01-15' },
-          { localContext: 'intensity', target: 8 }
-        ]
-      });
+      const relationshipDelta = createDelta('test-creator', 'test-host')
+        .addPointer('users', 'alice', 'relationships')
+        .addPointer('partner', 'bob')
+        .addPointer('type', 'friendship')
+        .addPointer('since', '2020-01-15')
+        .addPointer('intensity', 8)
+        .buildV1();
 
       node.lossless.ingestDelta(relationshipDelta);
 
@@ -115,33 +103,21 @@ describe('Lossless View Compose/Decompose', () => {
 
     it('should handle reference relationships correctly', () => {
       // Create entities first
-      const aliceDelta = new Delta({
-        creator: 'test-creator',
-        host: 'test-host',
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'name' },
-          { localContext: 'name', target: 'Alice' }
-        ]
-      });
+      const aliceDelta = createDelta('test-creator', 'test-host')
+        .addPointer('users', 'alice', 'name')
+        .addPointer('name', 'Alice')
+        .buildV1();
 
-      const bobDelta = new Delta({
-        creator: 'test-creator',
-        host: 'test-host',
-        pointers: [
-          { localContext: 'users', target: 'bob', targetContext: 'name' },
-          { localContext: 'name', target: 'Bob' }
-        ]
-      });
+      const bobDelta = createDelta('test-creator', 'test-host')
+        .addPointer('users', 'bob', 'name')
+        .addPointer('name', 'Bob')
+        .buildV1();
 
       // Create friendship relationship
-      const friendshipDelta = new Delta({
-        creator: 'test-creator',
-        host: 'test-host',
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friend', target: 'bob', targetContext: 'friends' }
-        ]
-      });
+      const friendshipDelta = createDelta('test-creator', 'test-host')
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friend', 'bob', 'friends')
+        .buildV1();
 
       [aliceDelta, bobDelta, friendshipDelta].forEach(d => node.lossless.ingestDelta(d));
 
@@ -171,14 +147,10 @@ describe('Lossless View Compose/Decompose', () => {
     });
 
     it('should preserve delta metadata correctly', () => {
-      const originalDelta = new Delta({
-        creator: 'test-creator',
-        host: 'test-host',
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'name' },
-          { localContext: 'name', target: 'Alice' }
-        ]
-      });
+      const originalDelta = createDelta('test-creator', 'test-host')
+        .addPointer('users', 'alice', 'name')
+        .addPointer('name', 'Alice')
+        .buildV1();
 
       node.lossless.ingestDelta(originalDelta);
 
@@ -198,30 +170,18 @@ describe('Lossless View Compose/Decompose', () => {
     it('should handle multiple deltas for the same property', () => {
       // Create multiple name changes for alice
       const nameDeltas = [
-        new Delta({
-          creator: 'test-creator',
-          host: 'test-host',
-          pointers: [
-            { localContext: 'users', target: 'alice', targetContext: 'name' },
-            { localContext: 'name', target: 'Alice' }
-          ]
-        }),
-        new Delta({
-          creator: 'test-creator',
-          host: 'test-host',
-          pointers: [
-            { localContext: 'users', target: 'alice', targetContext: 'name' },
-            { localContext: 'name', target: 'Alice Smith' }
-          ]
-        }),
-        new Delta({
-          creator: 'test-creator',
-          host: 'test-host',
-          pointers: [
-            { localContext: 'users', target: 'alice', targetContext: 'name' },
-            { localContext: 'name', target: 'Alice Johnson' }
-          ]
-        })
+        createDelta('test-creator', 'test-host')
+          .addPointer('users', 'alice', 'name')
+          .addPointer('name', 'Alice')
+          .buildV1(),
+        createDelta('test-creator', 'test-host')
+          .addPointer('users', 'alice', 'name')
+          .addPointer('name', 'Alice Smith')
+          .buildV1(),
+        createDelta('test-creator', 'test-host')
+          .addPointer('users', 'alice', 'name')
+          .addPointer('name', 'Alice Johnson')
+          .buildV1()
       ];
 
       nameDeltas.forEach(d => node.lossless.ingestDelta(d));

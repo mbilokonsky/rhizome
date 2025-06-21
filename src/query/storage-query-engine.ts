@@ -263,6 +263,8 @@ export class StorageQueryEngine {
         default:
           properties[propertyId] = propDeltas.length;
       }
+
+      debug(`Resolved property ${propertyId}:`, properties[propertyId]);
     }
 
     return properties;
@@ -271,9 +273,9 @@ export class StorageQueryEngine {
   /**
    * Extract primitive value from a delta for a given property
    */
-  private extractPrimitiveValue(delta: Delta, _propertyId: string): unknown {
+  private extractPrimitiveValue(delta: Delta, propertyId: string): unknown {
     for (const pointer of delta.pointers) {
-      if (pointer.localContext === 'value') {
+      if (pointer.localContext === propertyId) {
         return pointer.target;
       }
     }
@@ -281,11 +283,11 @@ export class StorageQueryEngine {
   }
 
   /**
-   * Extract reference value (target ID) from a delta for a given property
+   * Extract reference value from a delta for a given property
    */
-  private extractReferenceValue(delta: Delta, _propertyId: string): string | null {
+  private extractReferenceValue(delta: Delta, propertyId: string): string | null {
     for (const pointer of delta.pointers) {
-      if (pointer.localContext === 'value' && typeof pointer.target === 'string') {
+      if (pointer.localContext === propertyId && typeof pointer.target === 'string') {
         return pointer.target;
       }
     }

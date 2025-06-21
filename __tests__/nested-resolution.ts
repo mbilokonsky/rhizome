@@ -10,11 +10,11 @@
  */
 
 import { RhizomeNode } from '../src/node';
-import { Delta } from '../src/core';
 import { DefaultSchemaRegistry } from '../src/schema';
 import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas } from '../src/schema';
 import { CommonSchemas } from '../util/schemas';
 import { TypedCollectionImpl } from '../src/collections';
+import { createDelta } from '../src/core/delta-builder';
 
 describe('Nested Object Resolution', () => {
   let node: RhizomeNode;
@@ -55,14 +55,10 @@ describe('Nested Object Resolution', () => {
       });
       
       // Create friendship relationship
-      const friendshipDelta = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friends', target: 'bob' }
-        ]
-      });
+      const friendshipDelta = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friends', 'bob')
+        .buildV1();
       node.lossless.ingestDelta(friendshipDelta);
 
       // Get Alice's lossless view
@@ -107,14 +103,10 @@ describe('Nested Object Resolution', () => {
       // Create user with reference to non-existent friend
       await userCollection.put('alice', { name: 'Alice' });
       
-      const friendshipDelta = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friends', target: 'nonexistent' }
-        ]
-      });
+      const friendshipDelta = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friends', 'nonexistent')
+        .buildV1();
       node.lossless.ingestDelta(friendshipDelta);
 
       const aliceViews = node.lossless.view(['alice']);
@@ -162,25 +154,17 @@ describe('Nested Object Resolution', () => {
       await userCollection.put('charlie', { name: 'Charlie' });
 
       // Alice's mentor is Bob
-      const mentorshipDelta1 = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'deep-users', target: 'alice', targetContext: 'mentor' },
-          { localContext: 'mentor', target: 'bob' }
-        ]
-      });
+      const mentorshipDelta1 = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('deep-users', 'alice', 'mentor')
+        .addPointer('mentor', 'bob')
+        .buildV1();
       node.lossless.ingestDelta(mentorshipDelta1);
 
       // Bob's mentor is Charlie
-      const mentorshipDelta2 = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'deep-users', target: 'bob', targetContext: 'mentor' },
-          { localContext: 'mentor', target: 'charlie' }
-        ]
-      });
+      const mentorshipDelta2 = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('deep-users', 'bob', 'mentor')
+        .addPointer('mentor', 'charlie')
+        .buildV1();
       node.lossless.ingestDelta(mentorshipDelta2);
 
       const aliceViews = node.lossless.view(['alice']);
@@ -246,24 +230,16 @@ describe('Nested Object Resolution', () => {
       await userCollection.put('bob', { name: 'Bob' });
 
       // Create circular friendship: Alice -> Bob -> Alice
-      const friendship1 = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friends', target: 'bob' }
-        ]
-      });
+      const friendship1 = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friends', 'bob')
+        .buildV1();
       node.lossless.ingestDelta(friendship1);
 
-      const friendship2 = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'bob', targetContext: 'friends' },
-          { localContext: 'friends', target: 'alice' }
-        ]
-      });
+      const friendship2 = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'bob', 'friends')
+        .addPointer('friends', 'alice')
+        .buildV1();
       node.lossless.ingestDelta(friendship2);
 
       const aliceViews = node.lossless.view(['alice']);
@@ -295,14 +271,10 @@ describe('Nested Object Resolution', () => {
       await userCollection.put('alice', { name: 'Alice' });
 
       // Alice is friends with herself
-      const selfFriendship = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friends', target: 'alice' }
-        ]
-      });
+      const selfFriendship = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friends', 'alice')
+        .buildV1();
       node.lossless.ingestDelta(selfFriendship);
 
       const aliceViews = node.lossless.view(['alice']);
@@ -335,24 +307,16 @@ describe('Nested Object Resolution', () => {
       await userCollection.put('charlie', { name: 'Charlie' });
 
       // Alice has multiple friends
-      const friendship1 = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friends', target: 'bob' }
-        ]
-      });
+      const friendship1 = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friends', 'bob')
+        .buildV1();
       node.lossless.ingestDelta(friendship1);
 
-      const friendship2 = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friends', target: 'charlie' }
-        ]
-      });
+      const friendship2 = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friends', 'charlie')
+        .buildV1();
       node.lossless.ingestDelta(friendship2);
 
       const aliceViews = node.lossless.view(['alice']);
@@ -405,14 +369,10 @@ describe('Nested Object Resolution', () => {
       });
 
       // Create friendship
-      const friendship = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'alice', targetContext: 'friends' },
-          { localContext: 'friends', target: 'bob' }
-        ]
-      });
+      const friendship = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'alice', 'friends')
+        .addPointer('friends', 'bob')
+        .buildV1();
       node.lossless.ingestDelta(friendship);
 
       const aliceViews = node.lossless.view(['alice']);

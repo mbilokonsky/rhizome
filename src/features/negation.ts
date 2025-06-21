@@ -1,19 +1,15 @@
 import Debug from 'debug';
 import { Delta, DeltaID } from '../core/delta';
+import { createDelta } from '../core/delta-builder';
 import { CreatorID, HostID } from '../core/types';
 
 const debug = Debug('rz:negation');
 
 // Negation-specific types
 export interface NegationPointer {
-  localContext: 'negates';
+  localContext: '_negates';
   target: DeltaID;
   targetContext: 'negated_by';
-}
-
-export interface NegationDelta extends Delta {
-  isNegation: true;
-  negatedDeltaId: DeltaID;
 }
 
 // Helper functions for creating and identifying negation deltas
@@ -26,19 +22,10 @@ export class NegationHelper {
     deltaToNegate: DeltaID,
     creator: CreatorID,
     host: HostID
-  ): NegationDelta {
-    const negationDelta = new Delta({
-      creator,
-      host,
-      pointers: [{
-        localContext: 'negates',
-        target: deltaToNegate,
-        targetContext: 'negated_by'
-      }]
-    }) as NegationDelta;
-
-    negationDelta.isNegation = true;
-    negationDelta.negatedDeltaId = deltaToNegate;
+  ): Delta {
+    const negationDelta = createDelta(creator, host)
+      .negate(deltaToNegate)
+      .buildV1();
 
     debug(`Created negation delta ${negationDelta.id} negating ${deltaToNegate}`);
     return negationDelta;
@@ -47,9 +34,9 @@ export class NegationHelper {
   /**
    * Check if a delta is a negation delta
    */
-  static isNegationDelta(delta: Delta): delta is NegationDelta {
+  static isNegationDelta(delta: Delta): boolean {
     return delta.pointers.some(pointer => 
-      pointer.localContext === 'negates' && 
+      pointer.localContext === '_negates' && 
       pointer.targetContext === 'negated_by'
     );
   }
@@ -59,7 +46,7 @@ export class NegationHelper {
    */
   static getNegatedDeltaId(negationDelta: Delta): DeltaID | null {
     const negationPointer = negationDelta.pointers.find(pointer =>
-      pointer.localContext === 'negates' && 
+      pointer.localContext === '_negates' && 
       pointer.targetContext === 'negated_by'
     );
 
@@ -73,10 +60,10 @@ export class NegationHelper {
   /**
    * Find all negation deltas that negate a specific delta
    */
-  static findNegationsFor(targetDeltaId: DeltaID, deltas: Delta[]): NegationDelta[] {
+  static findNegationsFor(targetDeltaId: DeltaID, deltas: Delta[]): Delta[] {
     return deltas
       .filter(delta => this.isNegationDelta(delta))
-      .filter(delta => this.getNegatedDeltaId(delta) === targetDeltaId) as NegationDelta[];
+      .filter(delta => this.getNegatedDeltaId(delta) === targetDeltaId);
   }
 
   /**
@@ -152,7 +139,7 @@ export class NegationHelper {
     // Create a map of delta ID to its negation status
     const deltaStatus = new Map<DeltaID, boolean>();
     // Create a map of delta ID to its negation deltas
-    const deltaToNegations = new Map<DeltaID, NegationDelta[]>();
+    const deltaToNegations = new Map<DeltaID, Delta[]>();
     
     // First pass: collect all deltas and their negations
     for (const delta of deltas) {

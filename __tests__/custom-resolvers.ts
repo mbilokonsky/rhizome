@@ -11,7 +11,8 @@ import {
   MinPlugin,
   MaxPlugin,
   PropertyTypes,
-  CollapsedDelta
+  CollapsedDelta,
+  createDelta
 } from "../src";
 
 describe('Custom Resolvers', () => {
@@ -25,33 +26,21 @@ describe('Custom Resolvers', () => {
 
   describe('Built-in Plugins', () => {
     test('LastWriteWinsPlugin should resolve to most recent value', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'first'
-        }]
-      }));
+      // First delta with earlier timestamp
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'name', 'first', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'second'
-        }]
-      }));
+      // Second delta with later timestamp (should win)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'name', 'second', 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         name: new LastWriteWinsPlugin()
@@ -63,33 +52,21 @@ describe('Custom Resolvers', () => {
     });
 
     test('FirstWriteWinsPlugin should resolve to earliest value', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'second'
-        }]
-      }));
+      // Later delta (should be ignored by FirstWriteWins)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'name', 'second', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'first'
-        }]
-      }));
+      // Earlier delta (should win with FirstWriteWins)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'name', 'first', 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         name: new FirstWriteWinsPlugin()
@@ -101,47 +78,29 @@ describe('Custom Resolvers', () => {
     });
 
     test('ConcatenationPlugin should join string values chronologically', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "tags"
-        }, {
-          localContext: "tags",
-          target: 'red'
-        }]
-      }));
+      // First tag
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'tags', 'red', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 3000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "tags"
-        }, {
-          localContext: "tags",
-          target: 'blue'
-        }]
-      }));
+      // Second tag (with later timestamp)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(3000)
+          .setProperty('entity1', 'tags', 'blue', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "tags"
-        }, {
-          localContext: "tags",
-          target: 'green'
-        }]
-      }));
+      // Third tag (with timestamp between first and second)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'tags', 'green', 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         tags: new ConcatenationPlugin(' ')
@@ -153,33 +112,21 @@ describe('Custom Resolvers', () => {
     });
 
     test('ConcatenationPlugin should handle duplicates', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "tags"
-        }, {
-          localContext: "tags",
-          target: 'red'
-        }]
-      }));
+      // First tag
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'tags', 'red', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "tags"
-        }, {
-          localContext: "tags",
-          target: 'red' // duplicate
-        }]
-      }));
+      // Duplicate tag with later timestamp
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'tags', 'red', 'collection') // duplicate
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         tags: new ConcatenationPlugin(',')
@@ -192,76 +139,41 @@ describe('Custom Resolvers', () => {
 
     test('MajorityVotePlugin should resolve to most voted value', () => {
       // Add 3 votes for 'red'
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "color"
-        }, {
-          localContext: "color",
-          target: 'red'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'color', 'red', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user2',
-        host: 'host1',
-        timeCreated: 1001,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "color"
-        }, {
-          localContext: "color",
-          target: 'red'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user2', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'color', 'red', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user3',
-        host: 'host1',
-        timeCreated: 1002,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "color"
-        }, {
-          localContext: "color",
-          target: 'red'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user3', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'color', 'red', 'collection')
+          .buildV1()
+      );
 
       // Add 2 votes for 'blue'
-      lossless.ingestDelta(new Delta({
-        creator: 'user4',
-        host: 'host1',
-        timeCreated: 1003,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "color"
-        }, {
-          localContext: "color",
-          target: 'blue'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user4', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'color', 'blue', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user5',
-        host: 'host1',
-        timeCreated: 1004,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "color"
-        }, {
-          localContext: "color",
-          target: 'blue'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user5', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'color', 'blue', 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         color: new MajorityVotePlugin()
@@ -273,47 +185,29 @@ describe('Custom Resolvers', () => {
     });
 
     test('MinPlugin should resolve to minimum numeric value', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      // First score (100)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'score', 100, 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 50
-        }]
-      }));
+      // Second score (50) - this is the minimum
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'score', 50, 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 3000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 75
-        }]
-      }));
+      // Third score (75)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(3000)
+          .setProperty('entity1', 'score', 75, 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         score: new MinPlugin()
@@ -325,47 +219,29 @@ describe('Custom Resolvers', () => {
     });
 
     test('MaxPlugin should resolve to maximum numeric value', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      // First score (100)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'score', 100, 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 150
-        }]
-      }));
+      // Second score (150) - this is the maximum
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'score', 150, 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 3000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 75
-        }]
-      }));
+      // Third score (75)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(3000)
+          .setProperty('entity1', 'score', 75, 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         score: new MaxPlugin()
@@ -380,62 +256,36 @@ describe('Custom Resolvers', () => {
   describe('Mixed Plugin Configurations', () => {
     test('should handle different plugins for different properties', () => {
       // Add name with different timestamps
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'old_name'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'name', 'old_name', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'new_name'
-        }]
-      }));
+      // Update name with newer timestamp
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'name', 'new_name', 'collection')
+          .buildV1()
+      );
 
       // Add scores
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'score', 100, 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 50
-        }]
-      }));
+      // Add another score (MinPlugin will pick the smaller one)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'score', 50, 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         name: new LastWriteWinsPlugin(), // Should resolve to 'new_name'
@@ -450,34 +300,20 @@ describe('Custom Resolvers', () => {
 
     test('should only include entities with configured properties', () => {
       // Entity1 has configured property
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'test'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'name', 'test', 'collection')
+          .buildV1()
+      );
 
       // Entity2 has non-configured property
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity2",
-          targetContext: "other"
-        }, {
-          localContext: "other",
-          target: 'value'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity2', 'other_prop', 'value', 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         name: new LastWriteWinsPlugin()
@@ -510,47 +346,29 @@ describe('Custom Resolvers', () => {
         }
       }
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "updates"
-        }, {
-          localContext: "updates",
-          target: 'first'
-        }]
-      }));
+      // First update
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'updates', 'first', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "updates"
-        }, {
-          localContext: "updates",
-          target: 'second'
-        }]
-      }));
+      // Second update
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'updates', 'second', 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 3000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "updates"
-        }, {
-          localContext: "updates",
-          target: 'third'
-        }]
-      }));
+      // Third update
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(3000)
+          .setProperty('entity1', 'updates', 'third', 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         updates: new CountPlugin()
@@ -585,47 +403,29 @@ describe('Custom Resolvers', () => {
         }
       }
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      // First score (10)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'score', 10, 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      // Second score (20)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty('entity1', 'score', 20, 'collection')
+          .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 3000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 30
-        }]
-      }));
+      // Third score (30)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(3000)
+          .setProperty('entity1', 'score', 30, 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         score: new RunningAveragePlugin()
@@ -650,19 +450,12 @@ describe('Custom Resolvers', () => {
 
     test('should handle non-matching property types gracefully', () => {
       // Add string value to numeric plugin
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 'not_a_number'
-        }]
-      }));
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('entity1', 'score', 'not_a_number', 'collection')
+          .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         score: new MinPlugin() // Expects numeric values

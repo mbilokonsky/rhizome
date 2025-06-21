@@ -1,4 +1,5 @@
 import Debug from "debug";
+import { createDelta } from '../src/core/delta-builder';
 import {Delta, LastWriteWins, Lossless, RhizomeNode} from "../src";
 const debug = Debug('test:last-write-wins');
 
@@ -11,31 +12,15 @@ describe('Last write wins', () => {
     const lossy = new LastWriteWins(lossless);
 
     beforeAll(() => {
-      lossless.ingestDelta(new Delta({
-        creator: 'a',
-        host: 'h',
-        pointers: [{
-          localContext: "vegetable",
-          target: "broccoli",
-          targetContext: "want"
-        }, {
-          localContext: "desire",
-          target: 95,
-        }]
-      }));
+      lossless.ingestDelta(createDelta('a', 'h')
+        .setProperty('broccoli', 'want', 95, 'vegetable')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'a',
-        host: 'h',
-        pointers: [{
-          localContext: "vegetable",
-          target: "broccoli",
-          targetContext: "want"
-        }, {
-          localContext: "want",
-          target: 90,
-        }]
-      }));
+      lossless.ingestDelta(createDelta('a', 'h')
+        .setProperty('broccoli', 'want', 90, 'vegetable')
+        .buildV1()
+      );
     });
 
     it('our resolver should return the most recently written value', () => {

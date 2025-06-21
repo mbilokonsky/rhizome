@@ -1,7 +1,6 @@
 import {
   RhizomeNode,
   Lossless,
-  Delta,
   AggregationResolver,
   MinResolver,
   MaxResolver,
@@ -10,6 +9,8 @@ import {
   CountResolver,
   AggregationType
 } from "../src";
+import { createDelta } from "../src/core/delta-builder";
+import { Delta } from "../src/core/delta";
 
 describe('Aggregation Resolvers', () => {
   let node: RhizomeNode;
@@ -23,46 +24,22 @@ describe('Aggregation Resolvers', () => {
   describe('Basic Aggregation', () => {
     test('should aggregate numbers using min resolver', () => {
       // Add first entity with score 10
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'score', 10, 'collection')
+        .buildV1()
+      );
 
       // Add second entity with score 5
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity2", 
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 5
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity2', 'score', 5, 'collection')
+        .buildV1()
+      );
 
       // Add third entity with score 15
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity3",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 15
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity3', 'score', 15, 'collection')
+        .buildV1()
+      );
 
       const minResolver = new MinResolver(lossless, ['score']);
       const result = minResolver.resolve();
@@ -76,44 +53,20 @@ describe('Aggregation Resolvers', () => {
 
     test('should aggregate numbers using max resolver', () => {
       // Add deltas for entities
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'score', 10, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity2",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 5
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity2', 'score', 5, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity3",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 15
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity3', 'score', 15, 'collection')
+        .buildV1()
+      );
 
       const maxResolver = new MaxResolver(lossless, ['score']);
       const result = maxResolver.resolve();
@@ -126,46 +79,22 @@ describe('Aggregation Resolvers', () => {
 
     test('should aggregate numbers using sum resolver', () => {
       // Add first value for entity1
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'value', 10, 'collection')
+        .buildV1()
+      );
 
       // Add second value for entity1 (should sum)
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'value', 20, 'collection')
+        .buildV1()
+      );
 
       // Add value for entity2
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity2",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 5
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity2', 'value', 5, 'collection')
+        .buildV1()
+      );
 
       const sumResolver = new SumResolver(lossless, ['value']);
       const result = sumResolver.resolve();
@@ -176,46 +105,22 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should aggregate numbers using average resolver', () => {
-      // Add multiple values for entity1
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      // Add multiple scores for entity1
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'score', 10, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'score', 20, 'collection')
+        .buildV1()
+      );
 
       // Single value for entity2
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity2",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 30
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity2', 'score', 30, 'collection')
+        .buildV1()
+      );
 
       const avgResolver = new AverageResolver(lossless, ['score']);
       const result = avgResolver.resolve();
@@ -227,45 +132,21 @@ describe('Aggregation Resolvers', () => {
 
     test('should count values using count resolver', () => {
       // Add multiple visit deltas for entity1
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "visits"
-        }, {
-          localContext: "visits",
-          target: 1
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'visits', 1, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "visits"
-        }, {
-          localContext: "visits",
-          target: 1
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'visits', 1, 'collection')
+        .buildV1()
+      );
 
       // Single visit for entity2
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity2",
-          targetContext: "visits"
-        }, {
-          localContext: "visits",
-          target: 1
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity2', 'visits', 1, 'collection')
+        .buildV1()
+      );
 
       const countResolver = new CountResolver(lossless, ['visits']);
       const result = countResolver.resolve();
@@ -279,84 +160,36 @@ describe('Aggregation Resolvers', () => {
   describe('Custom Aggregation Configuration', () => {
     test('should handle mixed aggregation types', () => {
       // Add first set of values
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "min_val"
-        }, {
-          localContext: "min_val",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'min_val', 10, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "max_val"
-        }, {
-          localContext: "max_val",
-          target: 5
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'max_val', 5, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "sum_val"
-        }, {
-          localContext: "sum_val",
-          target: 3
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'sum_val', 3, 'collection')
+        .buildV1()
+      );
 
       // Add second set of values
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "min_val"
-        }, {
-          localContext: "min_val",
-          target: 5
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'min_val', 5, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "max_val"
-        }, {
-          localContext: "max_val",
-          target: 15
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'max_val', 15, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "sum_val"
-        }, {
-          localContext: "sum_val",
-          target: 7
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'sum_val', 7, 'collection')
+        .buildV1()
+      );
 
       const resolver = new AggregationResolver(lossless, {
         min_val: 'min' as AggregationType,
@@ -375,46 +208,22 @@ describe('Aggregation Resolvers', () => {
 
     test('should ignore non-numeric values', () => {
       // Add numeric value
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'score', 10, 'collection')
+        .buildV1()
+      );
 
       // Add non-numeric value (string)
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'test'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'name', 'test', 'collection')
+        .buildV1()
+      );
 
       // Add another numeric value
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'score', 20, 'collection')
+        .buildV1()
+      );
 
       const sumResolver = new SumResolver(lossless, ['score', 'name']);
       const result = sumResolver.resolve();
@@ -427,18 +236,10 @@ describe('Aggregation Resolvers', () => {
 
     test('should handle empty value arrays', () => {
       // Create entity with non-aggregated property
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'test'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'name', 'test', 'collection')
+        .buildV1()
+      );
 
       const sumResolver = new SumResolver(lossless, ['score']);
       const result = sumResolver.resolve();
@@ -451,18 +252,10 @@ describe('Aggregation Resolvers', () => {
 
   describe('Edge Cases', () => {
     test('should handle single value aggregations', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 42
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'value', 42, 'collection')
+        .buildV1()
+      );
 
       const avgResolver = new AverageResolver(lossless, ['value']);
       const result = avgResolver.resolve();
@@ -472,31 +265,15 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle zero values', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 0
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'value', 0, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'value', 10, 'collection')
+        .buildV1()
+      );
 
       const sumResolver = new SumResolver(lossless, ['value']);
       const result = sumResolver.resolve();
@@ -506,31 +283,15 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle negative values', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: -5
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'value', -5, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'test',
-        host: 'host1',
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('test', 'host1')
+        .setProperty('entity1', 'value', 10, 'collection')
+        .buildV1()
+      );
 
       const minResolver = new MinResolver(lossless, ['value']);
       const result = minResolver.resolve();

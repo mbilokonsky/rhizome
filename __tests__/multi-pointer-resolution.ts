@@ -5,7 +5,7 @@
  */
 
 import { RhizomeNode } from '../src/node';
-import { Delta } from '../src/core';
+import { createDelta } from '../src/core/delta-builder';
 import { DefaultSchemaRegistry } from '../src/schema';
 import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, SchemaAppliedViewWithNesting } from '../src/schema';
 import { TypedCollectionImpl } from '../src/collections';
@@ -76,17 +76,13 @@ describe('Multi-Pointer Delta Resolution', () => {
       await roleCollection.put('neo', { name: 'Neo' });
 
       // Create a complex casting delta with multiple entity references and scalar values
-      const castingDelta = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'actors', target: 'keanu', targetContext: 'filmography' },
-          { localContext: 'movies', target: 'matrix', targetContext: 'cast' },
-          { localContext: 'roles', target: 'neo', targetContext: 'portrayals' },
-          { localContext: 'salary', target: 15000000 },
-          { localContext: 'contract_date', target: '1999-03-31' }
-        ]
-      });
+      const castingDelta = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('actors', 'keanu', 'filmography')
+        .addPointer('movies', 'matrix', 'cast')
+        .addPointer('roles', 'neo', 'portrayals')
+        .addPointer('salary', 15000000)
+        .addPointer('contract_date', '1999-03-31')
+        .buildV1();
       node.lossless.ingestDelta(castingDelta);
 
       // Test from Keanu's perspective
@@ -164,17 +160,13 @@ describe('Multi-Pointer Delta Resolution', () => {
       await personCollection.put('bob', { name: 'Bob' });
 
       // Create a relationship delta with one entity reference and multiple scalars
-      const relationshipDelta = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'people', target: 'alice', targetContext: 'relationships' },
-          { localContext: 'partner', target: 'bob' }, // Entity reference
-          { localContext: 'type', target: 'friendship' }, // Scalar
-          { localContext: 'since', target: '2020-01-15' }, // Scalar
-          { localContext: 'intensity', target: 8 } // Scalar number
-        ]
-      });
+      const relationshipDelta = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('people', 'alice', 'relationships')
+        .addPointer('partner', 'bob')
+        .addPointer('type', 'friendship')
+        .addPointer('since', '2020-01-15')
+        .addPointer('intensity', 8)
+        .buildV1();
       node.lossless.ingestDelta(relationshipDelta);
 
       // Test from Alice's perspective
@@ -243,17 +235,13 @@ describe('Multi-Pointer Delta Resolution', () => {
       await designerCollection.put('bob', { name: 'Bob Designer' });
 
       // Create a collaboration delta with multiple entity references
-      const collaborationDelta = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'projects', target: 'website', targetContext: 'collaborations' },
-          { localContext: 'developer', target: 'alice' }, // Entity reference
-          { localContext: 'designer', target: 'bob' },   // Entity reference  
-          { localContext: 'budget', target: 50000 },     // Scalar
-          { localContext: 'deadline', target: '2024-06-01' } // Scalar
-        ]
-      });
+      const collaborationDelta = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('projects', 'website', 'collaborations')
+        .addPointer('developer', 'alice')
+        .addPointer('designer', 'bob')
+        .addPointer('budget', 50000)
+        .addPointer('deadline', '2024-06-01')
+        .buildV1();
       node.lossless.ingestDelta(collaborationDelta);
 
       // Test from project's perspective

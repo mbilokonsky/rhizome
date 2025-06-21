@@ -2,6 +2,7 @@ import Debug from 'debug';
 import {randomUUID} from "node:crypto";
 import EventEmitter from "node:events";
 import {Delta} from "../core/delta";
+import {createDelta} from "../core/delta-builder";
 import {Entity, EntityProperties} from "../core/entity";
 import {ResolvedViewOne} from '../views/resolvers/last-write-wins';
 import {RhizomeNode} from "../node";
@@ -72,18 +73,11 @@ export abstract class Collection<View> {
       if (key === 'id') return;
 
       if (oldProperties[key] !== value && host && creator) {
-        deltas.push(new Delta({
-          creator,
-          host,
-          pointers: [{
-            localContext: this.name,
-            target: entityId,
-            targetContext: key
-          }, {
-            localContext: key,
-            target: value
-          }]
-        }));
+        deltas.push(
+          createDelta(creator, host)
+            .setProperty(entityId, key, value, this.name)
+            .buildV1()
+        );
       }
     });
 
@@ -91,18 +85,10 @@ export abstract class Collection<View> {
 
     if (deltas.length > 1) {
       // We can generate a separate delta describing this transaction
-      transactionDelta = new Delta({
-        creator,
-        host,
-        pointers: [{
-          localContext: "_transaction",
-          target: transactionId,
-          targetContext: "size"
-        }, {
-          localContext: "size",
-          target: deltas.length
-        }]
-      });
+      transactionDelta = createDelta(creator, host)
+        .addPointer('_transaction', transactionId, 'size')
+        .addPointer('size', deltas.length)
+        .buildV1();
 
       // Also need to annotate the deltas with the transactionId
       for (const delta of deltas) {

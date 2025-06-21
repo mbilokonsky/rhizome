@@ -10,7 +10,7 @@ import { DefaultSchemaRegistry } from '../src/schema';
 import { CommonSchemas } from '../util/schemas';
 import { TypedCollectionImpl, SchemaValidationError } from '../src/collections';
 import { RhizomeNode } from '../src/node';
-import { Delta } from '../src/core';
+import { createDelta } from '../src/core/delta-builder';
 
 describe('Schema System', () => {
   let schemaRegistry: DefaultSchemaRegistry;
@@ -20,8 +20,10 @@ describe('Schema System', () => {
     schemaRegistry = new DefaultSchemaRegistry();
     node = new RhizomeNode();
   });
+  
 
   describe('Schema Builder', () => {
+
     it('should create a basic schema', () => {
       const schema = SchemaBuilder
         .create('user')
@@ -308,14 +310,10 @@ describe('Schema System', () => {
       await collection.put('user2', { name: 'Bob' });
 
       // Manually create an invalid entity by bypassing validation
-      const invalidDelta = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'user3', targetContext: 'email' },
-          { localContext: 'email', target: 'invalid@test.com' }
-        ]
-      });
+      const invalidDelta = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'user3', 'email')
+        .addPointer('email', 'invalid@test.com')
+        .buildV1();
       node.lossless.ingestDelta(invalidDelta);
 
       const stats = collection.getValidationStats();
@@ -337,14 +335,10 @@ describe('Schema System', () => {
       await collection.put('user2', { name: 'Bob' });
 
       // Create invalid entity manually
-      const invalidDelta = new Delta({
-        creator: node.config.creator,
-        host: node.config.peerId,
-        pointers: [
-          { localContext: 'users', target: 'user3', targetContext: 'age' },
-          { localContext: 'age', target: 'not-a-number' }
-        ]
-      });
+      const invalidDelta = createDelta(node.config.creator, node.config.peerId)
+        .addPointer('users', 'user3', 'age')
+        .addPointer('age', 'not-a-number')
+        .buildV1();
       node.lossless.ingestDelta(invalidDelta);
 
       const validIds = collection.getValidEntities();

@@ -30,7 +30,7 @@ interface ExtendedNodeStatus extends Omit<NodeStatus, 'network'> {
 // Set default timeout for all tests to 5 minutes
 jest.setTimeout(300000);
 
-describe('Docker Orchestrator V2', () => {
+describe('Docker Orchestrator', () => {
   let docker: Docker;
   let orchestrator: DockerOrchestrator;
   let node: NodeHandle | null = null;
@@ -43,27 +43,31 @@ describe('Docker Orchestrator V2', () => {
   beforeAll(async () => {
     debug('Setting up Docker client and orchestrator...');
     
-    // Initialize Docker client
-    docker = new Docker();
+    // Initialize Docker client with increased timeout
+    docker = new Docker({
+      timeout: 60000, // 60 second timeout for Docker operations
+    });
     
     // Verify Docker is running
     try {
       await docker.ping();
       debug('Docker daemon is responding');
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       debug('Docker daemon is not responding: %o', error);
-      throw error;
+      throw new Error(`Docker daemon is not running or not accessible: ${errorMessage}`);
     }
     
     // Initialize the orchestrator with the Docker client and test image
     orchestrator = createOrchestrator('docker') as DockerOrchestrator;
     debug('Docker orchestrator initialized');
     
-    // Create a basic node config for testing
+    // Create a basic node config for testing with unique network ID
+    const testRunId = `test-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     nodePort = 3000 + Math.floor(Math.random() * 1000);
     nodeConfig = {
-      id: `test-node-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      networkId: 'test-network',
+      id: `node-${testRunId}`,
+      networkId: `test-network-${testRunId}`,
       port: nodePort,
       resources: {
         memory: 256, // 256MB
@@ -79,85 +83,8 @@ describe('Docker Orchestrator V2', () => {
 
   afterAll(async () => {
     debug('Starting test cleanup...');
-    const cleanupPromises: Promise<unknown>[] = [];
-    
-    // Helper function to clean up a node with retries
-    const cleanupNode = async (nodeToClean: NodeHandle | null, nodeName: string) => {
-      if (!nodeToClean) return;
-      
-      debug(`[${nodeName}] Starting cleanup for node ${nodeToClean.id}...`);
-      try {
-        // First try the normal stop
-        await orchestrator.stopNode(nodeToClean).catch(error => {
-          debug(`[${nodeName}] Warning stopping node normally: %s`, error.message);
-          throw error; // Will be caught by outer catch
-        });
-        debug(`[${nodeName}] Node ${nodeToClean.id} stopped gracefully`);
-      } catch (error) {
-        debug(`[${nodeName}] Error stopping node ${nodeToClean.id}: %o`, error);
-        
-        // If normal stop fails, try force cleanup
-        try {
-          debug(`[${nodeName}] Attempting force cleanup for node ${nodeToClean.id}...`);
-          const container = orchestrator.docker.getContainer(`rhizome-${nodeToClean.id}`);
-          await container.stop({ t: 1 }).catch(() => {
-            debug(`[${nodeName}] Container stop timed out, forcing removal...`);
-          });
-          await container.remove({ force: true });
-          debug(`[${nodeName}] Node ${nodeToClean.id} force-removed`);
-        } catch (forceError) {
-          debug(`[${nodeName}] Force cleanup failed for node ${nodeToClean.id}: %o`, forceError);
-        }
-      }
-    };
-    
-    // Clean up all created nodes
-    if (node) {
-      cleanupPromises.push(cleanupNode(node, 'node1'));
-    }
-    
-    if (node2) {
-      cleanupPromises.push(cleanupNode(node2, 'node2'));
-    }
 
-    // Wait for all node cleanups to complete before cleaning up networks
-    if (cleanupPromises.length > 0) {
-      debug('Waiting for node cleanups to complete...');
-      await Promise.race([
-        Promise.all(cleanupPromises),
-        new Promise(resolve => setTimeout(() => {
-          debug('Node cleanup timed out, proceeding with network cleanup...');
-          resolve(null);
-        }, 30000)) // 30s timeout for node cleanup
-      ]);
-    }
-    
-    // Clean up any dangling networks using NetworkManager
-    try {
-      debug('Cleaning up networks...');
-      // Get the network manager from the orchestrator
-      const networkManager = (orchestrator as any).networkManager;
-      if (!networkManager) {
-        debug('Network manager not available for cleanup');
-        return;
-      }
-      
-      // Get all networks managed by this test
-      const networks = Array.from((orchestrator as any).networks.entries() || []);
-      
-      const cleanupResults = await networkManager.cleanupNetworks((orchestrator as any).networks);
-      
-      // Log any cleanup errors
-      cleanupResults.forEach(({ resource, error }: { resource: string; error: Error }) => {
-        if (error) {
-          debug(`Failed to clean up network ${resource || 'unknown'}: %s`, error.message);
-        } else {
-          debug(`Successfully cleaned up network ${resource || 'unknown'}`);
-        }
-      });
-    } catch (error) {
-      debug('Error during network cleanup: %o', error);
-    }
+    await orchestrator.cleanup();
     
     debug('All test cleanups completed');
   }, 120000); // 2 minute timeout for afterAll
@@ -166,12 +93,19 @@ describe('Docker Orchestrator V2', () => {
     debug('Starting test: should start and stop a node');
     
     // Create a new config with a unique ID for this test
+    const testRunId = `test-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const testNodeConfig = {
       ...nodeConfig,
-      id: `test-node-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: `node-${testRunId}`,
+      networkId: `test-network-${testRunId}`,
       network: {
         ...nodeConfig.network,
         enableHttpApi: true
+      },
+      // Add retry logic for Docker operations
+      docker: {
+        maxRetries: 3,
+        retryDelay: 1000
       }
     };
     
@@ -209,7 +143,7 @@ describe('Docker Orchestrator V2', () => {
         debug('Error during node cleanup: %o', e);
       }
     }
-  }, 30000); // 30 second timeout for this test
+  });
 
   it('should enforce resource limits', async () => {
     debug('Starting test: should enforce resource limits');
