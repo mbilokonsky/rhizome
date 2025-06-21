@@ -146,9 +146,11 @@ describe('DeltaBuilder', () => {
         .buildV1();
 
       // Check for transaction ID in pointers
-      const txPointer = delta.pointers.find(p => p.localContext === '_transaction');
-      expect(txPointer).toBeDefined();
-      expect(txPointer?.target).toBe(txId);
+      expect(delta.pointers).toContainEqual({
+        localContext: '_transaction',
+        target: txId,
+        targetContext: 'deltas'
+      });
     });
 
     it('should support transactions in V2', () => {
@@ -168,7 +170,7 @@ describe('DeltaBuilder', () => {
         .buildV1();
 
       // Check for negation in pointers
-      const negationPointer = delta.pointers.find(p => p.localContext === '_negation');
+      const negationPointer = delta.pointers.find(p => p.localContext === '_negates');
       expect(negationPointer).toBeDefined();
       expect(negationPointer?.target).toBe(negatedId);
     });

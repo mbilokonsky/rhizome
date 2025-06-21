@@ -194,14 +194,9 @@ describe('Nested Object Resolution Performance', () => {
         const currentId = userIds[i];
         const nextId = userIds[i + 1];
         
-        const linkDelta = new Delta({
-          creator: node.config.creator,
-          host: node.config.peerId,
-          pointers: [
-            { localContext: 'users', target: currentId, targetContext: 'next' },
-            { localContext: 'next', target: nextId }
-          ]
-        });
+        const linkDelta = createDelta(node.config.creator, node.config.peerId)
+          .setProperty(currentId, 'next', nextId, 'users')
+          .buildV1();
         node.lossless.ingestDelta(linkDelta);
       }
 
@@ -293,14 +288,10 @@ describe('Nested Object Resolution Performance', () => {
           const connectedIndex = (i + j) % userCount;
           const connectedId = userIds[connectedIndex];
           
-          const connectionDelta = new Delta({
-            creator: node.config.creator,
-            host: node.config.peerId,
-            pointers: [
-              { localContext: 'users', target: userId, targetContext: 'connections' },
-              { localContext: 'connections', target: connectedId }
-            ]
-          });
+          const connectionDelta = createDelta(node.config.creator, node.config.peerId)
+            .addPointer('users', userId, 'connections')
+            .addPointer('connections', connectedId)
+            .buildV1();
           node.lossless.ingestDelta(connectionDelta);
         }
       }

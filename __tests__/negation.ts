@@ -1,6 +1,5 @@
 import Debug from 'debug';
 import { createDelta } from '../src/core/delta-builder';
-import { Delta } from '../src/core';
 import { NegationHelper } from '../src/features';
 import { RhizomeNode } from '../src/node';
 import { Lossless } from '../src/views';
@@ -28,15 +27,14 @@ describe('Negation System', () => {
         'host1'
       );
 
-      expect(negationDelta.isNegation).toBe(true);
-      expect(negationDelta.negatedDeltaId).toBe(originalDelta.id);
       expect(negationDelta.creator).toBe('moderator');
       expect(negationDelta.pointers).toHaveLength(1);
       expect(negationDelta.pointers[0]).toEqual({
-        localContext: 'negates',
+        localContext: '_negates',
         target: originalDelta.id,
         targetContext: 'negated_by'
       });
+      expect(NegationHelper.isNegationDelta(negationDelta)).toBe(true);
     });
 
     it('should identify negation deltas', () => {

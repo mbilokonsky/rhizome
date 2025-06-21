@@ -248,8 +248,7 @@ describe('Lossless', () => {
       losslessT.ingestDelta(
         createDelta('A', 'H')
           .inTransaction(transactionId)
-          .addPointer('step', 'process1', 'status')
-          .addPointer('value', 'started')
+          .setProperty('process1', 'status', 'started', 'step')
           .buildV1()
       );
 
@@ -257,8 +256,7 @@ describe('Lossless', () => {
       losslessT.ingestDelta(
         createDelta('B', 'H')
           .inTransaction(transactionId)
-          .addPointer('step', 'process1', 'status')
-          .addPointer('value', 'processing')
+          .setProperty('process1', 'status', 'processing', 'step')
           .buildV1()
       );
 

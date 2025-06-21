@@ -24,15 +24,13 @@ describe('Transactions', () => {
       // Create first delta in transaction
       const delta1 = createDelta('user1', 'host1')
         .inTransaction(transactionId)
-        .addPointer('name', 'user123', 'name')
-        .addPointer('value', 'Alice')
+        .setProperty('user123', 'name', 'Alice')
         .buildV1();
 
       // Create second delta in transaction
       const delta2 = createDelta('user1', 'host1')
         .inTransaction(transactionId)
-        .addPointer('age', 'user123', 'age')
-        .addPointer('value', 25)
+        .setProperty('user123', 'age', 25)
         .buildV1();
 
       // Ingest transaction declaration and first two deltas
@@ -47,8 +45,7 @@ describe('Transactions', () => {
       // Add the third delta to complete the transaction
       const delta3 = createDelta('user1', 'host1')
         .inTransaction(transactionId)
-        .addPointer('email', 'user123', 'email')
-        .addPointer('value', 'alice@example.com')
+        .setProperty('user123', 'email', 'alice@example.com')
         .buildV1();
 
       lossless.ingestDelta(delta3);
@@ -79,15 +76,13 @@ describe('Transactions', () => {
       // Add deltas for both transactions
       lossless.ingestDelta(createDelta('user1', 'host1')
         .inTransaction(tx1)
-        .addPointer('status', 'order1', 'status')
-        .addPointer('value', 'pending')
+        .setProperty('order1', 'status', 'pending')
         .buildV1()
       );
 
       lossless.ingestDelta(createDelta('user2', 'host2')
         .inTransaction(tx2)
-        .addPointer('status', 'order2', 'status')
-        .addPointer('value', 'shipped')
+        .setProperty('order2', 'status', 'shipped')
         .buildV1()
       );
 
@@ -99,8 +94,7 @@ describe('Transactions', () => {
       // Complete tx1
       lossless.ingestDelta(createDelta('user1', 'host1')
         .inTransaction(tx1)
-        .addPointer('total', 'order1', 'total')
-        .addPointer('value', 100)
+        .setProperty('order1', 'total', 100)
         .buildV1()
       );
 
@@ -114,8 +108,7 @@ describe('Transactions', () => {
       // Complete tx2
       lossless.ingestDelta(createDelta('user2', 'host2')
         .inTransaction(tx2)
-        .addPointer('tracking', 'order2', 'tracking')
-        .addPointer('value', 'TRACK123')
+        .setProperty('order2', 'tracking', 'TRACK123')
         .buildV1()
       );
 
@@ -139,15 +132,13 @@ describe('Transactions', () => {
       // Add both deltas
       lossless.ingestDelta(createDelta('user1', 'host1')
         .inTransaction(transactionId)
-        .addPointer('type', 'doc1', 'type')
-        .addPointer('value', 'report')
+        .setProperty('doc1', 'type', 'report')
         .buildV1()
       );
 
       lossless.ingestDelta(createDelta('user2', 'host2')
         .inTransaction(transactionId)
-        .addPointer('author', 'doc1', 'author')
-        .addPointer('value', 'Bob')
+        .setProperty('doc1', 'author', 'Bob')
         .buildV1()
       );
 
@@ -169,14 +160,13 @@ describe('Transactions', () => {
 
       // Transaction that updates multiple entities atomically
       lossless.ingestDelta(createDelta('system', 'host1')
-        .addPointer('_transaction', transactionId, 'size')
-        .addPointer('size', 3)
+        .declareTransaction(transactionId, 3)
         .buildV1()
       );
 
       // Transfer money from account1 to account2
       lossless.ingestDelta(createDelta('bank', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
+        .inTransaction(transactionId)
         .addPointer('balance', 'account1', 'balance')
         .addPointer('value', 900)
         .addPointer('operation', 'debit')
@@ -184,7 +174,7 @@ describe('Transactions', () => {
       );
 
       lossless.ingestDelta(createDelta('bank', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
+        .inTransaction(transactionId)
         .addPointer('balance', 'account2', 'balance')
         .addPointer('value', 1100)
         .addPointer('operation', 'credit')
@@ -198,7 +188,7 @@ describe('Transactions', () => {
 
       // Complete transaction with audit log
       lossless.ingestDelta(createDelta('bank', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
+        .inTransaction(transactionId)
         .addPointer('transfer', 'transfer123', 'details')
         .addPointer('from', 'account1')
         .addPointer('to', 'account2')
@@ -227,16 +217,14 @@ describe('Transactions', () => {
 
       // Create transaction
       lossless.ingestDelta(createDelta('system', 'host1')
-        .addPointer('_transaction', transactionId, 'size')
-        .addPointer('size', 2)
+        .declareTransaction(transactionId, 2)
         .buildV1()
       );
 
       // Add first delta
       const delta1 = createDelta('user1', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
-        .addPointer('field1', 'entity1', 'field1')
-        .addPointer('value', 'value1')
+        .inTransaction(transactionId)
+        .setProperty('entity1', 'field1', 'value1')
         .buildV1();
       lossless.ingestDelta(delta1);
 
@@ -245,9 +233,8 @@ describe('Transactions', () => {
 
       // Add second delta to complete transaction
       const delta2 = createDelta('user1', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
-        .addPointer('field2', 'entity1', 'field2')
-        .addPointer('value', 'value2')
+        .inTransaction(transactionId)
+        .setProperty('entity1', 'field2', 'value2')
         .buildV1();
       lossless.ingestDelta(delta2);
 
@@ -270,16 +257,14 @@ describe('Transactions', () => {
 
       // Create transaction
       lossless.ingestDelta(createDelta('system', 'host1')
-        .addPointer('_transaction', transactionId, 'size')
-        .addPointer('size', 2)
+        .declareTransaction(transactionId, 2)
         .buildV1()
       );
 
       // Add first delta
       lossless.ingestDelta(createDelta('user1', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
-        .addPointer('status', 'job1', 'status')
-        .addPointer('value', 'processing')
+        .inTransaction(transactionId)
+        .setProperty('job1', 'status', 'processing')
         .buildV1()
       );
 
@@ -294,9 +279,8 @@ describe('Transactions', () => {
 
       // Complete transaction
       lossless.ingestDelta(createDelta('user1', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
-        .addPointer('status', 'job1', 'status')
-        .addPointer('value', 'completed')
+        .inTransaction(transactionId)
+        .setProperty('job1', 'status', 'completed')
         .buildV1()
       );
 
@@ -340,21 +324,20 @@ describe('Transactions', () => {
 
       // Initially declare transaction with size 2
       lossless.ingestDelta(createDelta('system', 'host1')
-        .addPointer('_transaction', transactionId, 'size')
-        .addPointer('size', 2)
+        .declareTransaction(transactionId, 2)
         .buildV1()
       );
 
       // Add 2 deltas
       lossless.ingestDelta(createDelta('user1', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
-        .addPointer('item1', 'cart1', 'items')
+        .inTransaction(transactionId)
+        .setProperty('cart1', 'items', 'item1')
         .buildV1()
       );
 
       lossless.ingestDelta(createDelta('user1', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
-        .addPointer('item2', 'cart1', 'items')
+        .inTransaction(transactionId)
+        .setProperty('cart1', 'items', 'item2')
         .buildV1()
       );
 
@@ -371,9 +354,8 @@ describe('Transactions', () => {
 
       // Add delta with transaction reference but no size declaration
       lossless.ingestDelta(createDelta('user1', 'host1')
-        .addPointer('_transaction', transactionId, 'deltas')
-        .addPointer('data', 'entity1', 'data')
-        .addPointer('value', 'test')
+        .inTransaction(transactionId)
+        .setProperty('entity1', 'data', 'test')
         .buildV1()
       );
 
@@ -386,8 +368,7 @@ describe('Transactions', () => {
 
       // Declare size after the fact
       lossless.ingestDelta(createDelta('system', 'host1')
-        .addPointer('_transaction', transactionId, 'size')
-        .addPointer('size', 1)
+        .declareTransaction(transactionId, 1)
         .buildV1()
       );
 

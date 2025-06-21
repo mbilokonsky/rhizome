@@ -13,9 +13,6 @@ export class DeltaBuilder {
   private host: string;
   private creator: string;
   private pointers: Record<string, any> = {};
-  private transactionId?: string;
-  private isNegation: boolean = false;
-  private negatedDeltaId?: string;
 
   /**
    * Create a new DeltaBuilder instance
@@ -48,7 +45,7 @@ export class DeltaBuilder {
    * Set the transaction ID for this delta
    */
   inTransaction(transactionId: string): this {
-    this.transactionId = transactionId;
+    this.addPointer('_transaction', transactionId, 'deltas');
     return this;
   }
   
@@ -59,8 +56,7 @@ export class DeltaBuilder {
    * @returns 
    */
   declareTransaction(transactionId: string, size: number): this {
-    this.addPointer('_transaction', transactionId, 'size');
-    this.addPointer('size', size)
+    this.setProperty(transactionId, 'size', size, '_transaction');
     return this;
   }
 
@@ -68,15 +64,17 @@ export class DeltaBuilder {
    * Mark this delta as a negation of another delta
    */
   negate(deltaId: string): this {
-    this.isNegation = true;
-    this.negatedDeltaId = deltaId;
+    this.addPointer('_negates', deltaId, 'negated_by');
     return this;
   }
 
   /**
    * Add a pointer to the delta
+   * @param localContext The local context for the pointer
+   * @param target The target value (string, number, boolean, or null)
+   * @param targetContext Optional target context for the pointer
    */
-  addPointer(localContext: string, target: string | number | boolean, targetContext?: string): this {
+  addPointer(localContext: string, target: string | number | boolean | null, targetContext?: string): this {
     if (targetContext && typeof target === 'string') {
       this.pointers[localContext] = { [target]: targetContext };
     } else {
@@ -88,7 +86,7 @@ export class DeltaBuilder {
   /**
    * Set a property on an entity
    */
-  setProperty(entityId: string, property: string, value: string | number | boolean, entityLabel = "entity"): this {
+  setProperty(entityId: string, property: string, value: string | number | boolean | null, entityLabel = "entity"): this {
     this.addPointer(entityLabel, entityId, property)
     this.addPointer(property, value);
     return this;
@@ -110,14 +108,6 @@ export class DeltaBuilder {
     // For V2, we'll store transaction and negation info in the pointers object
     const pointers = { ...this.pointers };
     
-    if (this.transactionId) {
-      pointers['_transaction'] = { [this.transactionId]: 'deltas' };
-    }
-
-    if (this.isNegation && this.negatedDeltaId) {
-      pointers['_negation'] = this.negatedDeltaId;
-    }
-
     // Create the delta with all pointers
     return new DeltaV2({
       id: this.id,

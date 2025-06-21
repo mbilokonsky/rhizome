@@ -124,10 +124,10 @@ export class Lossless {
             // Add negation delta to the entity
             // For negation deltas, we need to add them to a special property
             // since they don't directly target the entity
-            let negationDeltas = ent.properties.get('_negations');
+            let negationDeltas = ent.properties.get('_negates');
             if (!negationDeltas) {
               negationDeltas = new Set<Delta>();
-              ent.properties.set('_negations', negationDeltas);
+              ent.properties.set('_negates', negationDeltas);
             }
             negationDeltas.add(delta);
           }
@@ -363,8 +363,8 @@ export class Lossless {
     }
 
     for (const [property, deltas] of ent.properties.entries()) {
-      // Skip the special _negations property in the per-property stats
-      if (property === '_negations') {
+      // Skip the special _negates property in the per-property stats
+      if (property === '_negates') {
         totalDeltas += deltas.size;
         totalNegationDeltas += deltas.size;
         continue;
@@ -398,7 +398,7 @@ export class Lossless {
     const ent = this.domainEntities.get(entityId);
     if (!ent) return [];
 
-    const negationProperty = ent.properties.get('_negations');
+    const negationProperty = ent.properties.get('_negates');
     if (!negationProperty) return [];
 
     return Array.from(negationProperty);
