@@ -7,8 +7,7 @@
     "build:watch": "tsc --watch",
     "lint": "eslint",
     "test": "jest",
-    "coverage": "./scripts/coverage.sh",
-    "coverage-report": "npm run test -- --coverage --coverageDirectory=coverage",
+    "coverage": "npm run test -- --coverage --coverageDirectory=coverage",
     "example-app": "node dist/examples/app.js",
     "stop-all": "docker ps -a --filter \"name=^/rhizome-node-\" --format {{.Names}} | xargs -r docker stop",
     "build-test-image": "docker build -t rhizome-node-test -f Dockerfile.test ."
