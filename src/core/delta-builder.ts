@@ -134,6 +134,13 @@ export class DeltaBuilder {
   buildV1(): DeltaV1 {
     return this.buildV2().toV1();
   }
+
+  /**
+   * Default to V1 for now
+   */
+  build(): DeltaV1 {
+    return this.buildV1();
+  }
 }
 
 /**

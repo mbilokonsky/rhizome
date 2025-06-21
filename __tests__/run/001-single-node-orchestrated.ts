@@ -9,22 +9,12 @@ describe('Run (Orchestrated)', () => {
   let apiUrl: string;
 
   beforeAll(async () => {
-    console.time('Test setup');
-    console.time('Create config');
     // Configure and start the node
     const config: NodeConfig = {
       id: 'app-001',
     };
-    console.timeEnd('Create config');
-
-    console.time('Start node');
     nodeHandle = await orchestrator.startNode(config);
-    console.timeEnd('Start node');
-
-    console.time('Get API URL');
     apiUrl = nodeHandle.getApiUrl();
-    console.timeEnd('Get API URL');
-    console.timeEnd('Test setup');
   }, 60000); // Increase timeout to 60s for this hook
 
   afterAll(async () => {

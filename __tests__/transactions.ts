@@ -1,4 +1,4 @@
-import { Delta } from '../src/core';
+import { createDelta } from '../src/core/delta-builder';
 import { Lossless } from '../src/views';
 import { RhizomeNode } from '../src/node';
 import { DeltaFilter } from '../src/core';
@@ -17,36 +17,23 @@ describe('Transactions', () => {
       const transactionId = 'tx-123';
       
       // Create a delta that declares a transaction with size 3
-      const txDeclaration = new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 3 }
-        ]
-      });
+      const txDeclaration = createDelta('system', 'host1')
+        .declareTransaction(transactionId, 3)
+        .buildV1();
 
       // Create first delta in transaction
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'name', target: 'user123', targetContext: 'name' },
-          { localContext: 'value', target: 'Alice' }
-        ]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .inTransaction(transactionId)
+        .addPointer('name', 'user123', 'name')
+        .addPointer('value', 'Alice')
+        .buildV1();
 
       // Create second delta in transaction
-      const delta2 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'age', target: 'user123', targetContext: 'age' },
-          { localContext: 'value', target: 25 }
-        ]
-      });
+      const delta2 = createDelta('user1', 'host1')
+        .inTransaction(transactionId)
+        .addPointer('age', 'user123', 'age')
+        .addPointer('value', 25)
+        .buildV1();
 
       // Ingest transaction declaration and first two deltas
       lossless.ingestDelta(txDeclaration);
@@ -58,15 +45,11 @@ describe('Transactions', () => {
       expect(view.user123).toBeUndefined();
 
       // Add the third delta to complete the transaction
-      const delta3 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'email', target: 'user123', targetContext: 'email' },
-          { localContext: 'value', target: 'alice@example.com' }
-        ]
-      });
+      const delta3 = createDelta('user1', 'host1')
+        .inTransaction(transactionId)
+        .addPointer('email', 'user123', 'email')
+        .addPointer('value', 'alice@example.com')
+        .buildV1();
 
       lossless.ingestDelta(delta3);
 
@@ -83,44 +66,30 @@ describe('Transactions', () => {
       const tx2 = 'tx-002';
 
       // Declare two transactions
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: tx1, targetContext: 'size' },
-          { localContext: 'size', target: 2 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .declareTransaction(tx1, 2)
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: tx2, targetContext: 'size' },
-          { localContext: 'size', target: 2 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .declareTransaction(tx2, 2)
+        .buildV1()
+      );
 
       // Add deltas for both transactions
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: tx1, targetContext: 'deltas' },
-          { localContext: 'status', target: 'order1', targetContext: 'status' },
-          { localContext: 'value', target: 'pending' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .inTransaction(tx1)
+        .addPointer('status', 'order1', 'status')
+        .addPointer('value', 'pending')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user2',
-        host: 'host2',
-        pointers: [
-          { localContext: '_transaction', target: tx2, targetContext: 'deltas' },
-          { localContext: 'status', target: 'order2', targetContext: 'status' },
-          { localContext: 'value', target: 'shipped' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user2', 'host2')
+        .inTransaction(tx2)
+        .addPointer('status', 'order2', 'status')
+        .addPointer('value', 'shipped')
+        .buildV1()
+      );
 
       // Neither transaction is complete
       let view = lossless.view(['order1', 'order2']);
@@ -128,15 +97,12 @@ describe('Transactions', () => {
       expect(view.order2).toBeUndefined();
 
       // Complete tx1
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: tx1, targetContext: 'deltas' },
-          { localContext: 'total', target: 'order1', targetContext: 'total' },
-          { localContext: 'value', target: 100 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .inTransaction(tx1)
+        .addPointer('total', 'order1', 'total')
+        .addPointer('value', 100)
+        .buildV1()
+      );
 
       // tx1 is complete, tx2 is not
       view = lossless.view(['order1', 'order2']);
@@ -146,15 +112,12 @@ describe('Transactions', () => {
       expect(view.order2).toBeUndefined();
 
       // Complete tx2
-      lossless.ingestDelta(new Delta({
-        creator: 'user2',
-        host: 'host2',
-        pointers: [
-          { localContext: '_transaction', target: tx2, targetContext: 'deltas' },
-          { localContext: 'tracking', target: 'order2', targetContext: 'tracking' },
-          { localContext: 'value', target: 'TRACK123' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user2', 'host2')
+        .inTransaction(tx2)
+        .addPointer('tracking', 'order2', 'tracking')
+        .addPointer('value', 'TRACK123')
+        .buildV1()
+      );
 
       // Both transactions complete
       view = lossless.view(['order1', 'order2']);
@@ -168,35 +131,25 @@ describe('Transactions', () => {
       const transactionId = 'tx-filter-test';
 
       // Create transaction with 2 deltas
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 2 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .declareTransaction(transactionId, 2)
+        .buildV1()
+      );
 
       // Add both deltas
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'type', target: 'doc1', targetContext: 'type' },
-          { localContext: 'value', target: 'report' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .inTransaction(transactionId)
+        .addPointer('type', 'doc1', 'type')
+        .addPointer('value', 'report')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user2',
-        host: 'host2',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'author', target: 'doc1', targetContext: 'author' },
-          { localContext: 'value', target: 'Bob' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user2', 'host2')
+        .inTransaction(transactionId)
+        .addPointer('author', 'doc1', 'author')
+        .addPointer('value', 'Bob')
+        .buildV1()
+      );
 
       // Create a filter that only accepts deltas from user1
       const userFilter: DeltaFilter = (delta) => delta.creator === 'user1';
@@ -215,37 +168,28 @@ describe('Transactions', () => {
       const transactionId = 'tx-multi-entity';
 
       // Transaction that updates multiple entities atomically
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 3 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .addPointer('_transaction', transactionId, 'size')
+        .addPointer('size', 3)
+        .buildV1()
+      );
 
       // Transfer money from account1 to account2
-      lossless.ingestDelta(new Delta({
-        creator: 'bank',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'balance', target: 'account1', targetContext: 'balance' },
-          { localContext: 'value', target: 900 },
-          { localContext: 'operation', target: 'debit' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('bank', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('balance', 'account1', 'balance')
+        .addPointer('value', 900)
+        .addPointer('operation', 'debit')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'bank',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'balance', target: 'account2', targetContext: 'balance' },
-          { localContext: 'value', target: 1100 },
-          { localContext: 'operation', target: 'credit' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('bank', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('balance', 'account2', 'balance')
+        .addPointer('value', 1100)
+        .addPointer('operation', 'credit')
+        .buildV1()
+      );
 
       // Transaction incomplete - no entities should show updates
       let view = lossless.view(['account1', 'account2']);
@@ -253,17 +197,14 @@ describe('Transactions', () => {
       expect(view.account2).toBeUndefined();
 
       // Complete transaction with audit log
-      lossless.ingestDelta(new Delta({
-        creator: 'bank',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'transfer', target: 'transfer123', targetContext: 'details' },
-          { localContext: 'from', target: 'account1' },
-          { localContext: 'to', target: 'account2' },
-          { localContext: 'amount', target: 100 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('bank', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('transfer', 'transfer123', 'details')
+        .addPointer('from', 'account1')
+        .addPointer('to', 'account2')
+        .addPointer('amount', 100)
+        .buildV1()
+      );
 
       // All entities should now be visible
       view = lossless.view(['account1', 'account2', 'transfer123']);
@@ -285,40 +226,29 @@ describe('Transactions', () => {
       });
 
       // Create transaction
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 2 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .addPointer('_transaction', transactionId, 'size')
+        .addPointer('size', 2)
+        .buildV1()
+      );
 
       // Add first delta
-      const delta1 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'field1', target: 'entity1', targetContext: 'field1' },
-          { localContext: 'value', target: 'value1' }
-        ]
-      });
+      const delta1 = createDelta('user1', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('field1', 'entity1', 'field1')
+        .addPointer('value', 'value1')
+        .buildV1();
       lossless.ingestDelta(delta1);
 
       // No events should be emitted yet
       expect(updateEvents).toHaveLength(0);
 
       // Add second delta to complete transaction
-      const delta2 = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'field2', target: 'entity1', targetContext: 'field2' },
-          { localContext: 'value', target: 'value2' }
-        ]
-      });
+      const delta2 = createDelta('user1', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('field2', 'entity1', 'field2')
+        .addPointer('value', 'value2')
+        .buildV1();
       lossless.ingestDelta(delta2);
 
       // Wait for async event processing
@@ -339,25 +269,19 @@ describe('Transactions', () => {
       const transactionId = 'tx-wait';
 
       // Create transaction
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 2 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .addPointer('_transaction', transactionId, 'size')
+        .addPointer('size', 2)
+        .buildV1()
+      );
 
       // Add first delta
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'status', target: 'job1', targetContext: 'status' },
-          { localContext: 'value', target: 'processing' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('status', 'job1', 'status')
+        .addPointer('value', 'processing')
+        .buildV1()
+      );
 
       // Start waiting for transaction
       const waitPromise = lossless.transactions.waitFor(transactionId);
@@ -369,15 +293,12 @@ describe('Transactions', () => {
       expect(isResolved).toBe(false);
 
       // Complete transaction
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'status', target: 'job1', targetContext: 'status' },
-          { localContext: 'value', target: 'completed' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('status', 'job1', 'status')
+        .addPointer('value', 'completed')
+        .buildV1()
+      );
 
       // Wait should now resolve
       await waitPromise;
@@ -391,14 +312,10 @@ describe('Transactions', () => {
 
     it('should handle non-transactional deltas normally', () => {
       // Regular delta without transaction
-      const regularDelta = new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: 'name', target: 'user456', targetContext: 'name' },
-          { localContext: 'value', target: 'Charlie' }
-        ]
-      });
+      const regularDelta = createDelta('user1', 'host1')
+        .addPointer('name', 'user456', 'name')
+        .addPointer('value', 'Charlie')
+        .buildV1();
 
       const updateEvents: string[] = [];
       lossless.eventStream.on('updated', (entityId) => {
@@ -422,33 +339,24 @@ describe('Transactions', () => {
       const transactionId = 'tx-resize';
 
       // Initially declare transaction with size 2
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 2 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .addPointer('_transaction', transactionId, 'size')
+        .addPointer('size', 2)
+        .buildV1()
+      );
 
       // Add 2 deltas
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'item1', target: 'cart1', targetContext: 'items' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('item1', 'cart1', 'items')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'item2', target: 'cart1', targetContext: 'items' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('item2', 'cart1', 'items')
+        .buildV1()
+      );
 
       // Transaction should be complete
       expect(lossless.transactions.isComplete(transactionId)).toBe(true);
@@ -462,15 +370,12 @@ describe('Transactions', () => {
       const transactionId = 'tx-no-size';
 
       // Add delta with transaction reference but no size declaration
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'deltas' },
-          { localContext: 'data', target: 'entity1', targetContext: 'data' },
-          { localContext: 'value', target: 'test' }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .addPointer('_transaction', transactionId, 'deltas')
+        .addPointer('data', 'entity1', 'data')
+        .addPointer('value', 'test')
+        .buildV1()
+      );
 
       // Transaction should not be complete (no size)
       expect(lossless.transactions.isComplete(transactionId)).toBe(false);
@@ -480,14 +385,11 @@ describe('Transactions', () => {
       expect(view.entity1).toBeUndefined();
 
       // Declare size after the fact
-      lossless.ingestDelta(new Delta({
-        creator: 'system',
-        host: 'host1',
-        pointers: [
-          { localContext: '_transaction', target: transactionId, targetContext: 'size' },
-          { localContext: 'size', target: 1 }
-        ]
-      }));
+      lossless.ingestDelta(createDelta('system', 'host1')
+        .addPointer('_transaction', transactionId, 'size')
+        .addPointer('size', 1)
+        .buildV1()
+      );
 
       // Now transaction should be complete
       expect(lossless.transactions.isComplete(transactionId)).toBe(true);

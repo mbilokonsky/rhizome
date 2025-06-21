@@ -3,7 +3,7 @@ import { Lossless } from '../src/views';
 import { DefaultSchemaRegistry } from '../src/schema';
 import { SchemaBuilder, PrimitiveSchemas } from '../src/schema';
 import { CommonSchemas } from '../util/schemas';
-import { Delta } from '../src/core';
+import { createDelta } from '../src/core/delta-builder';
 import { RhizomeNode } from '../src/node';
 
 describe('Query Engine', () => {
@@ -48,100 +48,65 @@ describe('Query Engine', () => {
 
   async function createUser(id: string, name: string, age?: number, email?: string) {
     // Create user entity with name
-    const nameDelta = new Delta({
-      id: `delta-${id}-name-${Date.now()}`,
-      creator: 'test',
-      host: 'test-host',
-      timeCreated: Date.now(),
-      pointers: [
-        { localContext: 'user', target: id, targetContext: 'name' },
-        { localContext: 'value', target: name }
-      ]
-    });
+    const nameDelta = createDelta('test', 'test-host')
+      .withId(`delta-${id}-name-${Date.now()}`)
+      .withTimestamp(Date.now())
+      .setProperty(id, 'name', name, 'user')
+      .buildV1();
     lossless.ingestDelta(nameDelta);
 
     // Add age if provided
     if (age !== undefined) {
-      const ageDelta = new Delta({
-        id: `delta-${id}-age-${Date.now()}`,
-        creator: 'test',
-        host: 'test-host', 
-        timeCreated: Date.now(),
-        pointers: [
-          { localContext: 'user', target: id, targetContext: 'age' },
-          { localContext: 'value', target: age }
-        ]
-      });
+      const ageDelta = createDelta('test', 'test-host')
+        .withId(`delta-${id}-age-${Date.now()}`)
+        .withTimestamp(Date.now())
+        .setProperty(id, 'age', age, 'user')
+        .buildV1();
       lossless.ingestDelta(ageDelta);
     }
 
     // Add email if provided
     if (email) {
-      const emailDelta = new Delta({
-        id: `delta-${id}-email-${Date.now()}`,
-        creator: 'test',
-        host: 'test-host',
-        timeCreated: Date.now(),
-        pointers: [
-          { localContext: 'user', target: id, targetContext: 'email' },
-          { localContext: 'value', target: email }
-        ]
-      });
+      const emailDelta = createDelta('test', 'test-host')
+        .withId(`delta-${id}-email-${Date.now()}`)
+        .withTimestamp(Date.now())
+        .setProperty(id, 'email', email, 'user')
+        .buildV1();
       lossless.ingestDelta(emailDelta);
     }
   }
 
   async function createBlogPost(id: string, title: string, author: string, published = false, views = 0) {
     // Title delta
-    const titleDelta = new Delta({
-      id: `delta-${id}-title-${Date.now()}`,
-      creator: 'test',
-      host: 'test-host',
-      timeCreated: Date.now(),
-      pointers: [
-        { localContext: 'post', target: id, targetContext: 'title' },
-        { localContext: 'value', target: title }
-      ]
-    });
+    const titleDelta = createDelta('test', 'test-host')
+      .withId(`delta-${id}-title-${Date.now()}`)
+      .withTimestamp(Date.now())
+      .setProperty(id, 'title', title, 'post')
+      .buildV1();
     lossless.ingestDelta(titleDelta);
 
     // Author delta
-    const authorDelta = new Delta({
-      id: `delta-${id}-author-${Date.now()}`,
-      creator: 'test',
-      host: 'test-host',
-      timeCreated: Date.now(),
-      pointers: [
-        { localContext: 'post', target: id, targetContext: 'author' },
-        { localContext: 'value', target: author }
-      ]
-    });
+    const authorDelta = createDelta('test', 'test-host')
+      .withId(`delta-${id}-author-${Date.now()}`)
+      .withTimestamp(Date.now())
+      .setProperty(id, 'author', author, 'post')
+      .buildV1();
     lossless.ingestDelta(authorDelta);
 
     // Published delta
-    const publishedDelta = new Delta({
-      id: `delta-${id}-published-${Date.now()}`,
-      creator: 'test',
-      host: 'test-host',
-      timeCreated: Date.now(),
-      pointers: [
-        { localContext: 'post', target: id, targetContext: 'published' },
-        { localContext: 'value', target: published }
-      ]
-    });
+    const publishedDelta = createDelta('test', 'test-host')
+      .withId(`delta-${id}-published-${Date.now()}`)
+      .withTimestamp(Date.now())
+      .setProperty(id, 'published', published, 'post')
+      .buildV1();
     lossless.ingestDelta(publishedDelta);
 
     // Views delta
-    const viewsDelta = new Delta({
-      id: `delta-${id}-views-${Date.now()}`,
-      creator: 'test',
-      host: 'test-host',
-      timeCreated: Date.now(),
-      pointers: [
-        { localContext: 'post', target: id, targetContext: 'views' },
-        { localContext: 'value', target: views }
-      ]
-    });
+    const viewsDelta = createDelta('test', 'test-host')
+      .withId(`delta-${id}-views-${Date.now()}`)
+      .withTimestamp(Date.now())
+      .setProperty(id, 'views', views, 'post')
+      .buildV1();
     lossless.ingestDelta(viewsDelta);
   }
 

@@ -258,7 +258,7 @@ export class QueryEngine {
     // Convert each schema property from lossless view deltas
     for (const [propertyId, propertySchema] of Object.entries(schema.properties)) {
       const deltas = view.propertyDeltas[propertyId] || [];
-      
+
       if (deltas.length === 0) {
         obj[propertyId] = null;
         continue;
@@ -268,9 +268,13 @@ export class QueryEngine {
       switch (propertySchema.type) {
         case 'primitive': {
           // Use last-write-wins for primitives
-          const lastDelta = deltas.sort((a, b) => b.timeCreated - a.timeCreated)[0];
-          const primitiveValue = this.extractPrimitiveValue(lastDelta, propertyId);
-          obj[propertyId] = primitiveValue;
+          const deltasSorted = deltas.sort((a, b) => b.timeCreated - a.timeCreated);
+          for (let delta of deltasSorted) {
+            const primitiveValue = this.extractPrimitiveValue(delta, propertyId);
+            if (primitiveValue !== null) {
+              obj[propertyId] = primitiveValue;
+            }
+          }
           break;
         }
 
@@ -304,12 +308,12 @@ export class QueryEngine {
   /**
    * Extract primitive value from a delta for a given property
    */
-  private extractPrimitiveValue(delta: CollapsedDelta, _propertyId: string): unknown {
+  private extractPrimitiveValue(delta: CollapsedDelta, propertyId: string): unknown {
     // Look for the value in collapsed pointers
     // CollapsedPointer is {[key: PropertyID]: PropertyTypes}
     for (const pointer of delta.pointers) {
-      if (pointer.value !== undefined) {
-        return pointer.value;
+      if (pointer[propertyId] !== undefined) {
+        return pointer[propertyId];
       }
     }
     return null;

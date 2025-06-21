@@ -1,3 +1,4 @@
+import { createDelta } from '../src/core/delta-builder';
 import {
   RhizomeNode,
   Lossless,
@@ -24,35 +25,19 @@ describe('Concurrent Write Scenarios', () => {
       const timestamp = 1000;
       
       // Simulate two writers updating the same property at the exact same time
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        id: 'delta-a',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withId('delta-a')
+        .withTimestamp(timestamp)
+        .setProperty('entity1', 'score', 100, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer2',
-        host: 'host2',
-        id: 'delta-b',
-        timeCreated: timestamp, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 200
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer2', 'host2')
+        .withId('delta-b')
+        .withTimestamp(timestamp) // Same timestamp
+        .setProperty('entity1', 'score', 200, 'collection')
+        .buildV1()
+      );
 
       const resolver = new LastWriteWins(lossless);
       const result = resolver.resolve();
@@ -66,35 +51,19 @@ describe('Concurrent Write Scenarios', () => {
     test('should handle simultaneous writes using timestamp resolver with tie-breaking', () => {
       const timestamp = 1000;
       
-      lossless.ingestDelta(new Delta({
-        creator: 'writer_z', // Lexicographically later
-        host: 'host1',
-        id: 'delta-a',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer_z', 'host1') // Lexicographically later
+        .withId('delta-a')
+        .withTimestamp(timestamp)
+        .setProperty('entity1', 'score', 100, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer_a', // Lexicographically earlier
-        host: 'host2',
-        id: 'delta-b',
-        timeCreated: timestamp, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 200
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer_a', 'host2') // Lexicographically earlier
+        .withId('delta-b')
+        .withTimestamp(timestamp) // Same timestamp
+        .setProperty('entity1', 'score', 200, 'collection')
+        .buildV1()
+      );
 
       const resolver = new TimestampResolver(lossless, 'creator-id');
       const result = resolver.resolve();
@@ -108,47 +77,24 @@ describe('Concurrent Write Scenarios', () => {
       const timestamp = 1000;
       
       // Multiple writers add values simultaneously
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "points"
-        }, {
-          localContext: "points",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(1000)
+        .setProperty('entity1', 'points', 10, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer2',
-        host: 'host2',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "points"
-        }, {
-          localContext: "points",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer2', 'host2')
+        .withTimestamp(1000) // Same timestamp
+        .setProperty('entity1', 'points', 20, 'collection')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer3',
-        host: 'host3',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "points"
-        }, {
-          localContext: "points",
-          target: 30
-        }]
-      }));
+      // Third writer adds another value
+      lossless.ingestDelta(createDelta('writer3', 'host3')
+        .withTimestamp(1000) // Same timestamp
+        .setProperty('entity1', 'points', 30, 'collection')
+        .buildV1()
+      );
 
       const resolver = new SumResolver(lossless, ['points']);
       const result = resolver.resolve();
@@ -162,34 +108,20 @@ describe('Concurrent Write Scenarios', () => {
   describe('Out-of-Order Write Arrival', () => {
     test('should handle writes arriving out of chronological order', () => {
       // Newer delta arrives first
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: 2000, // Later timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 'newer'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(2000)
+        .addPointer('collection', 'entity1', 'value')
+        .addPointer('value', 'newer')
+        .buildV1()
+      );
 
       // Older delta arrives later
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: 1000, // Earlier timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 'older'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'value')
+        .addPointer('value', 'older')
+        .buildV1()
+      );
 
       const resolver = new LastWriteWins(lossless);
       const result = resolver.resolve();
@@ -201,47 +133,26 @@ describe('Concurrent Write Scenarios', () => {
 
     test('should maintain correct aggregation despite out-of-order arrival', () => {
       // Add deltas in reverse chronological order
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: 3000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 30
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(3000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 30)
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 10)
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(2000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 20)
+        .buildV1()
+      );
 
       const resolver = new SumResolver(lossless, ['score']);
       const result = resolver.resolve();
@@ -261,19 +172,12 @@ describe('Concurrent Write Scenarios', () => {
       // Simulate multiple writers making rapid updates
       for (let writer = 0; writer < numWriters; writer++) {
         for (let write = 0; write < writesPerWriter; write++) {
-          lossless.ingestDelta(new Delta({
-            creator: `writer${writer}`,
-            host: `host${writer}`,
-            timeCreated: baseTimestamp + write, // Small time increments
-            pointers: [{
-              localContext: "collection",
-              target: "entity1",
-              targetContext: "counter"
-            }, {
-              localContext: "counter",
-              target: 1 // Each update adds 1
-            }]
-          }));
+          lossless.ingestDelta(createDelta(`writer${writer}`, `host${writer}`)
+            .withTimestamp(baseTimestamp + write)
+            .addPointer('collection', 'entity1', 'counter')
+            .addPointer('counter', 1)
+            .buildV1()
+          );
         }
       }
 
@@ -289,62 +193,34 @@ describe('Concurrent Write Scenarios', () => {
       const timestamp = 1000;
       
       // Writer 1 updates name and score
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'alice'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(timestamp)
+        .addPointer('collection', 'entity1', 'name')
+        .addPointer('name', 'alice')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: timestamp + 1,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(timestamp + 1)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 100)
+        .buildV1()
+      );
 
       // Writer 2 updates name and score concurrently
-      lossless.ingestDelta(new Delta({
-        creator: 'writer2',
-        host: 'host2',
-        timeCreated: timestamp + 2,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'bob'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer2', 'host2')
+        .withTimestamp(timestamp + 2)
+        .addPointer('collection', 'entity1', 'name')
+        .addPointer('name', 'bob')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer2',
-        host: 'host2',
-        timeCreated: timestamp + 3,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 200
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer2', 'host2')
+        .withTimestamp(timestamp + 3)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 200)
+        .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         name: new LastWriteWinsPlugin(),
@@ -365,19 +241,12 @@ describe('Concurrent Write Scenarios', () => {
       
       // Multiple writers updating different entities simultaneously
       for (let i = 0; i < 5; i++) {
-        lossless.ingestDelta(new Delta({
-          creator: `writer${i}`,
-          host: `host${i}`,
-          timeCreated: timestamp,
-          pointers: [{
-            localContext: "collection",
-            target: `entity${i}`,
-            targetContext: "value"
-          }, {
-            localContext: "value",
-            target: (i + 1) * 10 // Start from 10 to avoid 0 values
-          }]
-        }));
+        lossless.ingestDelta(createDelta(`writer${i}`, `host${i}`)
+          .withTimestamp(timestamp)
+          .addPointer('collection', `entity${i}`, 'value')
+          .addPointer('value', (i + 1) * 10)
+          .buildV1()
+        );
       }
 
       const resolver = new LastWriteWins(lossless);
@@ -395,62 +264,34 @@ describe('Concurrent Write Scenarios', () => {
       const timestamp = 1000;
       
       // Entity1: Multiple writers competing for same property
-      lossless.ingestDelta(new Delta({
-        creator: 'writer1',
-        host: 'host1',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "votes"
-        }, {
-          localContext: "votes",
-          target: 'option_a'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer1', 'host1')
+        .withTimestamp(timestamp)
+        .addPointer('collection', 'entity1', 'votes')
+        .addPointer('votes', 'option_a')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer2',
-        host: 'host2',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "votes"
-        }, {
-          localContext: "votes",
-          target: 'option_a'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer2', 'host2')
+        .withTimestamp(timestamp)
+        .addPointer('collection', 'entity1', 'votes')
+        .addPointer('votes', 'option_a')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'writer3',
-        host: 'host3',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "votes"
-        }, {
-          localContext: "votes",
-          target: 'option_b'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer3', 'host3')
+        .withTimestamp(timestamp)
+        .addPointer('collection', 'entity1', 'votes')
+        .addPointer('votes', 'option_b')
+        .buildV1()
+      );
 
       // Entity2: Single writer, no conflict
-      lossless.ingestDelta(new Delta({
-        creator: 'writer4',
-        host: 'host4',
-        timeCreated: timestamp,
-        pointers: [{
-          localContext: "collection",
-          target: "entity2",
-          targetContext: "status"
-        }, {
-          localContext: "status",
-          target: 'active'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('writer4', 'host4')
+        .withTimestamp(timestamp)
+        .addPointer('collection', 'entity2', 'status')
+        .addPointer('status', 'active')
+        .buildV1()
+      );
 
       const resolver = new CustomResolver(lossless, {
         votes: new MajorityVotePlugin(),
@@ -474,19 +315,12 @@ describe('Concurrent Write Scenarios', () => {
       // Generate a large number of concurrent writes
       for (let entity = 0; entity < numEntities; entity++) {
         for (let writer = 0; writer < numWritersPerEntity; writer++) {
-          lossless.ingestDelta(new Delta({
-            creator: `writer${writer}`,
-            host: `host${writer}`,
-            timeCreated: baseTimestamp + Math.floor(Math.random() * 1000), // Random timestamps
-            pointers: [{
-              localContext: "collection",
-              target: `entity${entity}`,
-              targetContext: "score"
-            }, {
-              localContext: "score",
-              target: Math.floor(Math.random() * 100) // Random scores
-            }]
-          }));
+          lossless.ingestDelta(createDelta(`writer${writer}`, `host${writer}`)
+            .withTimestamp(baseTimestamp + Math.floor(Math.random() * 1000))
+            .addPointer('collection', `entity${entity}`, 'score')
+            .addPointer('score', Math.floor(Math.random() * 100))
+            .buildV1()
+          );
         }
       }
 
@@ -510,19 +344,15 @@ describe('Concurrent Write Scenarios', () => {
       
       // Add initial deltas
       for (let i = 0; i < 50; i++) {
-        lossless.ingestDelta(new Delta({
-          creator: `writer${i % 5}`,
-          host: `host${i % 3}`,
-          timeCreated: 1000 + i,
-          pointers: [{
-            localContext: "collection",
-            target: entityId,
-            targetContext: "counter"
-          }, {
-            localContext: "counter",
-            target: 1
-          }]
-        }));
+        lossless.ingestDelta(createDelta(
+          `writer${i % 5}`, 
+          `host${i % 3}`
+        )
+          .withTimestamp(1000 + i)
+          .addPointer('collection', entityId, 'counter')
+          .addPointer('counter', 1)
+          .buildV1()
+        );
         updateCount++;
       }
 
@@ -534,19 +364,12 @@ describe('Concurrent Write Scenarios', () => {
       
       // Add more deltas and verify consistency
       for (let i = 0; i < 25; i++) {
-        lossless.ingestDelta(new Delta({
-          creator: 'late-writer',
-          host: 'late-host',
-          timeCreated: 2000 + i,
-          pointers: [{
-            localContext: "collection",
-            target: entityId,
-            targetContext: "counter"
-          }, {
-            localContext: "counter",
-            target: 2
-          }]
-        }));
+        lossless.ingestDelta(createDelta('late-writer', 'late-host')
+          .withTimestamp(2000 + i)
+          .addPointer('collection', entityId, 'counter')
+          .addPointer('counter', 2)
+          .buildV1()
+        );
         updateCount += 2;
         
         // Create a fresh resolver to avoid accumulator caching issues

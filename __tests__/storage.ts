@@ -1,39 +1,25 @@
 import { MemoryDeltaStorage, LevelDBDeltaStorage, StorageFactory } from '../src/storage';
+import { createDelta } from '../src/core/delta-builder';
 import { Delta } from '../src/core';
 import { DeltaQueryStorage } from '../src/storage/interface';
 
 describe('Delta Storage', () => {
   const testDeltas = [
-    new Delta({
-      id: 'delta1',
-      creator: 'alice',
-      host: 'host1',
-      timeCreated: Date.now() - 1000,
-      pointers: [
-        { localContext: 'user', target: 'user1', targetContext: 'name' },
-        { localContext: 'value', target: 'Alice' }
-      ]
-    }),
-    new Delta({
-      id: 'delta2', 
-      creator: 'bob',
-      host: 'host1',
-      timeCreated: Date.now() - 500,
-      pointers: [
-        { localContext: 'user', target: 'user1', targetContext: 'age' },
-        { localContext: 'value', target: 25 }
-      ]
-    }),
-    new Delta({
-      id: 'delta3',
-      creator: 'alice',
-      host: 'host2', 
-      timeCreated: Date.now(),
-      pointers: [
-        { localContext: 'user', target: 'user2', targetContext: 'name' },
-        { localContext: 'value', target: 'Bob' }
-      ]
-    })
+    createDelta('alice', 'host1')
+      .withId('delta1')
+      .withTimestamp(Date.now() - 1000)
+      .setProperty('user1', 'name', 'Alice', 'user')
+      .buildV1(),
+    createDelta('bob', 'host1')
+      .withId('delta2')
+      .withTimestamp(Date.now() - 500)
+      .setProperty('user1', 'age', 25, 'user')
+      .buildV1(),
+    createDelta('alice', 'host2')
+      .withId('delta3')
+      .withTimestamp(Date.now())
+      .setProperty('user2', 'name', 'Bob', 'user')
+      .buildV1()
   ];
 
   describe('Memory Storage', () => {

@@ -1,13 +1,13 @@
 import {
   RhizomeNode,
   Lossless,
-  Delta,
   TimestampResolver,
   CreatorIdTimestampResolver,
   DeltaIdTimestampResolver,
   HostIdTimestampResolver,
   LexicographicTimestampResolver
 } from "../src";
+import { createDelta } from "../src/core/delta-builder";
 
 describe('Timestamp Resolvers', () => {
   let node: RhizomeNode;
@@ -21,36 +21,22 @@ describe('Timestamp Resolvers', () => {
   describe('Basic Timestamp Resolution', () => {
     test('should resolve by most recent timestamp', () => {
       // Add older delta
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 10)
+        .buildV1()
+      );
 
       // Add newer delta
-      lossless.ingestDelta(new Delta({
-        creator: 'user2',
-        host: 'host2',
-        id: 'delta2',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user2', 'host2')
+        .withId('delta2')
+        .withTimestamp(2000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 20)
+        .buildV1()
+      );
 
       const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
@@ -61,34 +47,20 @@ describe('Timestamp Resolvers', () => {
 
     test('should handle multiple entities with different timestamps', () => {
       // Entity1 - older value
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 100
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'value')
+        .addPointer('value', 100)
+        .buildV1()
+      );
 
       // Entity2 - newer value
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        timeCreated: 2000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity2",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 200
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withTimestamp(2000)
+        .addPointer('collection', 'entity2', 'value')
+        .addPointer('value', 200)
+        .buildV1()
+      );
 
       const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
@@ -102,35 +74,21 @@ describe('Timestamp Resolvers', () => {
   describe('Tie-Breaking Strategies', () => {
     test('should break ties using creator-id strategy', () => {
       // Two deltas with same timestamp, different creators
-      lossless.ingestDelta(new Delta({
-        creator: 'user_z', // Lexicographically later
-        host: 'host1',
-        id: 'delta1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user_z', 'host1')
+        .withId('delta1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 10)
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user_a', // Lexicographically earlier
-        host: 'host1',
-        id: 'delta2',
-        timeCreated: 1000, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user_a', 'host1')
+        .withId('delta2')
+        .withTimestamp(1000) // Same timestamp
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 20)
+        .buildV1()
+      );
 
       const resolver = new CreatorIdTimestampResolver(lossless);
       const result = resolver.resolve();
@@ -142,35 +100,21 @@ describe('Timestamp Resolvers', () => {
 
     test('should break ties using delta-id strategy', () => {
       // Two deltas with same timestamp, different delta IDs
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta_a', // Lexicographically earlier
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta_a') // Lexicographically earlier
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 10)
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta_z', // Lexicographically later
-        timeCreated: 1000, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta_z') // Lexicographically later
+        .withTimestamp(1000) // Same timestamp
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 20)
+        .buildV1()
+      );
 
       const resolver = new DeltaIdTimestampResolver(lossless);
       const result = resolver.resolve();
@@ -182,35 +126,21 @@ describe('Timestamp Resolvers', () => {
 
     test('should break ties using host-id strategy', () => {
       // Two deltas with same timestamp, different hosts
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host_z', // Lexicographically later
-        id: 'delta1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host_z') // Lexicographically later
+        .withId('delta1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 10)
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host_a', // Lexicographically earlier
-        id: 'delta2',
-        timeCreated: 1000, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host_a') // Lexicographically earlier
+        .withId('delta2')
+        .withTimestamp(1000) // Same timestamp
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 20)
+        .buildV1()
+      );
 
       const resolver = new HostIdTimestampResolver(lossless);
       const result = resolver.resolve();
@@ -222,35 +152,21 @@ describe('Timestamp Resolvers', () => {
 
     test('should break ties using lexicographic strategy with string values', () => {
       // Two deltas with same timestamp, different string values
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'alice'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'name')
+        .addPointer('name', 'alice')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta2',
-        timeCreated: 1000, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'bob'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta2')
+        .withTimestamp(1000) // Same timestamp
+        .addPointer('collection', 'entity1', 'name')
+        .addPointer('name', 'bob')
+        .buildV1()
+      );
 
       const resolver = new LexicographicTimestampResolver(lossless);
       const result = resolver.resolve();
@@ -262,35 +178,21 @@ describe('Timestamp Resolvers', () => {
 
     test('should break ties using lexicographic strategy with numeric values (falls back to delta ID)', () => {
       // Two deltas with same timestamp, numeric values (should fall back to delta ID comparison)
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta_a', // Lexicographically earlier
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta_a') // Lexicographically earlier
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 100)
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta_z', // Lexicographically later
-        timeCreated: 1000, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 200
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta_z') // Lexicographically later
+        .withTimestamp(1000) // Same timestamp
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 200)
+        .buildV1()
+      );
 
       const resolver = new LexicographicTimestampResolver(lossless);
       const result = resolver.resolve();
@@ -304,35 +206,21 @@ describe('Timestamp Resolvers', () => {
   describe('Complex Tie-Breaking Scenarios', () => {
     test('should handle multiple properties with different tie-breaking outcomes', () => {
       // Add deltas for multiple properties with same timestamp
-      lossless.ingestDelta(new Delta({
-        creator: 'user_a',
-        host: 'host1',
-        id: 'delta_z',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'alice'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user_a', 'host1')
+        .withId('delta_z')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'name')
+        .addPointer('name', 'alice')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user_z',
-        host: 'host1',
-        id: 'delta_a',
-        timeCreated: 1000, // Same timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'bob'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user_z', 'host1')
+        .withId('delta_a')
+        .withTimestamp(1000) // Same timestamp
+        .addPointer('collection', 'entity1', 'name')
+        .addPointer('name', 'bob')
+        .buildV1()
+      );
 
       const creatorResolver = new CreatorIdTimestampResolver(lossless);
       const deltaResolver = new DeltaIdTimestampResolver(lossless);
@@ -352,36 +240,22 @@ describe('Timestamp Resolvers', () => {
 
     test('should work consistently with timestamp priority over tie-breaking', () => {
       // Add older delta with "better" tie-breaking attributes
-      lossless.ingestDelta(new Delta({
-        creator: 'user_z', // Would win in creator tie-breaking
-        host: 'host1',
-        id: 'delta_z', // Would win in delta ID tie-breaking
-        timeCreated: 1000, // Older timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 10
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user_z', 'host1')
+        .withId('delta_z') // Would win in delta ID tie-breaking
+        .withTimestamp(1000) // Older timestamp
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 10)
+        .buildV1()
+      );
 
       // Add newer delta with "worse" tie-breaking attributes
-      lossless.ingestDelta(new Delta({
-        creator: 'user_a', // Would lose in creator tie-breaking
-        host: 'host1',
-        id: 'delta_a', // Would lose in delta ID tie-breaking
-        timeCreated: 2000, // Newer timestamp
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 20
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user_a', 'host1')
+        .withId('delta_a') // Would lose in delta ID tie-breaking
+        .withTimestamp(2000) // Newer timestamp
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 20)
+        .buildV1()
+      );
 
       const resolver = new CreatorIdTimestampResolver(lossless);
       const result = resolver.resolve();
@@ -394,20 +268,13 @@ describe('Timestamp Resolvers', () => {
 
   describe('Edge Cases', () => {
     test('should handle single delta correctly', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "value"
-        }, {
-          localContext: "value",
-          target: 42
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'value')
+        .addPointer('value', 42)
+        .buildV1()
+      );
 
       const resolver = new TimestampResolver(lossless, 'creator-id');
       const result = resolver.resolve();
@@ -417,35 +284,21 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should handle mixed value types correctly', () => {
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta1',
-        timeCreated: 1000,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "name"
-        }, {
-          localContext: "name",
-          target: 'test'
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta1')
+        .withTimestamp(1000)
+        .addPointer('collection', 'entity1', 'name')
+        .addPointer('name', 'test')
+        .buildV1()
+      );
 
-      lossless.ingestDelta(new Delta({
-        creator: 'user1',
-        host: 'host1',
-        id: 'delta2',
-        timeCreated: 1001,
-        pointers: [{
-          localContext: "collection",
-          target: "entity1",
-          targetContext: "score"
-        }, {
-          localContext: "score",
-          target: 100
-        }]
-      }));
+      lossless.ingestDelta(createDelta('user1', 'host1')
+        .withId('delta2')
+        .withTimestamp(1001)
+        .addPointer('collection', 'entity1', 'score')
+        .addPointer('score', 100)
+        .buildV1()
+      );
 
       const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();

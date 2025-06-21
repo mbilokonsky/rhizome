@@ -1,6 +1,5 @@
 import Debug from 'debug';
 import {
-  Delta,
   PointerTarget,
   lastValueFromDeltas,
   valueFromCollapsedDelta,
@@ -9,6 +8,7 @@ import {
   Lossy,
   RhizomeNode
 } from "../src";
+import { createDelta } from "../src/core/delta-builder";
 const debug = Debug('test:lossy');
 
 type Role = {
@@ -62,29 +62,14 @@ describe('Lossy', () => {
     const lossy = new Summarizer(lossless);
 
     beforeAll(() => {
-      lossless.ingestDelta(new Delta({
-        creator: 'a',
-        host: 'h',
-        pointers: [{
-          localContext: "actor",
-          target: "keanu",
-          targetContext: "roles"
-        }, {
-          localContext: "role",
-          target: "neo",
-          targetContext: "actor"
-        }, {
-          localContext: "film",
-          target: "the_matrix",
-          targetContext: "cast"
-        }, {
-          localContext: "base_salary",
-          target: 1000000
-        }, {
-          localContext: "salary_currency",
-          target: "usd"
-        }]
-      }));
+      lossless.ingestDelta(createDelta('a', 'h')
+        .addPointer('actor', 'keanu', 'roles')
+        .addPointer('role', 'neo', 'actor')
+        .addPointer('film', 'the_matrix', 'cast')
+        .addPointer('base_salary', 1000000)
+        .addPointer('salary_currency', 'usd')
+        .buildV1()
+      );
     });
 
     it('example summary', () => {

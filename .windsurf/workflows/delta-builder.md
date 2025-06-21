@@ -2,5 +2,6 @@
 description: Update the current file to use delta builder
 ---
 
-Replace each deltav2 instantiation with a fluent call to createDelta from delta builder, using the following process:
+Replace each delta instantiation with a fluent call to createDelta from delta builder
     - pass creator and host as arguments to createDelta
+    - use setProperty where appropriate

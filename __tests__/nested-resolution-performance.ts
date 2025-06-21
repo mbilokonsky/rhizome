@@ -12,7 +12,7 @@ import Debug from 'debug';
 import { RhizomeNode } from '../src/node';
 
 const debug = Debug('rz:test:nested-resolution-performance');
-import { Delta } from '../src/core';
+import { Delta, createDelta } from '../src/core';
 import { DefaultSchemaRegistry } from '../src/schema';
 import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, ArraySchemas } from '../src/schema';
 import { TypedCollectionImpl } from '../src/collections';
@@ -80,14 +80,9 @@ describe('Nested Object Resolution Performance', () => {
           const friendIndex = Math.floor(Math.random() * userCount);
           if (friendIndex !== i) {
             const friendId = userIds[friendIndex];
-            const friendshipDelta = new Delta({
-              creator: node.config.creator,
-              host: node.config.peerId,
-              pointers: [
-                { localContext: 'users', target: userId, targetContext: 'friends' },
-                { localContext: 'friends', target: friendId }
-              ]
-            });
+            const friendshipDelta = createDelta(node.config.creator, node.config.peerId)
+              .setProperty(userId, 'friends', friendId, 'users')
+              .buildV1();
             node.lossless.ingestDelta(friendshipDelta);
           }
         }
@@ -98,14 +93,9 @@ describe('Nested Object Resolution Performance', () => {
           const followerIndex = Math.floor(Math.random() * userCount);
           if (followerIndex !== i) {
             const followerId = userIds[followerIndex];
-            const followDelta = new Delta({
-              creator: node.config.creator,
-              host: node.config.peerId,
-              pointers: [
-                { localContext: 'users', target: userId, targetContext: 'followers' },
-                { localContext: 'followers', target: followerId }
-              ]
-            });
+            const followDelta = createDelta(node.config.creator, node.config.peerId)
+              .setProperty(userId, 'followers', followerId, 'users')
+              .buildV1();
             node.lossless.ingestDelta(followDelta);
           }
         }
@@ -114,14 +104,9 @@ describe('Nested Object Resolution Performance', () => {
         if (i > 0) {
           const mentorIndex = Math.floor(i / 2); // Create a tree-like mentor structure
           const mentorId = userIds[mentorIndex];
-          const mentorshipDelta = new Delta({
-            creator: node.config.creator,
-            host: node.config.peerId,
-            pointers: [
-              { localContext: 'users', target: userId, targetContext: 'mentor' },
-              { localContext: 'mentor', target: mentorId }
-            ]
-          });
+          const mentorshipDelta = createDelta(node.config.creator, node.config.peerId)
+            .setProperty(userId, 'mentor', mentorId, 'users')
+            .buildV1();
           node.lossless.ingestDelta(mentorshipDelta);
         }
       }

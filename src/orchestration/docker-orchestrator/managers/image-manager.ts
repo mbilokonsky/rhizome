@@ -63,16 +63,11 @@ export class ImageManager implements IImageManager {
     debug('Created build context tar stream');
     
     testImageBuildPromise = new Promise<void>((resolve, reject) => {
-      const logMessages: string[] = [];
-      
       const log = (...args: any[]) => {
-        const timestamp = new Date().toISOString();
         const message = args.map(arg => 
           typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
         ).join(' ');
-        const logMessage = `[${timestamp}] ${message}\n`;
-        process.stdout.write(logMessage);
-        logMessages.push(logMessage);
+        debug(message);
       };
       
       this.docker.buildImage(tarStream, { t: imageName }, (err, stream) => {
@@ -142,18 +137,5 @@ export class ImageManager implements IImageManager {
         });
       });
     });
-  }
-
-  /**
-   * Check if an image exists locally
-   */
-  async imageExists(imageName: string): Promise<boolean> {
-    try {
-      const image = this.docker.getImage(imageName);
-      await image.inspect();
-      return true;
-    } catch (error) {
-      return false;
-    }
   }
 }

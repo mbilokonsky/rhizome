@@ -1,5 +1,11 @@
 // Set up environment variables for tests
-process.env.DEBUG = 'rz:*';
+// DEBUG handling examples:
+//   npm test               // will set DEBUG=rz:* by default
+//   NO_DEBUG=true npm test // will not set DEBUG
+//   DEBUG=other npm test   // will set DEBUG=other
+if (!process.env.DEBUG && !process.env.NO_DEBUG) {
+  process.env.DEBUG = 'rz:*';
+}
 
 // Extend the global Jest namespace
 declare global {
