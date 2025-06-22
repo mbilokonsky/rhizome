@@ -3,7 +3,6 @@ import {
   PrimitiveSchemas, 
   ReferenceSchemas, 
   ArraySchemas,
-  // CommonSchemas has been moved to ./test-utils/schemas
   ObjectSchema
 } from '../src/schema';
 import { DefaultSchemaRegistry } from '../src/schema';
