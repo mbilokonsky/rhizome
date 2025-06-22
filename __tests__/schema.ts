@@ -1,3 +1,4 @@
+import { LosslessViewOne } from '../src/views/lossless';
 import { 
   SchemaBuilder, 
   PrimitiveSchemas, 
@@ -155,7 +156,7 @@ describe('Schema System', () => {
       schemaRegistry.register(userSchema);
 
       // Create a valid lossless view
-      const validView = {
+      const validView: LosslessViewOne = {
         id: 'user123',
         referencedAs: ['user'],
         propertyDeltas: {
@@ -173,7 +174,7 @@ describe('Schema System', () => {
             creator: 'creator1',
             pointers: [{ age: 25 }]
           }]
-        }
+        },
       };
 
       const result = schemaRegistry.validate('user123', 'user', validView);
@@ -181,7 +182,7 @@ describe('Schema System', () => {
       expect(result.errors).toHaveLength(0);
 
       // Test invalid view (missing required property)
-      const invalidView = {
+      const invalidView: LosslessViewOne = {
         id: 'user456',
         referencedAs: ['user'],
         propertyDeltas: {
@@ -217,7 +218,7 @@ describe('Schema System', () => {
       schemaRegistry.register(schema);
 
       // Valid types
-      const validView = {
+      const validView: LosslessViewOne = {
         id: 'test1',
         referencedAs: [],
         propertyDeltas: {
@@ -231,7 +232,7 @@ describe('Schema System', () => {
       expect(validResult.valid).toBe(true);
 
       // Invalid types
-      const invalidView = {
+      const invalidView: LosslessViewOne = {
         id: 'test2',
         referencedAs: [],
         propertyDeltas: {

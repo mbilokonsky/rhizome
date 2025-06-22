@@ -1,6 +1,7 @@
 import Debug from 'debug';
 import { Collection } from '../collections/collection-abstract';
-import { LastWriteWins, ResolvedViewOne } from '../views/resolvers/last-write-wins';
+import { ResolvedViewOne } from '../views/resolvers/last-write-wins';
+import { TimestampResolver } from '../views/resolvers/timestamp-resolvers'
 import { 
   ObjectSchema, 
   SchemaValidationResult, 
@@ -23,7 +24,7 @@ export class SchemaValidationError extends Error {
 }
 
 export class TypedCollectionImpl<T extends Record<string, unknown>> 
-  extends Collection<LastWriteWins> 
+  extends Collection<TimestampResolver> 
   implements TypedCollection<T> {
   
   schema: ObjectSchema;
@@ -56,7 +57,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
 
   initializeView(): void {
     if (!this.rhizomeNode) throw new Error('not connected to rhizome');
-    this.lossy = new LastWriteWins(this.rhizomeNode.lossless);
+    this.lossy = new TimestampResolver(this.rhizomeNode.lossless);
   }
 
   resolve(id: string): ResolvedViewOne | undefined {
@@ -73,7 +74,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const mockLosslessView: LosslessViewOne = {
       id: 'validation-mock',
       referencedAs: [],
-      propertyDeltas: {}
+      propertyDeltas: {},
     };
 
     // Create mock deltas for each property

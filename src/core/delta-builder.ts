@@ -95,17 +95,22 @@ export class DeltaBuilder {
 
   /**
    * Create a relationship between two entities
+   * @param sourceId The ID of the source entity
+   * @param targetId The ID of the target entity
+   * @param relationship The type of relationship
+   * @param properties Optional properties for the relationship
    */
   relate(sourceId: string, targetId: string, relationship: string, properties?: Record<string, any>): this {
     const relId = randomUUID();
-    this.setProperty(relId, 'source', sourceId, '_source');
-    this.setProperty(relId, 'target', targetId, '_target');
-    this.setProperty(relId, 'type', relationship, '_type');
+    this.setProperty(relId, 'source', sourceId, '_rel_source');
+    this.setProperty(relId, 'target', targetId, '_rel_target');
+    this.setProperty(relId, 'type', relationship, '_rel_type');
     if (properties) {
       for (const [key, value] of Object.entries(properties)) {
-        this.setProperty(relId, key, value, `_${key}`);
+        this.setProperty(relId, key, value, `_rel_${key}`);
       }
     }
+    
     return this;
   }
 

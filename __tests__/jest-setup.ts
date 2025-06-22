@@ -4,7 +4,7 @@
 //   NO_DEBUG=true npm test // will not set DEBUG
 //   DEBUG=other npm test   // will set DEBUG=other
 if (!process.env.DEBUG && !process.env.NO_DEBUG) {
-  process.env.DEBUG = 'rz:*';
+  // process.env.DEBUG = 'rz:*';
 }
 
 // This is a placeholder test to satisfy Jest's requirement for at least one test

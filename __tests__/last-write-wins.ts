@@ -1,7 +1,11 @@
 import Debug from "debug";
 import { createDelta } from '../src/core/delta-builder';
-import {Delta, LastWriteWins, Lossless, RhizomeNode} from "../src";
+import {Lossless, RhizomeNode} from "../src";
+import {TimestampResolver} from "../src/views/resolvers/timestamp-resolvers";
 const debug = Debug('test:last-write-wins');
+
+// This was initially written to test a LastWriteWins resolver, but that has been
+// superceded by the TimestampResolver.
 
 describe('Last write wins', () => {
 
@@ -9,7 +13,7 @@ describe('Last write wins', () => {
     const node = new RhizomeNode();
     const lossless = new Lossless(node);
 
-    const lossy = new LastWriteWins(lossless);
+    const lossy = new TimestampResolver(lossless);
 
     beforeAll(() => {
       lossless.ingestDelta(createDelta('a', 'h')

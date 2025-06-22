@@ -4,14 +4,15 @@
 // It could then be further extended with e.g. table semantics like filter, sort, join
 
 import {Collection} from '../collections/collection-abstract';
-import {LastWriteWins, ResolvedViewOne} from '../views/resolvers/last-write-wins';
+import {ResolvedViewOne} from '../views/resolvers/last-write-wins';
+import {TimestampResolver} from '../views/resolvers/timestamp-resolvers';
 
-export class BasicCollection extends Collection<LastWriteWins> {
-  declare lossy?: LastWriteWins;
+export class BasicCollection extends Collection<TimestampResolver> {
+  declare lossy?: TimestampResolver;
 
   initializeView() {
     if (!this.rhizomeNode) throw new Error('not connected to rhizome');
-    this.lossy = new LastWriteWins(this.rhizomeNode.lossless);
+    this.lossy = new TimestampResolver(this.rhizomeNode.lossless);
   }
 
   resolve(

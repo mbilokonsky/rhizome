@@ -2,13 +2,11 @@ import { createDelta } from '../src/core/delta-builder';
 import {
   RhizomeNode,
   Lossless,
-  Delta,
-  LastWriteWins,
-  TimestampResolver,
   SumResolver,
   CustomResolver,
   LastWriteWinsPlugin,
-  MajorityVotePlugin
+  MajorityVotePlugin,
+  TimestampResolver
 } from "../src";
 
 describe('Concurrent Write Scenarios', () => {
@@ -39,7 +37,7 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new LastWriteWins(lossless);
+      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -123,7 +121,7 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new LastWriteWins(lossless);
+      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -249,7 +247,7 @@ describe('Concurrent Write Scenarios', () => {
         );
       }
 
-      const resolver = new LastWriteWins(lossless);
+      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();

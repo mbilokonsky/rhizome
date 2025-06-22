@@ -2,7 +2,7 @@ import { createDelta } from '../src/core/delta-builder';
 import { DeltaV1, DeltaV2 } from '../src/core/delta';
 import { Lossless } from '../src/views/lossless';
 import { RhizomeNode } from '../src/node';
-import { LastWriteWins } from '../src/views/resolvers/last-write-wins';
+import { TimestampResolver } from '../src/views/resolvers/timestamp-resolvers';
 
 describe('DeltaBuilder', () => {
   const creator = 'creator-123';
@@ -47,7 +47,7 @@ describe('DeltaBuilder', () => {
       // Verify that the entity property resolves correctly
       const lossless = new Lossless(node);
       lossless.ingestDelta(delta);
-      const lossy = new LastWriteWins(lossless);
+      const lossy = new TimestampResolver(lossless);
       const result = lossy.resolve();
       expect(result).toBeDefined();
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
@@ -72,7 +72,7 @@ describe('DeltaBuilder', () => {
       // Verify that the entity property resolves correctly
       const lossless = new Lossless(node);
       lossless.ingestDelta(delta);
-      const lossy = new LastWriteWins(lossless);
+      const lossy = new TimestampResolver(lossless);
       const result = lossy.resolve();
       expect(result).toBeDefined();
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
@@ -86,18 +86,18 @@ describe('DeltaBuilder', () => {
         // This delta sets values on a new relationship entity
 
       expect(delta.pointers).toContainEqual({
-        localContext: '_target',
+        localContext: '_rel_target',
         target: expect.any(String),
         targetContext: 'target'
       });
-      const relId = delta.pointers.find(p => p.localContext === '_target')?.target;
+      const relId = delta.pointers.find(p => p.localContext === '_rel_target')?.target;
       expect(delta.pointers).toContainEqual({
-        localContext: '_source',
+        localContext: '_rel_source',
         target: relId,
         targetContext: 'source'
       });
       expect(delta.pointers).toContainEqual({
-        localContext: '_type',
+        localContext: '_rel_type',
         target: relId,
         targetContext: 'type'
       });
@@ -110,23 +110,23 @@ describe('DeltaBuilder', () => {
 
       // This delta sets values on a new relationship entity
       expect(delta.pointers).toContainEqual({
-        localContext: '_target',
+        localContext: '_rel_target',
         target: expect.any(String),
         targetContext: 'target'
       });
-      const relId = delta.pointers.find(p => p.localContext === '_target')?.target;
+      const relId = delta.pointers.find(p => p.localContext === '_rel_target')?.target;
       expect(delta.pointers).toContainEqual({
-        localContext: '_source',
+        localContext: '_rel_source',
         target: relId,
         targetContext: 'source'
       });
       expect(delta.pointers).toContainEqual({
-        localContext: '_type',
+        localContext: '_rel_type',
         target: relId,
         targetContext: 'type'
       });
       expect(delta.pointers).toContainEqual({
-        localContext: '_version',
+        localContext: '_rel_version',
         target: relId,
         targetContext: 'version'
       });
@@ -161,8 +161,27 @@ describe('DeltaBuilder', () => {
         .relate('user-1', 'user-2', 'follows')
         .buildV2();
 
-      expect(delta.pointers).toHaveProperty('follows', { 'user-2': 'follows' });
-      expect(delta.pointers).toHaveProperty('source', { 'user-1': 'follows' });
+      expect(delta.pointers).toHaveProperty('_rel_source');
+      const [relId] = Object.entries(delta.pointers._rel_source!)[0];
+      expect(delta.pointers).toHaveProperty('_rel_source', { [relId]: 'source' });
+      expect(delta.pointers).toHaveProperty('_rel_target', { [relId]: 'target' });
+      expect(delta.pointers).toHaveProperty('_rel_type', { [relId]: 'type' });
+      expect(delta.pointers).toHaveProperty('source', 'user-1');
+      expect(delta.pointers).toHaveProperty('target', 'user-2');
+      expect(delta.pointers).toHaveProperty('type', 'follows');
+
+      const lossless = new Lossless(node);
+      lossless.ingestDelta(delta);
+      const lossy = new TimestampResolver(lossless);
+      const result = lossy.resolve([relId]);
+      expect(result).toBeDefined();
+      expect(result![relId]).toMatchObject({
+        properties: {
+          source: 'user-1',
+          target: 'user-2',
+          type: 'follows'
+        }
+      });
     });
 
     it('should create a V2 delta with relationships and properties', () => {
@@ -170,9 +189,30 @@ describe('DeltaBuilder', () => {
         .relate('user-1', 'user-2', 'follows', { version: 1})
         .buildV2();
 
-      expect(delta.pointers).toHaveProperty('follows', { 'user-2': 'follows' });
-      expect(delta.pointers).toHaveProperty('source', { 'user-1': 'follows' });
-      expect(delta.pointers).toHaveProperty('version', { 1: 'follows' });
+      expect(delta.pointers).toHaveProperty('_rel_source');
+      const [relId] = Object.entries(delta.pointers._rel_source!)[0];
+      expect(delta.pointers).toHaveProperty('_rel_source', { [relId]: 'source' });
+      expect(delta.pointers).toHaveProperty('_rel_target', { [relId]: 'target' });
+      expect(delta.pointers).toHaveProperty('_rel_type', { [relId]: 'type' });
+      expect(delta.pointers).toHaveProperty('_rel_version', { [relId]: 'version' });
+      expect(delta.pointers).toHaveProperty('source', 'user-1');
+      expect(delta.pointers).toHaveProperty('target', 'user-2');
+      expect(delta.pointers).toHaveProperty('type', 'follows');
+      expect(delta.pointers).toHaveProperty('version', 1);
+
+      const lossless = new Lossless(node);
+      lossless.ingestDelta(delta);
+      const lossy = new TimestampResolver(lossless);
+      const result = lossy.resolve([relId]);
+      expect(result).toBeDefined();
+      expect(result![relId]).toMatchObject({
+        properties: {
+          source: 'user-1',
+          target: 'user-2',
+          type: 'follows',
+          version: 1
+        }
+      });
     });
   });
 
