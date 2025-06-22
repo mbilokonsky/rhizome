@@ -6,8 +6,8 @@ import {
   DeltaIdTimestampResolver,
   HostIdTimestampResolver,
   LexicographicTimestampResolver
-} from "../src";
-import { createDelta } from "../src/core/delta-builder";
+} from "../../../../src";
+import { createDelta } from "../../../../src/core/delta-builder";
 
 describe('Timestamp Resolvers', () => {
   let node: RhizomeNode;

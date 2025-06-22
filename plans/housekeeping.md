@@ -1,5 +1,7 @@
 # Housekeeping tasks
 
-- [] Organize tests?
-- [] More documentation in docs/
-- [] Rename/consolidate, lossless view() and compose() --> composeView()
+- [x] Organize tests?
+- [ ] More documentation in docs/
+- [ ] Rename/consolidate, lossless view() and compose() --> composeView()
+- [ ] Rename Lossless to HyperView
+- [ ] Rename Lossy to View

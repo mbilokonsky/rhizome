@@ -1,16 +1,16 @@
-import { LosslessViewOne } from '../src/views/lossless';
+import { LosslessViewOne } from '../../src/views/lossless';
 import { 
   SchemaBuilder, 
   PrimitiveSchemas, 
   ReferenceSchemas, 
   ArraySchemas,
   ObjectSchema
-} from '../src/schema';
-import { DefaultSchemaRegistry } from '../src/schema';
-import { CommonSchemas } from '../util/schemas';
-import { TypedCollectionImpl, SchemaValidationError } from '../src/collections';
-import { RhizomeNode } from '../src/node';
-import { createDelta } from '../src/core/delta-builder';
+} from '../../src/schema';
+import { DefaultSchemaRegistry } from '../../src/schema';
+import { CommonSchemas } from '../../util/schemas';
+import { TypedCollectionImpl, SchemaValidationError } from '../../src/collections';
+import { RhizomeNode } from '../../src/node';
+import { createDelta } from '../../src/core/delta-builder';
 
 describe('Schema System', () => {
   let schemaRegistry: DefaultSchemaRegistry;

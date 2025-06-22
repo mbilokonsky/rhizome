@@ -1,7 +1,7 @@
-import { createDelta } from '../src/core/delta-builder';
-import { Lossless } from '../src/views';
-import { RhizomeNode } from '../src/node';
-import { DeltaFilter } from '../src/core';
+import { createDelta } from '../../../src/core/delta-builder';
+import { Lossless } from '../../../src/views';
+import { RhizomeNode } from '../../../src/node';
+import { DeltaFilter } from '../../../src/core';
 
 describe('Transactions', () => {
   let node: RhizomeNode;
@@ -211,7 +211,7 @@ describe('Transactions', () => {
       const updateEvents: Array<{ entityId: string, deltaIds: string[] }> = [];
 
       // Listen for update events
-      lossless.eventStream.on('updated', (entityId, deltaIds) => {
+      lossless.eventStream.on('updated', (entityId: string, deltaIds: string[]) => {
         updateEvents.push({ entityId, deltaIds });
       });
 
@@ -302,7 +302,7 @@ describe('Transactions', () => {
         .buildV1();
 
       const updateEvents: string[] = [];
-      lossless.eventStream.on('updated', (entityId) => {
+      lossless.eventStream.on('updated', (entityId: string) => {
         updateEvents.push(entityId);
       });
 

@@ -1,16 +1,11 @@
 import Docker from 'dockerode';
 import { describe, it, beforeAll, afterAll, expect, jest } from '@jest/globals';
-import Debug from 'debug';
-
-const debug = Debug('rz:test:docker-orchestrator-v2');
-import { createOrchestrator } from '../../src/orchestration';
-import type { NodeOrchestrator, NodeConfig, NodeHandle, NodeStatus } from '../../src/orchestration';
+import type { NodeConfig, NodeHandle, NodeStatus } from '../../src/orchestration';
+import { DockerOrchestrator, createOrchestrator } from '../../src/orchestration';
 import { ImageManager } from '../../src/orchestration/docker-orchestrator/managers/image-manager';
+import Debug from 'debug';
+const debug = Debug('rz:test:docker-orchestrator-v2');
 
-// Extend the NodeOrchestrator type to include the docker client for DockerOrchestrator
-interface DockerOrchestrator extends NodeOrchestrator {
-  docker: Docker;
-}
 
 // Extended interface to include additional properties that might be present in the implementation
 interface ExtendedNodeStatus extends Omit<NodeStatus, 'network'> {
@@ -33,12 +28,8 @@ jest.setTimeout(300000);
 describe('Docker Orchestrator', () => {
   let docker: Docker;
   let orchestrator: DockerOrchestrator;
-  let node: NodeHandle | null = null;
-  let node2: NodeHandle | null = null;
   let nodeConfig: NodeConfig;
-  let node2Config: NodeConfig;
   let nodePort: number;
-  let node2Port: number;
 
   beforeAll(async () => {
     debug('Setting up Docker client and orchestrator...');
@@ -59,7 +50,10 @@ describe('Docker Orchestrator', () => {
     }
     
     // Initialize the orchestrator with the Docker client and test image
-    orchestrator = createOrchestrator('docker') as DockerOrchestrator;
+    orchestrator = createOrchestrator('docker', {
+      docker,
+      image: 'rhizome-node-test',
+    }) as DockerOrchestrator;
     debug('Docker orchestrator initialized');
     
     // Create a basic node config for testing with unique network ID
@@ -89,6 +83,9 @@ describe('Docker Orchestrator', () => {
     debug('All test cleanups completed');
   }, 120000); // 2 minute timeout for afterAll
 
+  /**
+   * ! Note that this test fails if the build fails
+   */
   it('should start and stop a node', async () => {
     debug('Starting test: should start and stop a node');
     
@@ -183,7 +180,7 @@ describe('Docker Orchestrator', () => {
       }
       
       // Get container info using ContainerManager
-      const container = await (orchestrator as any).containerManager.getContainer(status.containerId);
+      const container = await orchestrator.containerManager.getContainer(status.containerId);
       if (!container) {
         throw new Error('Container not found');
       }
@@ -358,11 +355,10 @@ describe('Docker Orchestrator', () => {
       // Start first node
       debug('Starting node 1...');
       node1 = await orchestrator.startNode(node1Config);
-      debug(`Node 1 started with ID: ${node1.id}`);
+      debug(`Node 1 started with ID: ${node1.id} apiUrl: ${node1.getApiUrl?.()}`);
       
       // Get node 1's status and API URL
       const status1 = await node1.status() as ExtendedNodeStatus;
-      const node1ApiUrl = node1.getApiUrl?.();
       
       // Update node 2's config with node 1's actual address if available
       if (status1.network?.address && node2Config.network) {
@@ -373,11 +369,10 @@ describe('Docker Orchestrator', () => {
       // Start second node
       debug('Starting node 2...');
       node2 = await orchestrator.startNode(node2Config);
-      debug(`Node 2 started with ID: ${node2.id}`);
+      debug(`Node 2 started with ID: ${node2.id} apiUrl: ${node2.getApiUrl?.()}`);
       
       // Get node 2's status
       const status2 = await node2.status() as ExtendedNodeStatus;
-      const node2ApiUrl = node2.getApiUrl?.();
       
       // Verify both nodes are running
       expect(status1).toBeDefined();

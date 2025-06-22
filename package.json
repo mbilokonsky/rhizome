@@ -7,7 +7,7 @@
     "build:watch": "tsc --watch",
     "lint": "eslint",
     "test": "jest",
-    "coverage": "npm run test -- --coverage --coverageDirectory=coverage",
+    "coverage": "npm run test -- --coverage",
     "example-app": "node dist/examples/app.js",
     "stop-all": "docker ps -a --filter \"name=^/rhizome-node-\" --format {{.Names}} | xargs -r docker stop",
     "build-test-image": "docker build -t rhizome-node-test -f Dockerfile.test ."
@@ -16,14 +16,19 @@
     "testEnvironment": "node",
     "preset": "ts-jest/presets/default",
     "roots": [
-      "./__tests__/"
+      "<rootDir>/__tests__"
     ],
     "testMatch": [
-      "**/__tests__/**/*"
+      "**/*.test.ts",
+      "**/*.test.tsx"
     ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/__tests__/jest-setup.ts"
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/"
     ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
     "transform": {
       "^\\.tsx?$": [
         "ts-jest",
@@ -37,7 +42,16 @@
     "verbose": true,
     "testEnvironmentOptions": {
       "NODE_ENV": "test"
-    }
+    },
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "util/**/*.{ts,tsx}",
+      "!**/node_modules/**",
+      "!**/dist/**",
+      "!**/__tests__/**",
+      "!**/*.test.{ts,tsx}"
+    ],
+    "coverageDirectory": "coverage"
   },
   "author": "Lentil <lentil@laddhoffman.com>",
   "license": "Unlicense",

@@ -26,7 +26,8 @@ export class DockerOrchestrator extends BaseOrchestrator {
   private nodeHandles: Map<string, DockerNodeHandle> = new Map();
   
   // Managers
-  private readonly containerManager: ContainerManager;
+  // Visible for testing
+  readonly containerManager: ContainerManager;
   private readonly networkManager: NetworkManager;
   private readonly resourceManager: ResourceManager;
   private readonly statusManager: StatusManager;
@@ -225,7 +226,7 @@ export class DockerOrchestrator extends BaseOrchestrator {
   /**
    * Create network partitions
    */
-  async partitionNetwork(partitions: NetworkPartition): Promise<void> {
+  async partitionNetwork(_partitions: NetworkPartition): Promise<void> {
     // Implementation for network partitioning
     // This is a simplified version - in a real implementation, you would:
     // 1. Create separate networks for each partition

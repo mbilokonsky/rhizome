@@ -8,9 +8,8 @@ import {
   AverageResolver,
   CountResolver,
   AggregationType
-} from "../src";
-import { createDelta } from "../src/core/delta-builder";
-import { Delta } from "../src/core/delta";
+} from "../../../../src";
+import { createDelta } from "../../../../src/core/delta-builder";
 
 describe('Aggregation Resolvers', () => {
   let node: RhizomeNode;

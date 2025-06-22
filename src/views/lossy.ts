@@ -5,8 +5,17 @@
 import Debug from 'debug';
 import {DeltaFilter, DeltaID} from "../core/delta";
 import {Lossless, LosslessViewOne} from "./lossless";
-import {DomainEntityID} from "../core/types";
+import {DomainEntityID, PropertyID, PropertyTypes, ViewMany} from "../core/types";
 const debug = Debug('rz:lossy');
+
+type PropertyMap = Record<PropertyID, PropertyTypes>;
+
+export type LossyViewOne<T = PropertyMap> = {
+  id: DomainEntityID;
+  properties: T;
+};
+
+export type LossyViewMany<T = PropertyMap> = ViewMany<LossyViewOne<T>>;
 
 // We support incremental updates of lossy models.
 export abstract class Lossy<Accumulator, Result> {

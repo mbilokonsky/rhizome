@@ -6,7 +6,7 @@ import {
   InvalidPointerError,
   validateDeltaNetworkImageV1,
   validateDeltaNetworkImageV2
-} from "../src";
+} from "../../../../src";
 
 describe("Delta Validation", () => {
   describe("Invalid Delta Formats", () => {

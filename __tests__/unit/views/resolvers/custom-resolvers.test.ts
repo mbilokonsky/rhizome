@@ -1,7 +1,6 @@
 import {
   RhizomeNode,
   Lossless,
-  Delta,
   CustomResolver,
   ResolverPlugin,
   LastWriteWinsPlugin,
@@ -13,7 +12,7 @@ import {
   PropertyTypes,
   CollapsedDelta,
   createDelta
-} from "../src";
+} from "../../../../src";
 
 describe('Custom Resolvers', () => {
   let node: RhizomeNode;

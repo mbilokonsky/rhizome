@@ -1,7 +1,7 @@
 import Debug from "debug";
-import { createDelta } from '../src/core/delta-builder';
-import {Lossless, RhizomeNode} from "../src";
-import {TimestampResolver} from "../src/views/resolvers/timestamp-resolvers";
+import { createDelta } from '../../../../src/core/delta-builder';
+import { Lossless, RhizomeNode } from '../../../../src';
+import { TimestampResolver } from '../../../../src/views/resolvers/timestamp-resolvers';
 const debug = Debug('test:last-write-wins');
 
 // This was initially written to test a LastWriteWins resolver, but that has been

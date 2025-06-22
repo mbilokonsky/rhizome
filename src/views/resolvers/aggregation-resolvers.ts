@@ -2,7 +2,7 @@ import { EntityProperties } from "../../core/entity";
 import { Lossless, LosslessViewOne } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
-import { valueFromCollapsedDelta } from "./last-write-wins";
+import { CollapsedDelta } from "../lossless";
 
 export type AggregationType = 'min' | 'max' | 'sum' | 'average' | 'count';
 
@@ -36,6 +36,20 @@ type ResolvedAggregatedViewMany = ViewMany<ResolvedAggregatedViewOne>;
 
 type Accumulator = AggregatedViewMany;
 type Result = ResolvedAggregatedViewMany;
+
+// Extract a particular value from a delta's pointers
+export function valueFromCollapsedDelta(
+  key: string,
+  delta: CollapsedDelta
+): string | number | undefined {
+  for (const pointer of delta.pointers) {
+    for (const [k, value] of Object.entries(pointer)) {
+      if (k === key && (typeof value === "string" || typeof value === "number")) {
+        return value;
+      }
+    }
+  }
+}
 
 function aggregateValues(values: number[], type: AggregationType): number {
   if (values.length === 0) return 0;

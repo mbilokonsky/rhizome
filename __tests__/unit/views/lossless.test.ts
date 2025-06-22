@@ -1,7 +1,7 @@
-import {Delta, DeltaFilter, DeltaV2} from '../src/core';
-import {Lossless} from '../src/views';
-import {RhizomeNode} from '../src/node';
-import {createDelta} from '../src/core/delta-builder';
+import {DeltaFilter} from '../../../src/core';
+import {Lossless} from '../../../src/views';
+import {RhizomeNode} from '../../../src/node';
+import {createDelta} from '../../../src/core/delta-builder';
 
 describe('Lossless', () => {
   const node = new RhizomeNode();

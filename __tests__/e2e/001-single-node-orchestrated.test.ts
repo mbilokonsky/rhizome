@@ -1,11 +1,11 @@
 import { createOrchestrator, type NodeConfig } from '../../src/orchestration';
-
+import type { NodeHandle } from '../../src/orchestration/types';
 // Increase test timeout to 30 seconds
 jest.setTimeout(30000);
 
 describe('Run (Orchestrated)', () => {
   const orchestrator = createOrchestrator('in-memory');
-  let nodeHandle: any;
+  let nodeHandle: NodeHandle;
   let apiUrl: string;
 
   beforeAll(async () => {
@@ -14,7 +14,7 @@ describe('Run (Orchestrated)', () => {
       id: 'app-001',
     };
     nodeHandle = await orchestrator.startNode(config);
-    apiUrl = nodeHandle.getApiUrl();
+    apiUrl = nodeHandle.getApiUrl?.() || 'http://localhost:3000'; // Default URL if getApiUrl is not available
   }, 60000); // Increase timeout to 60s for this hook
 
   afterAll(async () => {

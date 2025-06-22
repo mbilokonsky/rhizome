@@ -1,5 +1,5 @@
 import {Collection} from "./collection-abstract";
-import {ResolvedViewOne} from "../views/resolvers/last-write-wins";
+import { ResolvedTimestampedViewOne as ResolvedViewOne } from "../views/resolvers/timestamp-resolvers";
 import {TimestampResolver} from "../views/resolvers/timestamp-resolvers";
 
 class RelationalView extends TimestampResolver {

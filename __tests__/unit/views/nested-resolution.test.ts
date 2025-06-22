@@ -9,12 +9,12 @@
  * - Deep nesting scenarios
  */
 
-import { RhizomeNode } from '../src/node';
-import { DefaultSchemaRegistry } from '../src/schema';
-import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas } from '../src/schema';
-import { CommonSchemas } from '../util/schemas';
-import { TypedCollectionImpl } from '../src/collections';
-import { createDelta } from '../src/core/delta-builder';
+import { RhizomeNode } from '../../../src/node';
+import { DefaultSchemaRegistry } from '../../../src/schema';
+import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas } from '../../../src/schema';
+import { CommonSchemas } from '../../../util/schemas';
+import { TypedCollectionImpl } from '../../../src/collections';
+import { createDelta } from '../../../src/core/delta-builder';
 
 describe('Nested Object Resolution', () => {
   let node: RhizomeNode;

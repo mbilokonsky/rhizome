@@ -4,7 +4,7 @@
 // It could then be further extended with e.g. table semantics like filter, sort, join
 
 import {Collection} from '../collections/collection-abstract';
-import {ResolvedViewOne} from '../views/resolvers/last-write-wins';
+import { ResolvedTimestampedViewOne as ResolvedViewOne } from '../views/resolvers/timestamp-resolvers';
 import {TimestampResolver} from '../views/resolvers/timestamp-resolvers';
 
 export class BasicCollection extends Collection<TimestampResolver> {

@@ -1,4 +1,4 @@
-import { createDelta } from '../src/core/delta-builder';
+import { createDelta } from '../../src/core/delta-builder';
 import {
   RhizomeNode,
   Lossless,
@@ -7,7 +7,7 @@ import {
   LastWriteWinsPlugin,
   MajorityVotePlugin,
   TimestampResolver
-} from "../src";
+} from "../../src";
 
 describe('Concurrent Write Scenarios', () => {
   let node: RhizomeNode;

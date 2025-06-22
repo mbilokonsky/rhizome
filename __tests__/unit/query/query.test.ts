@@ -1,10 +1,10 @@
-import { QueryEngine } from '../src/query';
-import { Lossless } from '../src/views';
-import { DefaultSchemaRegistry } from '../src/schema';
-import { SchemaBuilder, PrimitiveSchemas } from '../src/schema';
-import { CommonSchemas } from '../util/schemas';
-import { createDelta } from '../src/core/delta-builder';
-import { RhizomeNode } from '../src/node';
+import { QueryEngine } from '../../../src/query';
+import { Lossless } from '../../../src/views';
+import { DefaultSchemaRegistry } from '../../../src/schema';
+import { SchemaBuilder, PrimitiveSchemas } from '../../../src/schema';
+import { CommonSchemas } from '../../../util/schemas';
+import { createDelta } from '../../../src/core/delta-builder';
+import { RhizomeNode } from '../../../src/node';
 
 describe('Query Engine', () => {
   let queryEngine: QueryEngine;

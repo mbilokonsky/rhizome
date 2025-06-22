@@ -1,6 +1,6 @@
 import Debug from 'debug';
 import { Collection } from '../collections/collection-abstract';
-import { ResolvedViewOne } from '../views/resolvers/last-write-wins';
+import { ResolvedTimestampedViewOne as ResolvedViewOne } from '../views/resolvers/timestamp-resolvers';
 import { TimestampResolver } from '../views/resolvers/timestamp-resolvers'
 import { 
   ObjectSchema, 

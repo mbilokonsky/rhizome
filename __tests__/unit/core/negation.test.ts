@@ -1,8 +1,8 @@
 import Debug from 'debug';
-import { createDelta } from '../src/core/delta-builder';
-import { NegationHelper } from '../src/features';
-import { RhizomeNode } from '../src/node';
-import { Lossless } from '../src/views';
+import { createDelta } from '../../../src/core/delta-builder';
+import { NegationHelper } from '../../../src/features';
+import { RhizomeNode } from '../../../src/node';
+import { Lossless } from '../../../src/views';
 
 const debug = Debug('rz:negation:test');
 

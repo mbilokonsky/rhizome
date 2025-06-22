@@ -4,7 +4,7 @@ import EventEmitter from "node:events";
 import {Delta} from "../core/delta";
 import {createDelta} from "../core/delta-builder";
 import {Entity, EntityProperties} from "../core/entity";
-import {ResolvedViewOne} from '../views/resolvers/last-write-wins';
+import { ResolvedTimestampedViewOne as ResolvedViewOne } from '../views/resolvers/timestamp-resolvers';
 import {RhizomeNode} from "../node";
 import {DomainEntityID} from "../core/types";
 const debug = Debug('rz:abstract-collection');

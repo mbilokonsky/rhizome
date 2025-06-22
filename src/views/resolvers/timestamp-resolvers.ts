@@ -1,8 +1,19 @@
 import { EntityProperties } from "../../core/entity";
-import { Lossless, LosslessViewOne } from "../lossless";
+import { Lossless, LosslessViewOne, CollapsedDelta } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany } from "../../core/types";
-import { valueFromCollapsedDelta } from "./last-write-wins";
+import { valueFromCollapsedDelta } from "./aggregation-resolvers";
+
+// Moved here from last-write-wins.ts before removing that file
+export type TimestampedProperty = {
+  value: PropertyTypes,
+  timeUpdated: Timestamp
+};
+
+// Moved here from last-write-wins.ts before removing that file
+export type TimestampedProperties = {
+  [key: PropertyID]: TimestampedProperty
+};
 
 export type TieBreakingStrategy = 'creator-id' | 'delta-id' | 'host-id' | 'lexicographic';
 
@@ -152,4 +163,32 @@ export class LexicographicTimestampResolver extends TimestampResolver {
   constructor(lossless: Lossless) {
     super(lossless, 'lexicographic');
   }
+}
+
+// Resolve a value for an entity by last write wins
+export function lastValueFromDeltas(
+  key: string,
+  deltas?: CollapsedDelta[]
+): {
+  delta?: CollapsedDelta,
+  value?: string | number,
+  timeUpdated?: number
+} | undefined {
+  const res: {
+    delta?: CollapsedDelta,
+    value?: string | number,
+    timeUpdated?: number
+  } = {};
+  res.timeUpdated = 0;
+
+  for (const delta of deltas || []) {
+    const value = valueFromCollapsedDelta(key, delta);
+    if (value === undefined) continue;
+    if (res.timeUpdated && delta.timeCreated < res.timeUpdated) continue;
+    res.delta = delta;
+    res.value = value;
+    res.timeUpdated = delta.timeCreated;
+  }
+
+  return res;
 }
