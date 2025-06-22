@@ -80,18 +80,55 @@ describe('DeltaBuilder', () => {
 
     it('should create a V1 delta with relationships', () => {
       const delta = createDelta(creator, host)
-        .relate('user-1', 'follows', 'user-2')
+        .relate('user-1', 'user-2', 'follows')
         .buildV1();
 
+        // This delta sets values on a new relationship entity
+
       expect(delta.pointers).toContainEqual({
-        localContext: 'follows',
-        target: 'user-2',
-        targetContext: 'follows'
+        localContext: '_target',
+        target: expect.any(String),
+        targetContext: 'target'
+      });
+      const relId = delta.pointers.find(p => p.localContext === '_target')?.target;
+      expect(delta.pointers).toContainEqual({
+        localContext: '_source',
+        target: relId,
+        targetContext: 'source'
       });
       expect(delta.pointers).toContainEqual({
-        localContext: 'source',
-        target: 'user-1',
-        targetContext: 'follows'
+        localContext: '_type',
+        target: relId,
+        targetContext: 'type'
+      });
+    });
+
+    it('should create a V1 delta with relationships and properties', () => {
+      const delta = createDelta(creator, host)
+        .relate('user-1', 'user-2', 'follows', { version: 1})
+        .buildV1();
+
+      // This delta sets values on a new relationship entity
+      expect(delta.pointers).toContainEqual({
+        localContext: '_target',
+        target: expect.any(String),
+        targetContext: 'target'
+      });
+      const relId = delta.pointers.find(p => p.localContext === '_target')?.target;
+      expect(delta.pointers).toContainEqual({
+        localContext: '_source',
+        target: relId,
+        targetContext: 'source'
+      });
+      expect(delta.pointers).toContainEqual({
+        localContext: '_type',
+        target: relId,
+        targetContext: 'type'
+      });
+      expect(delta.pointers).toContainEqual({
+        localContext: '_version',
+        target: relId,
+        targetContext: 'version'
       });
     });
   });
@@ -121,11 +158,21 @@ describe('DeltaBuilder', () => {
 
     it('should create a V2 delta with relationships', () => {
       const delta = createDelta(creator, host)
-        .relate('user-1', 'follows', 'user-2')
+        .relate('user-1', 'user-2', 'follows')
         .buildV2();
 
       expect(delta.pointers).toHaveProperty('follows', { 'user-2': 'follows' });
       expect(delta.pointers).toHaveProperty('source', { 'user-1': 'follows' });
+    });
+
+    it('should create a V2 delta with relationships and properties', () => {
+      const delta = createDelta(creator, host)
+        .relate('user-1', 'user-2', 'follows', { version: 1})
+        .buildV2();
+
+      expect(delta.pointers).toHaveProperty('follows', { 'user-2': 'follows' });
+      expect(delta.pointers).toHaveProperty('source', { 'user-1': 'follows' });
+      expect(delta.pointers).toHaveProperty('version', { 1: 'follows' });
     });
   });
 

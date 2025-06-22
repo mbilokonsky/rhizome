@@ -87,6 +87,7 @@ export class DeltaBuilder {
    * Set a property on an entity
    */
   setProperty(entityId: string, property: string, value: string | number | boolean | null, entityLabel = "entity"): this {
+    // Note that entityLabe and property each need to be unique within a given delta
     this.addPointer(entityLabel, entityId, property)
     this.addPointer(property, value);
     return this;
@@ -95,9 +96,16 @@ export class DeltaBuilder {
   /**
    * Create a relationship between two entities
    */
-  relate(sourceId: string, relationship: string, targetId: string): this {
-    this.pointers[relationship] = { [targetId]: relationship };
-    this.pointers.source = { [sourceId]: relationship };
+  relate(sourceId: string, targetId: string, relationship: string, properties?: Record<string, any>): this {
+    const relId = randomUUID();
+    this.setProperty(relId, 'source', sourceId, '_source');
+    this.setProperty(relId, 'target', targetId, '_target');
+    this.setProperty(relId, 'type', relationship, '_type');
+    if (properties) {
+      for (const [key, value] of Object.entries(properties)) {
+        this.setProperty(relId, key, value, `_${key}`);
+      }
+    }
     return this;
   }
 
