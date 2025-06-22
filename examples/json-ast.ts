@@ -1,4 +1,4 @@
-import { jsonToAst } from './index';
+import { jsonToAst } from '../src/util/json-ast/index';
 
 // Example JSON data
 const exampleJson = {
@@ -29,8 +29,9 @@ const ast = jsonToAst(exampleJson, {
   // filter: (node) => !node.path || node.path.includes('address')
 });
 
-// Print the AST
-console.log(JSON.stringify(ast, null, 2));
+console.log("Original JSON:", JSON.stringify(exampleJson, null, 2));
+
+console.log("\nAST:", JSON.stringify(ast, null, 2));
 
 // Example of traversing the AST
 function traverse(node: any, indent = 0) {
