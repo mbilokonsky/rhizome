@@ -14,23 +14,6 @@ export interface NegationPointer {
 
 // Helper functions for creating and identifying negation deltas
 export class NegationHelper {
-  
-  /**
-   * Create a negation delta that negates another delta
-   */
-  static createNegation(
-    deltaToNegate: DeltaID,
-    creator: CreatorID,
-    host: HostID
-  ): Delta {
-    const negationDelta = createDelta(creator, host)
-      .negate(deltaToNegate)
-      .buildV1();
-
-    debug(`Created negation delta ${negationDelta.id} negating ${deltaToNegate}`);
-    return negationDelta;
-  }
-
   /**
    * Check if a delta is a negation delta
    */
@@ -361,14 +344,6 @@ export class NegationHelper {
     };
   }
   
-  /**
-   * Helper to check if a delta with the given ID is a negation delta
-   */
-  private static isNegationDeltaById(deltaId: DeltaID, deltas: Delta[]): boolean {
-    const delta = deltas.find(d => d.id === deltaId);
-    return delta ? this.isNegationDelta(delta) : false;
-  }
-
   /**
    * Apply negations to a delta stream in chronological order
    * Later negations can override earlier ones

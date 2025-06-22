@@ -21,11 +21,9 @@ describe('Negation System', () => {
         .setProperty('entity1', 'name', 'Alice')
         .buildV1();
 
-      const negationDelta = NegationHelper.createNegation(
-        originalDelta.id,
-        'moderator',
-        'host1'
-      );
+      const negationDelta = createDelta('moderator', 'host1')
+        .negate(originalDelta.id)
+        .buildV1();
 
       expect(negationDelta.creator).toBe('moderator');
       expect(negationDelta.pointers).toHaveLength(1);
@@ -42,11 +40,9 @@ describe('Negation System', () => {
         .setProperty('entity1', 'name', 'Entity 1')
         .buildV1();
 
-      const negationDelta = NegationHelper.createNegation(
-        'delta-to-negate',
-        'moderator',
-        'host1'
-      );
+      const negationDelta = createDelta('moderator', 'host1')
+        .negate('delta-to-negate')
+        .buildV1();
 
       expect(NegationHelper.isNegationDelta(regularDelta)).toBe(false);
       expect(NegationHelper.isNegationDelta(negationDelta)).toBe(true);
@@ -54,11 +50,9 @@ describe('Negation System', () => {
 
     it('should extract negated delta ID', () => {
       const targetDeltaId = 'target-delta-123';
-      const negationDelta = NegationHelper.createNegation(
-        targetDeltaId,
-        'moderator',
-        'host1'
-      );
+      const negationDelta = createDelta('moderator', 'host1')
+        .negate(targetDeltaId)
+        .buildV1();
 
       const extractedId = NegationHelper.getNegatedDeltaId(negationDelta);
       expect(extractedId).toBe(targetDeltaId);
@@ -79,9 +73,9 @@ describe('Negation System', () => {
         .setProperty('entity1', 'age', 25)
         .buildV1();
 
-      const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
-      const negation2 = NegationHelper.createNegation(delta1.id, 'mod2', 'host1');
-      const negation3 = NegationHelper.createNegation(delta2.id, 'mod1', 'host1');
+      const negation1 = createDelta('mod1', 'host1').negate(delta1.id).buildV1();
+      const negation2 = createDelta('mod2', 'host1').negate(delta1.id).buildV1();
+      const negation3 = createDelta('mod1', 'host1').negate(delta2.id).buildV1();
 
       const allDeltas = [delta1, delta2, negation1, negation2, negation3];
 
@@ -104,7 +98,7 @@ describe('Negation System', () => {
         .setProperty('entity1', 'age', 25)
         .buildV1();
 
-      const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
+      const negation1 = createDelta('mod1', 'host1').negate(delta1.id).buildV1();
       const allDeltas = [delta1, delta2, negation1];
 
       expect(NegationHelper.isDeltaNegated(delta1.id, allDeltas)).toBe(true);
@@ -124,8 +118,8 @@ describe('Negation System', () => {
         .setProperty('entity1', 'email', 'entity1@example.com')
         .buildV1();
 
-      const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
-      const negation2 = NegationHelper.createNegation(delta2.id, 'mod2', 'host1');
+      const negation1 = createDelta('mod1', 'host1').negate(delta1.id).buildV1();
+      const negation2 = createDelta('mod2', 'host1').negate(delta2.id).buildV1();
 
       const allDeltas = [delta1, delta2, delta3, negation1, negation2];
       const filtered = NegationHelper.filterNegatedDeltas(allDeltas);
@@ -144,7 +138,7 @@ describe('Negation System', () => {
         .setProperty('entity1', 'age', 25)
         .buildV1();
 
-      const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
+      const negation1 = createDelta('mod1', 'host1').negate(delta1.id).buildV1();
       const allDeltas = [delta1, delta2, negation1];
 
       const stats = NegationHelper.getNegationStats(allDeltas);
@@ -166,7 +160,7 @@ describe('Negation System', () => {
         .setProperty('entity1', 'status', 'active')
         .buildV1();
 
-      const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
+      const negation1 = createDelta('mod1', 'host1').negate(delta1.id).buildV1();
       negation1.timeCreated = baseTime + 1000; // 1 second later
 
       const delta2 = createDelta('user1', 'host1')
@@ -174,7 +168,7 @@ describe('Negation System', () => {
         .setProperty('entity1', 'status', 'inactive')
         .buildV1();
 
-      const negation2 = NegationHelper.createNegation(delta2.id, 'mod1', 'host1');
+      const negation2 = createDelta('mod1', 'host1').negate(delta2.id).buildV1();
       negation2.timeCreated = baseTime + 3000; // 3 seconds later
 
       const allDeltas = [delta1, negation1, delta2, negation2];
@@ -193,11 +187,9 @@ describe('Negation System', () => {
         .buildV1();
 
       // Create negation delta
-      const negationDelta = NegationHelper.createNegation(
-        originalDelta.id,
-        'moderator',
-        'host1'
-      );
+      const negationDelta = createDelta('moderator', 'host1')
+        .negate(originalDelta.id)
+        .buildV1();
       
 
       // Create another non-negated delta
@@ -225,8 +217,8 @@ describe('Negation System', () => {
         .setProperty('post1', 'content', 'Original content')
         .buildV1();
 
-      const negation1 = NegationHelper.createNegation(originalDelta.id, 'mod1', 'host1');
-      const negation2 = NegationHelper.createNegation(originalDelta.id, 'mod2', 'host1');
+      const negation1 = createDelta('mod1', 'host1').negate(originalDelta.id).buildV1();
+      const negation2 = createDelta('mod2', 'host1').negate(originalDelta.id).buildV1();
 
       lossless.ingestDelta(originalDelta);
       lossless.ingestDelta(negation1);
@@ -247,7 +239,7 @@ describe('Negation System', () => {
         .setProperty('article1', 'content', 'Article content')
         .buildV1();
 
-      const negation1 = NegationHelper.createNegation(delta1.id, 'mod1', 'host1');
+      const negation1 = createDelta('mod1', 'host1').negate(delta1.id).buildV1();
 
       lossless.ingestDelta(delta1);
       lossless.ingestDelta(delta2);
@@ -268,11 +260,7 @@ describe('Negation System', () => {
         .setProperty('task1', 'status', 'pending')
         .buildV1();
 
-      const negationDelta = NegationHelper.createNegation(
-        originalDelta.id,
-        'admin',
-        'host1'
-      );
+      const negationDelta = createDelta('admin', 'host1').negate(originalDelta.id).buildV1();
 
       lossless.ingestDelta(originalDelta);
       lossless.ingestDelta(negationDelta);
@@ -299,7 +287,7 @@ describe('Negation System', () => {
         .buildV1();
 
       // Create negation delta in same transaction
-      const negationDelta = NegationHelper.createNegation(originalDelta.id, 'moderator', 'host1');
+      const negationDelta = createDelta('moderator', 'host1').negate(originalDelta.id).buildV1();
       negationDelta.pointers.unshift({
         localContext: '_transaction',
         target: transactionId,
@@ -324,7 +312,7 @@ describe('Negation System', () => {
         .buildV1();
 
       // Moderator negates it
-      const negationDelta = NegationHelper.createNegation(postDelta.id, 'moderator', 'host1');
+      const negationDelta = createDelta('moderator', 'host1').negate(postDelta.id).buildV1();
       negationDelta.timeCreated = baseTime + 1000;
 
       // User edits content (after negation)
@@ -351,11 +339,7 @@ describe('Negation System', () => {
 
   describe('Edge Cases', () => {
     it('should handle negation of non-existent deltas', () => {
-      const negationDelta = NegationHelper.createNegation(
-        'non-existent-delta-id',
-        'moderator',
-        'host1'
-      );
+      const negationDelta = createDelta('moderator', 'host1').negate('non-existent-delta-id').buildV1();
 
       lossless.ingestDelta(negationDelta);
 
@@ -371,7 +355,7 @@ describe('Negation System', () => {
         .setProperty('node1', 'child', 'node1') // Self-reference
         .buildV1();
 
-      const negationDelta = NegationHelper.createNegation(selfRefDelta.id, 'admin', 'host1');
+      const negationDelta = createDelta('admin', 'host1').negate(selfRefDelta.id).buildV1();
 
       lossless.ingestDelta(selfRefDelta);
       lossless.ingestDelta(negationDelta);
@@ -390,8 +374,8 @@ describe('Negation System', () => {
         .buildV1();
 
       // Create two negations of the same delta
-      const negation1 = NegationHelper.createNegation(originalDelta.id, 'user2', 'host1');
-      const negation2 = NegationHelper.createNegation(originalDelta.id, 'user3', 'host1');
+      const negation1 = createDelta('user2', 'host1').negate(originalDelta.id).buildV1();
+      const negation2 = createDelta('user3', 'host1').negate(originalDelta.id).buildV1();
 
       // Process all deltas
       testLossless.ingestDelta(originalDelta);
@@ -421,9 +405,9 @@ describe('Negation System', () => {
         .buildV1();
 
       // Create a chain of negations: B negates A, C negates B, D negates C
-      const deltaB = NegationHelper.createNegation(deltaA.id, 'user2', 'host1');
-      const deltaC = NegationHelper.createNegation(deltaB.id, 'user3', 'host1');
-      const deltaD = NegationHelper.createNegation(deltaC.id, 'user4', 'host1');
+      const deltaB = createDelta('user2', 'host1').negate(deltaA.id).buildV1();
+      const deltaC = createDelta('user3', 'host1').negate(deltaB.id).buildV1();
+      const deltaD = createDelta('user4', 'host1').negate(deltaC.id).buildV1();
 
       debug('Delta A (original): %s', deltaA.id);
       debug('Delta B (negates A): %s', deltaB.id);
@@ -498,8 +482,8 @@ describe('Negation System', () => {
         .buildV1();
 
       // Create negations for both deltas
-      const negation1 = NegationHelper.createNegation(delta1.id, 'user3', 'host1');
-      const negation2 = NegationHelper.createNegation(delta2.id, 'user4', 'host1');
+      const negation1 = createDelta('user3', 'host1').negate(delta1.id).buildV1();
+      const negation2 = createDelta('user4', 'host1').negate(delta2.id).buildV1();
 
       // Process all deltas
       testLossless.ingestDelta(delta1);
