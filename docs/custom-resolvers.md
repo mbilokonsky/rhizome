@@ -29,22 +29,74 @@ The `CustomResolver` class provides a flexible system for resolving property con
    - `MajorityVotePlugin`: Selects the most common value
    - `MinPlugin`/`MaxPlugin`: Tracks minimum/maximum numeric values
 
-## Inter-Plugin Dependencies
+## Plugin Dependencies
 
 ### Overview
 
-The system now supports inter-plugin dependencies, allowing plugins to access the state of other plugins during both the update and resolve phases. This enables the creation of more sophisticated resolution strategies that can depend on multiple properties.
+The system supports explicit declaration of dependencies between plugins, ensuring they are processed in the correct order. This enables:
+
+1. **Deterministic Execution**: Plugins are processed after their dependencies
+2. **Dependency Validation**: Circular dependencies are detected and prevented
+3. **Optimized Processing**: Only necessary states are processed in the correct order
+
+### Declaring Dependencies
+
+Each plugin can declare its dependencies using the `dependencies` property:
+
+```typescript
+class MyPlugin implements ResolverPlugin {
+  name = 'my-plugin';
+  
+  // List of property IDs this plugin depends on
+  dependencies: PropertyID[] = ['other-property'];
+  
+  // ... rest of the implementation
+}
+```
+
+### Dependency Resolution
+
+1. **Topological Sorting**: Plugins are processed in an order that respects their dependencies
+2. **Cycle Detection**: Circular dependencies are detected during initialization
+3. **Lazy Resolution**: Dependencies are only resolved when needed
+
+### Example: Chained Dependencies
+
+```typescript
+const resolver = new CustomResolver(losslessView, {
+  // This will be processed first (no dependencies)
+  basePrice: new LastWriteWinsPlugin(),
+  
+  // This depends on basePrice
+  tax: new TaxCalculatorPlugin(),
+  
+  // This depends on both basePrice and tax
+  total: new TotalCalculatorPlugin()
+});
+```
+
+### Best Practices
+
+1. **Minimal Dependencies**: Only declare dependencies that are actually needed
+2. **Avoid Cycles**: Design your plugins to avoid circular dependencies
+3. **Document Dependencies**: Clearly document what each plugin depends on
+4. **Test Dependencies**: Include tests that verify the dependency behavior
 
 ### Implementation Details
 
 #### ResolverPlugin Interface
 
-The `ResolverPlugin` interface has been updated to include an optional `allStates` parameter in both the `update` and `resolve` methods:
+The `ResolverPlugin` interface defines the contract that all resolver plugins must implement. It has been updated to support inter-plugin dependencies and state sharing:
 
 ```typescript
 interface ResolverPlugin<T = unknown> {
+  // Unique name of the plugin
   name: string;
   
+  // List of property IDs this plugin depends on
+  // Plugins will be processed after their dependencies
+  dependencies?: PropertyID[];
+
   // Initialize the state for a property
   initialize(): T;
 
@@ -53,25 +105,49 @@ interface ResolverPlugin<T = unknown> {
     currentState: T, 
     newValue: PropertyTypes, 
     delta: CollapsedDelta,
-    allStates?: Record<PropertyID, unknown>  // Access to other plugin states
+    allStates?: Record<PropertyID, unknown>
   ): T;
 
-  // Resolve the final value from the accumulated state
+  // Resolve the final value from the current state
+  // Must return a value of type PropertyTypes or undefined
+  // This is the value that will be used as the resolved property value
   resolve(
     state: T,
-    allStates?: Record<PropertyID, unknown>  // Access to other plugin states
+    allStates?: Record<PropertyID, unknown>
   ): PropertyTypes | undefined;
 }
 ```
+
+#### Important Notes
+
+1. **Return Type of `resolve`**:
+   - The `resolve` method must return a value of type `PropertyTypes` or `undefined`
+   - This is different from the `update` method which returns the updated state of type `T`
+   - The returned value will be used as the resolved property value
+
+2. **Plugin Dependencies**:
+   - Dependencies are declared using the `dependencies` property
+   - Dependencies should be an array of property IDs that this plugin depends on
+   - The resolver ensures that all dependencies are processed before the plugin that depends on them
+
+3. **State Access**:
+   - The `allStates` parameter in `update` and `resolve` provides access to the current state of all other properties
+   - This allows plugins to make decisions based on the state of other properties
+   - The states are keyed by property ID and contain the raw state objects for each plugin
+
+4. **Error Handling**:
+   - If a plugin throws an error during initialization, update, or resolve, the error will be logged and the plugin will be skipped
+   - It's recommended to handle errors within the plugin methods when possible
 
 #### CustomResolver Class
 
 The `CustomResolver` class has been enhanced to:
 1. Collect all plugin states before processing updates
 2. Pass the complete state to each plugin during updates and resolution
-3. Maintain backward compatibility with existing plugins
 
-### Example: Discounted Price Plugin
+### Complex Example: Discounted Price with Dependencies
+
+This example demonstrates a more complex scenario with multiple interdependent plugins:
 
 Here's a practical example of a plugin that calculates a discounted price based on another property:
 

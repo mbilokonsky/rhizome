@@ -7,6 +7,12 @@ import { DomainEntityID, PropertyID, PropertyTypes, ViewMany } from "../../core/
 export interface ResolverPlugin<T = unknown> {
   name: string;
 
+  /**
+   * Array of property IDs that this plugin depends on.
+   * These properties will be processed before this plugin.
+   */
+  dependencies?: PropertyID[];
+
   // Initialize the state for a property
   initialize(): T;
 
@@ -19,7 +25,6 @@ export interface ResolverPlugin<T = unknown> {
   ): T;
 
   // Resolve the final value from the accumulated state
-  // Returns undefined if no valid value could be resolved
   resolve(
     state: T,
     allStates?: Record<PropertyID, unknown>
@@ -65,11 +70,17 @@ function extractValueFromDelta(propertyId: PropertyID, delta: CollapsedDelta): P
 }
 
 export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResolverResult> {
+  private executionOrder: PropertyID[];
+  private readonly config: CustomResolverConfig;
+
   constructor(
     lossless: Lossless,
-    private config: CustomResolverConfig
+    config: CustomResolverConfig
   ) {
     super(lossless);
+    this.config = config;
+    this.validateDependencies();
+    this.executionOrder = this.getExecutionOrder();
   }
 
   initializer(view: LosslessViewOne): CustomResolverAccumulator {
@@ -78,36 +89,119 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
     };
   }
 
-  reducer(acc: CustomResolverAccumulator, cur: LosslessViewOne): CustomResolverAccumulator {
+  /**
+   * Validates that there are no circular dependencies between plugins
+   * @throws Error if circular dependencies are detected
+   */
+  private validateDependencies(): void {
+    const visited = new Set<PropertyID>();
+    const visiting = new Set<PropertyID>();
+    const plugins = Object.entries(this.config);
+    
+    const visit = (pluginId: PropertyID): void => {
+      if (visiting.has(pluginId)) {
+        throw new Error(`Circular dependency detected involving property: ${pluginId}`);
+      }
+      
+      if (visited.has(pluginId)) {
+        return;
+      }
+      
+      visiting.add(pluginId);
+      const plugin = this.config[pluginId];
+      
+      // Visit all dependencies first
+      for (const dep of plugin?.dependencies || []) {
+        if (this.config[dep]) {
+          visit(dep);
+        } else {
+          throw new Error(`Plugin '${pluginId}' depends on unknown property: ${dep}`);
+        }
+      }
+      
+      visiting.delete(pluginId);
+      visited.add(pluginId);
+    };
+    
+    // Check each plugin for circular dependencies
+    for (const [id] of plugins) {
+      if (!visited.has(id)) {
+        visit(id);
+      }
+    }
+  }
+  
+  /**
+   * Gets the execution order of properties based on their dependencies
+   * @returns Array of property IDs in execution order
+   */
+  private getExecutionOrder(): PropertyID[] {
+    const visited = new Set<PropertyID>();
+    const order: PropertyID[] = [];
+    
+    const visit = (pluginId: PropertyID): void => {
+      if (visited.has(pluginId)) return;
+      
+      const plugin = this.config[pluginId];
+      if (!plugin) return;
+      
+      // Visit dependencies first
+      for (const dep of plugin.dependencies || []) {
+        visit(dep);
+      }
+      
+      // Then add this plugin
+      if (!visited.has(pluginId)) {
+        visited.add(pluginId);
+        order.push(pluginId);
+      }
+    };
+    
+    // Visit each plugin
+    for (const id of Object.keys(this.config)) {
+      visit(id);
+    }
+    
+    return order;
+  }
+
+  public reducer(
+    acc: CustomResolverAccumulator,
+    cur: LosslessViewOne
+  ): CustomResolverAccumulator {
     if (!acc[cur.id]) {
       acc[cur.id] = { id: cur.id, properties: {} };
     }
-
-    // First pass: collect all property states for this entity
+    
+    // Get the execution order based on dependencies
+    const executionOrder = this.getExecutionOrder();
+    
+    // First pass: collect all current states for this entity
     const allStates: Record<PropertyID, unknown> = {};
     for (const [propertyId, propertyState] of Object.entries(acc[cur.id].properties)) {
       allStates[propertyId] = propertyState.state;
     }
 
-    // Second pass: update each property with access to all states
-    for (const [propertyId, deltas] of Object.entries(cur.propertyDeltas)) {
+    // Process each property in dependency order
+    for (const propertyId of executionOrder) {
+      const deltas = cur.propertyDeltas[propertyId];
+      if (!deltas) continue;
+      
       const plugin = this.config[propertyId];
       if (!plugin) continue;
 
-      // Initialize property state if not exists
+      // Initialize property state if it doesn't exist
       if (!acc[cur.id].properties[propertyId]) {
         acc[cur.id].properties[propertyId] = {
           plugin,
           state: plugin.initialize()
         };
-        // Update allStates with the new state
         allStates[propertyId] = acc[cur.id].properties[propertyId].state;
       }
 
+      // Process each delta for this property
       const propertyState = acc[cur.id].properties[propertyId];
-
-      // Process all deltas for this property
-      for (const delta of deltas || []) {
+      for (const delta of deltas) {
         const value = extractValueFromDelta(propertyId, delta);
         if (value !== undefined) {
           propertyState.state = propertyState.plugin.update(
@@ -116,9 +210,16 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
             delta,
             allStates
           );
-          // Update allStates with the new state
+          // Update the state in our tracking object
           allStates[propertyId] = propertyState.state;
         }
+      }
+    }
+    
+    // Handle any properties not in the execution order (shouldn't normally happen)
+    for (const [propertyId, _deltas] of Object.entries(cur.propertyDeltas)) {
+      if (!executionOrder.includes(propertyId) && this.config[propertyId]) {
+        console.warn(`Property '${propertyId}' not in execution order but has deltas`);
       }
     }
 
@@ -166,6 +267,7 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
 // Last Write Wins plugin
 export class LastWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTypes, timestamp: number }> {
   name = 'last-write-wins';
+  dependencies: PropertyID[] = [];
 
   initialize() {
     return { timestamp: 0 };
@@ -197,6 +299,7 @@ export class LastWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTyp
 // First Write Wins plugin
 export class FirstWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTypes, timestamp: number }> {
   name = 'first-write-wins';
+  dependencies: PropertyID[] = [];
 
   initialize() {
     return { timestamp: Infinity };
@@ -228,7 +331,8 @@ export class FirstWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTy
 // Concatenation plugin (for string values)
 export class ConcatenationPlugin implements ResolverPlugin<{ values: { value: string, timestamp: number }[] }> {
   name = 'concatenation';
-
+  dependencies: PropertyID[] = [];
+  
   constructor(private separator: string = ' ') { }
 
   initialize() {
@@ -267,6 +371,7 @@ export class ConcatenationPlugin implements ResolverPlugin<{ values: { value: st
 // Majority vote plugin
 export class MajorityVotePlugin implements ResolverPlugin<{ votes: Map<PropertyTypes, number> }> {
   name = 'majority-vote';
+  dependencies: PropertyID[] = [];
 
   initialize() {
     return { votes: new Map() };
@@ -301,9 +406,10 @@ export class MajorityVotePlugin implements ResolverPlugin<{ votes: Map<PropertyT
   }
 }
 
-// Numeric min/max plugins
+// Numeric min plugin
 export class MinPlugin implements ResolverPlugin<{ min?: number }> {
   name = 'min';
+  dependencies: PropertyID[] = [];
 
   initialize() {
     return {};
@@ -331,8 +437,10 @@ export class MinPlugin implements ResolverPlugin<{ min?: number }> {
   }
 }
 
+// Numeric max plugin
 export class MaxPlugin implements ResolverPlugin<{ max?: number }> {
   name = 'max';
+  dependencies: PropertyID[] = [];
 
   initialize() {
     return {};

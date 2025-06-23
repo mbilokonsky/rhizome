@@ -326,7 +326,223 @@ describe('Custom Resolvers', () => {
     });
   });
 
-  describe('Inter-Plugin Dependencies', () => {
+  describe('Plugin Dependencies', () => {
+    test('should detect circular dependencies', () => {
+      class PluginA implements ResolverPlugin {
+        name = 'a';
+        dependencies = ['b'];
+        initialize() { return {}; }
+        update() { return {}; }
+        resolve() { return 'a'; }
+      }
+
+      class PluginB implements ResolverPlugin {
+        name = 'b';
+        dependencies = ['a'];
+        initialize() { return {}; }
+        update() { return {}; }
+        resolve() { return 'b'; }
+      }
+
+      expect(() => {
+        new CustomResolver(lossless, {
+          'a': new PluginA(),
+          'b': new PluginB()
+        });
+      }).toThrow('Circular dependency detected');
+    });
+
+    test('should process plugins in dependency order', () => {
+      // Enable debug logging for this test
+      process.env.DEBUG = 'rz:*';
+      
+      const executionOrder: string[] = [];
+      
+      // Create test plugins with dependency tracking
+      const pluginTracker = {
+        first: { updated: false, resolved: false },
+        second: { updated: false, resolved: false }
+      };
+
+      interface PluginState {
+        value: string;
+        updated: boolean;
+        resolved: boolean;
+      }
+
+      class FirstPlugin implements ResolverPlugin<PluginState> {
+        name = 'first';
+        dependencies: string[] = [];
+        
+        initialize(): PluginState {
+          console.log('First plugin initialized');
+          executionOrder.push('first-init');
+          return { value: '', updated: false, resolved: false };
+        }
+        
+        update(
+          state: PluginState, 
+          value: unknown, 
+          _delta?: unknown, 
+          _allStates?: Record<string, unknown>
+        ): PluginState {
+          console.log('First plugin updated with value:', value);
+          executionOrder.push('first-update');
+          pluginTracker.first.updated = true;
+          return { 
+            ...state,
+            value: String(value), 
+            updated: true
+          };
+        }
+        
+        resolve(state: PluginState, _allStates?: Record<string, unknown>): string {
+          console.log('First plugin resolved with value:', state.value);
+          executionOrder.push('first-resolve');
+          pluginTracker.first.resolved = true;
+          return state.value;
+        }
+      }
+
+      class SecondPlugin implements ResolverPlugin<PluginState> {
+        name = 'second';
+        dependencies: string[] = ['first'];
+        
+        initialize(): PluginState {
+          console.log('Second plugin initialized');
+          executionOrder.push('second-init');
+          return { value: '', updated: false, resolved: false };
+        }
+        
+        update(
+          state: PluginState, 
+          value: unknown, 
+          _delta?: unknown, 
+          allStates?: Record<string, unknown>
+        ): PluginState {
+          console.log('Second plugin updated with value:', value);
+          executionOrder.push('second-update');
+          pluginTracker.second.updated = true;
+          
+          // Check if we have access to first plugin's state
+          const firstState = allStates?.first as PluginState | undefined;
+          if (firstState) {
+            executionOrder.push('second-has-first-state');
+            console.log('Second plugin has access to first plugin state:', firstState);
+          }
+          
+          return { 
+            ...state,
+            value: `${value}-${firstState?.value || 'unknown'}`,
+            updated: true
+          };
+        }
+        
+        resolve(state: PluginState, _allStates?: Record<string, unknown>): string {
+          console.log('Second plugin resolved with value:', state.value);
+          executionOrder.push('second-resolve');
+          pluginTracker.second.resolved = true;
+          return state.value;
+        }
+      }
+
+      // Create resolver with dependency order: first -> second
+      console.log('Creating resolver with plugins');
+      
+      // Create resolver with test plugins first
+      const firstPlugin = new FirstPlugin();
+      const secondPlugin = new SecondPlugin();
+      
+      const testResolver = new CustomResolver(lossless, {
+        first: firstPlugin,
+        second: secondPlugin
+      });
+  
+      // Verify plugins are not yet initialized
+      expect(pluginTracker.first.updated).toBe(false);
+      expect(pluginTracker.second.updated).toBe(false);
+  
+      // Verify the execution order array is empty before processing
+      expect(executionOrder).not.toContain('first-init');
+      expect(executionOrder).not.toContain('second-init');
+      expect(executionOrder).toHaveLength(0);
+      
+      // Create and ingest test data
+      const delta = createDelta('test1', 'host1')
+        .withTimestamp(1000)
+        .setProperty('test1', 'first', 'first', 'prop1')
+        .setProperty('test1', 'second', 'second', 'prop2')
+        .buildV1();
+        
+      lossless.ingestDelta(delta);
+  
+      // Resolve the view
+      const result = testResolver.resolve();
+  
+      // Verify the result
+      expect(result).toBeDefined();
+      if (!result) return;
+      
+      const testEntity = result['test1'];
+      expect(testEntity).toBeDefined();
+      if (!testEntity) return;
+      
+      // Check if properties exist
+      expect(testEntity.properties).toBeDefined();
+      
+      // Check if plugins were resolved
+      expect(pluginTracker.first.resolved).toBe(true);
+      expect(pluginTracker.second.resolved).toBe(true);
+      
+      // Check if second plugin has access to first plugin's state
+      expect(executionOrder).toContain('second-has-first-state');
+      
+      // Check if first plugin was processed before second
+      const firstUpdateIndex = executionOrder.indexOf('first-update');
+      const secondUpdateIndex = executionOrder.indexOf('second-update');
+      expect(firstUpdateIndex).not.toBe(-1);
+      expect(secondUpdateIndex).not.toBe(-1);
+      expect(firstUpdateIndex).toBeLessThan(secondUpdateIndex);
+      
+      // Verify initialization order (first should be initialized before second)
+      const firstInitIndex = executionOrder.indexOf('first-init');
+      const secondInitIndex = executionOrder.indexOf('second-init');
+      expect(firstInitIndex).not.toBe(-1);
+      expect(secondInitIndex).not.toBe(-1);
+      expect(firstInitIndex).toBeLessThan(secondInitIndex);
+      
+      // Check if resolve was called in the right order
+      const firstResolveIndex = executionOrder.indexOf('first-resolve');
+      const secondResolveIndex = executionOrder.indexOf('second-resolve');
+      expect(firstResolveIndex).not.toBe(-1);
+      expect(secondResolveIndex).not.toBe(-1);
+      expect(firstResolveIndex).toBeLessThan(secondResolveIndex);
+      expect(firstInitIndex).toBeLessThan(secondInitIndex);
+      
+      // Verify update order (first should be updated before second)
+      expect(firstUpdateIndex).toBeGreaterThanOrEqual(0);
+      expect(secondUpdateIndex).toBeGreaterThanOrEqual(0);
+      expect(firstUpdateIndex).toBeLessThan(secondUpdateIndex);
+      
+      // Verify resolve order (first should be resolved before second)
+      expect(firstResolveIndex).toBeGreaterThanOrEqual(0);
+      expect(secondResolveIndex).toBeGreaterThanOrEqual(0);
+      expect(firstResolveIndex).toBeLessThan(secondResolveIndex);
+      
+      // Check if second plugin could access first plugin's state
+      expect(executionOrder).toContain('second-has-first-state');
+      
+      // Check resolved values if they exist
+      if (testEntity.properties.first) {
+        expect(testEntity.properties.first).toBe('first');
+      }
+      
+      if (testEntity.properties.second) {
+        // Second plugin's value is 'second-<first plugin's value>'
+        expect(testEntity.properties.second).toBe('second-first');
+      }
+    });
+
     test('should allow plugins to depend on other plugin states', () => {
       // A plugin that applies a discount to a price
       class DiscountedPricePlugin implements ResolverPlugin<{ price: number }> {
