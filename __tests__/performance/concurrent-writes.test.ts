@@ -72,8 +72,6 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should handle multiple writers with aggregation resolver', () => {
-      const timestamp = 1000;
-      
       // Multiple writers add values simultaneously
       lossless.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(1000)
