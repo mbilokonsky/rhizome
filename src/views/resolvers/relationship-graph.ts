@@ -1,6 +1,12 @@
-import { CollapsedDelta, LosslessViewOne } from "../lossless";
+import { CollapsedDelta, Lossless, LosslessViewOne } from "../lossless";
 import { PropertyTypes } from "../../core/types";
 import { Lossy } from "../lossy";
+import Debug from 'debug';
+import { CustomResolver, LastWriteWinsPlugin } from "./custom-resolvers";
+
+const debug = Debug('rz:resolver:relationship-graph');
+const trace = Debug('rz:resolver:relationship-graph:trace');
+trace.enabled = true; // Always enable trace for now
 
 /**
  * Represents a single relationship between entities
@@ -51,31 +57,43 @@ export type RelationshipView = {
  * A resolver that builds a relationship graph from a LosslessViewMany
  */
 export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulator, RelationshipGraphAccumulator> {
+  private relData: CustomResolver;
+  constructor(lossless: Lossless) {
+    super(lossless);
+
+    this.relData = new CustomResolver(lossless, {
+      relationships: new LastWriteWinsPlugin(),
+    });
+  }
   /**
    * Initialize a new accumulator
    */
   protected createRelationshipGraphAccumulator(): RelationshipGraphAccumulator {
-    return {
+    debug('Creating new relationship graph accumulator');
+    const accumulator = {
       entities: new Map(),
       relationships: new Map(),
       relationshipsByType: new Map(),
       lastUpdated: Date.now()
     };
+    trace('Created accumulator:', accumulator);
+    return accumulator;
   }
 
   /**
    * Initialize the accumulator with a view
    */
   initializer(view: LosslessViewOne): RelationshipGraphAccumulator {
+    debug('Initializing relationship graph for view:', view.id);
     const graph = this.createRelationshipGraphAccumulator();
+
+    this.relData.initializer(view);
     
-    // Initialize entity relationships if they don't exist
-    if (!graph.entities.has(view.id)) {
-      graph.entities.set(view.id, {
-        outbound: new Map(),
-        inbound: new Map()
-      });
-    }
+    trace('Initialized graph state:', {
+      entities: Array.from(graph.entities.keys()),
+      relationships: Array.from(graph.relationships.keys()),
+      relationshipTypes: Array.from(graph.relationshipsByType.keys())
+    });
     
     return graph;
   }
@@ -84,8 +102,21 @@ export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulato
    * Process a view and update the accumulator
    */
   reducer(graph: RelationshipGraphAccumulator, view: LosslessViewOne): RelationshipGraphAccumulator {
+    debug(`Processing view ${view.id} in reducer`);
+    trace('View details:', {
+      id: view.id,
+      propertyCount: Object.keys(view.propertyDeltas).length,
+      properties: Object.keys(view.propertyDeltas)
+    });
+
+    // if (!isRelationshipEntity) {
+    //   trace(`Skipping non-relationship delta: ${view.id}`);
+    //   return graph;
+    // }
+    
     // Ensure entity exists in the graph
     if (!graph.entities.has(view.id)) {
+      trace(`Adding new entity in reducer: ${view.id}`);
       graph.entities.set(view.id, {
         outbound: new Map(),
         inbound: new Map()
@@ -94,8 +125,13 @@ export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulato
     
     // Process relationship properties
     for (const [property, deltas] of Object.entries(view.propertyDeltas)) {
+      trace(`Processing property: ${property} with ${deltas.length} deltas`);
+      
       // Skip non-relationship properties
-      if (!property.startsWith('_rel_')) continue;
+      if (!property.startsWith('_rel_')) {
+        trace(`Skipping non-relationship property: ${property}`);
+        continue;
+      }
 
       for (const delta of deltas) {
         this.processRelationshipDelta(graph, delta);
@@ -111,6 +147,15 @@ export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulato
    * For now, we just return the accumulator as is.
    */
   resolver(graph: RelationshipGraphAccumulator): RelationshipGraphAccumulator {
+    debug('Resolving relationship graph');
+    trace('Graph state at resolution:', {
+      entities: Array.from(graph.entities.keys()),
+      relationships: Array.from(graph.relationships.keys()),
+      relationshipTypes: Array.from(graph.relationshipsByType.entries()).map(([type, ids]) => ({
+        type,
+        count: ids.size
+      }))
+    });
     return graph;
   }
 
@@ -118,17 +163,29 @@ export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulato
    * Process a single relationship delta
    */
   private processRelationshipDelta(graph: RelationshipGraphAccumulator, delta: CollapsedDelta): void {
+    debug('Processing relationship delta:', delta.id);
+    trace('Delta details:', delta);
+    
     // Extract relationship metadata from the delta
     const relProps = this.extractRelationshipProperties(delta);
-    if (!relProps) return;
+    if (!relProps) {
+      debug('No relationship properties found in delta:', delta.id);
+      return;
+    }
+    
+    trace('Extracted relationship properties:', relProps);
 
     const { type, sourceId, targetId, relId, properties } = relProps;
     
+    debug(`Processing relationship ${relId} of type ${type} from ${sourceId} to ${targetId}`);
+    
     // Ensure source and target entities exist in the graph
     if (!graph.entities.has(sourceId)) {
+      trace(`Adding source entity: ${sourceId}`);
       graph.entities.set(sourceId, { outbound: new Map(), inbound: new Map() });
     }
     if (!graph.entities.has(targetId)) {
+      trace(`Adding target entity: ${targetId}`);
       graph.entities.set(targetId, { outbound: new Map(), inbound: new Map() });
     }
     
@@ -136,6 +193,7 @@ export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulato
     let relationship = graph.relationships.get(relId);
     
     if (!relationship) {
+      debug(`Creating new relationship: ${relId} (${type})`);
       // Create new relationship
       relationship = {
         id: relId,
@@ -148,12 +206,15 @@ export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulato
       
       // Add to relationships map
       graph.relationships.set(relId, relationship);
+      trace(`Added relationship ${relId} to relationships map`);
       
       // Add to relationships by type index
       if (!graph.relationshipsByType.has(type)) {
+        trace(`Creating new relationship type index: ${type}`);
         graph.relationshipsByType.set(type, new Set());
       }
       graph.relationshipsByType.get(type)?.add(relId);
+      trace(`Added relationship ${relId} to type index: ${type}`);
       
       // Update entity relationships
       const sourceEntity = graph.entities.get(sourceId)!;
@@ -161,14 +222,22 @@ export class RelationshipGraphResolver extends Lossy<RelationshipGraphAccumulato
       
       sourceEntity.outbound.set(relId, relationship);
       targetEntity.inbound.set(relId, relationship);
+      
+      trace('Updated entity relationships:', {
+        sourceOutbound: Array.from(sourceEntity.outbound.keys()),
+        targetInbound: Array.from(targetEntity.inbound.keys())
+      });
     } else {
-      // Update existing relationship
+      debug(`Updating existing relationship: ${relId}`);
       // TODO: Conflict resolution e.g. using TimestampResolver
       relationship.properties = { ...relationship.properties, ...properties };
       
       // Track this delta if not already present
       if (!relationship.deltas.includes(delta.id)) {
         relationship.deltas.push(delta.id);
+        trace(`Added delta ${delta.id} to relationship ${relId}`);
+      } else {
+        trace(`Delta ${delta.id} already tracked for relationship ${relId}`);
       }
     }
   }

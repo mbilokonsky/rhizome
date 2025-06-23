@@ -1,4 +1,4 @@
-import { jsonToAst } from '../src/util/json-ast/index';
+import { jsonToAst } from '../src/utils/json-ast/index';
 
 // Example JSON data
 const exampleJson = {
