@@ -1,18 +1,17 @@
-import {
-  RhizomeNode,
-  Lossless,
-  CustomResolver,
-  ResolverPlugin,
-  LastWriteWinsPlugin,
-  FirstWriteWinsPlugin,
-  ConcatenationPlugin,
-  MajorityVotePlugin,
-  MinPlugin,
-  MaxPlugin,
-  PropertyTypes,
-  CollapsedDelta,
-  createDelta
-} from "../../../../src";
+import { RhizomeNode, Lossless, createDelta } from "../../../../src";
+import { CollapsedDelta } from "../../../../src/views/lossless";
+import { 
+  CustomResolver, 
+  ResolverPlugin, 
+  LastWriteWinsPlugin, 
+  FirstWriteWinsPlugin, 
+  ConcatenationPlugin, 
+  MajorityVotePlugin, 
+  MinPlugin, 
+  MaxPlugin 
+} from "../../../../src/views/resolvers/custom-resolvers";
+
+type PropertyTypes = string | number | boolean | null;
 
 describe('Custom Resolvers', () => {
   let node: RhizomeNode;
