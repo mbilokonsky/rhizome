@@ -1,5 +1,10 @@
 See [spec.md](spec.md) for additional specification details about this project.
 
+## Documentation
+
+- [Custom Resolvers](./docs/custom-resolvers/overview.md) - Flexible property resolution system with plugin support
+
+
 # Development / Demo
 
 ## Setup
