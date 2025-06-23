@@ -2,25 +2,29 @@ import { PropertyTypes } from "../../../../core/types";
 import { CollapsedDelta } from "../../../lossless";
 import { ResolverPlugin } from "../plugin";
 
+type MinPluginState = {
+  min?: number;
+};
+
 /**
  * Numeric min plugin
  * 
  * Tracks the minimum numeric value
  */
-export class MinPlugin implements ResolverPlugin<{ min?: number }> {
-  name = 'min';
-  dependencies: string[] = [];
+export class MinPlugin implements ResolverPlugin<MinPluginState> {
+  readonly name = 'min';
+  readonly dependencies = [] as const;
 
-  initialize() {
+  initialize(): MinPluginState {
     return { min: undefined };
   }
 
   update(
-    currentState: { min?: number }, 
+    currentState: MinPluginState, 
     newValue: PropertyTypes, 
     _delta: CollapsedDelta,
-    _allStates?: Record<string, unknown>
-  ) {
+    _dependencies: Record<string, never> = {}
+  ): MinPluginState {
     const numValue = typeof newValue === 'number' ? newValue : parseFloat(String(newValue));
     
     if (!isNaN(numValue) && (currentState.min === undefined || numValue < currentState.min)) {
@@ -30,8 +34,8 @@ export class MinPlugin implements ResolverPlugin<{ min?: number }> {
   }
 
   resolve(
-    state: { min?: number },
-    _allStates?: Record<string, unknown>
+    state: MinPluginState,
+    _dependencies: Record<string, never> = {}
   ): PropertyTypes | undefined {
     return state.min;
   }

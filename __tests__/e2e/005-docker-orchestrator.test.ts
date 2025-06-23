@@ -1,8 +1,8 @@
 import Docker from 'dockerode';
 import { describe, it, beforeAll, afterAll, expect, jest } from '@jest/globals';
-import type { NodeConfig, NodeHandle, NodeStatus } from '../../src/orchestration';
-import { DockerOrchestrator, createOrchestrator } from '../../src/orchestration';
-import { ImageManager } from '../../src/orchestration/docker-orchestrator/managers/image-manager';
+import type { NodeConfig, NodeHandle, NodeStatus } from '@src/orchestration';
+import { DockerOrchestrator, createOrchestrator } from '@src/orchestration';
+import { ImageManager } from '@src/orchestration/docker-orchestrator/managers/image-manager';
 import Debug from 'debug';
 const debug = Debug('rz:test:docker-orchestrator-v2');
 

@@ -2,25 +2,29 @@ import { PropertyTypes } from "../../../../core/types";
 import { CollapsedDelta } from "../../../lossless";
 import { ResolverPlugin } from "../plugin";
 
+type MaxPluginState = {
+  max?: number;
+};
+
 /**
  * Numeric max plugin
  * 
  * Tracks the maximum numeric value
  */
-export class MaxPlugin implements ResolverPlugin<{ max?: number }> {
-  name = 'max';
-  dependencies: string[] = [];
+export class MaxPlugin implements ResolverPlugin<MaxPluginState> {
+  readonly name = 'max';
+  readonly dependencies = [] as const;
 
-  initialize() {
+  initialize(): MaxPluginState {
     return { max: undefined };
   }
 
   update(
-    currentState: { max?: number }, 
+    currentState: MaxPluginState, 
     newValue: PropertyTypes, 
     _delta: CollapsedDelta,
-    _allStates?: Record<string, unknown>
-  ) {
+    _dependencies: Record<string, never> = {}
+  ): MaxPluginState {
     const numValue = typeof newValue === 'number' ? newValue : parseFloat(String(newValue));
     
     if (!isNaN(numValue) && (currentState.max === undefined || numValue > currentState.max)) {
@@ -30,8 +34,8 @@ export class MaxPlugin implements ResolverPlugin<{ max?: number }> {
   }
 
   resolve(
-    state: { max?: number },
-    _allStates?: Record<string, unknown>
+    state: MaxPluginState,
+    _dependencies: Record<string, never> = {}
   ): PropertyTypes | undefined {
     return state.max;
   }

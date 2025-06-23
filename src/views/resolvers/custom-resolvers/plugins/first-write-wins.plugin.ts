@@ -2,25 +2,30 @@ import { PropertyTypes } from "../../../../core/types";
 import { CollapsedDelta } from "../../../lossless";
 import { ResolverPlugin } from "../plugin";
 
+type FirstWriteWinsState = {
+  value?: PropertyTypes;
+  timestamp: number;
+};
+
 /**
  * First Write Wins plugin
  * 
  * Keeps the first value that was written, ignoring subsequent writes
  */
-export class FirstWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTypes, timestamp: number }> {
-  name = 'first-write-wins';
-  dependencies: string[] = [];
+export class FirstWriteWinsPlugin implements ResolverPlugin<FirstWriteWinsState> {
+  readonly name = 'first-write-wins';
+  readonly dependencies = [] as const;
 
-  initialize() {
+  initialize(): FirstWriteWinsState {
     return { timestamp: Infinity };
   }
 
   update(
-    currentState: { value?: PropertyTypes, timestamp: number }, 
-    newValue: PropertyTypes, 
+    currentState: FirstWriteWinsState,
+    newValue: PropertyTypes,
     delta: CollapsedDelta,
-    _allStates?: Record<string, unknown>
-  ) {
+    _dependencies: Record<string, never> = {}
+  ): FirstWriteWinsState {
     // Only update if this delta is earlier than our current earliest
     if (delta.timeCreated < currentState.timestamp) {
       return {
@@ -32,8 +37,8 @@ export class FirstWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTy
   }
 
   resolve(
-    state: { value?: PropertyTypes, timestamp: number },
-    _allStates?: Record<string, unknown>
+    state: FirstWriteWinsState,
+    _dependencies: Record<string, never> = {}
   ): PropertyTypes | undefined {
     return state.value;
   }

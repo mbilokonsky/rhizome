@@ -1,5 +1,5 @@
-import { jsonToAst } from '../../../src/utils/json-ast';
-import { JsonNode } from '../../../src/utils/json-ast/types';
+import { jsonToAst } from '@src/utils/json-ast';
+import { JsonNode } from '@src/utils/json-ast/types';
 
 describe('jsonToAst', () => {
   it('should handle primitive values', () => {

@@ -27,7 +27,8 @@
       "/dist/"
     ],
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
+      "^@$": "<rootDir>/src",
+      "^@src/(.*)$": "<rootDir>/src/$1"
     },
     "transform": {
       "^\\.tsx?$": [

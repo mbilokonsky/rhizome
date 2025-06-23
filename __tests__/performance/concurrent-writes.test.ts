@@ -1,4 +1,4 @@
-import { createDelta } from '../../src/core/delta-builder';
+import { createDelta } from '@src/core/delta-builder';
 import {
   RhizomeNode,
   Lossless,

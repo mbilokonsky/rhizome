@@ -9,11 +9,11 @@
  */
 
 import Debug from 'debug';
-import { RhizomeNode } from '../../src/node';
-import { createDelta } from '../../src/core';
-import { DefaultSchemaRegistry } from '../../src/schema';
-import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, ArraySchemas } from '../../src/schema';
-import { TypedCollectionImpl } from '../../src/collections';
+import { RhizomeNode } from '@src/node';
+import { createDelta } from '@src/core';
+import { DefaultSchemaRegistry } from '@src/schema';
+import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, ArraySchemas } from '@src/schema';
+import { TypedCollectionImpl } from '@src/collections';
 
 const debug = Debug('rz:test:nested-resolution-performance');
 

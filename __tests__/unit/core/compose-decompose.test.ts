@@ -4,8 +4,8 @@
  * to the original deltas with all pointer relationships preserved.
  */
 
-import { RhizomeNode } from '../../../src/node';
-import { createDelta } from '../../../src/core/delta-builder';
+import { RhizomeNode } from '@src/node';
+import { createDelta } from '@src/core/delta-builder';
 
 describe('Lossless View Compose/Decompose', () => {
   let node: RhizomeNode;

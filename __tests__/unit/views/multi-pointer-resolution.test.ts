@@ -4,11 +4,11 @@
  * between multiple entities and includes scalar values.
  */
 
-import { RhizomeNode } from '../../../src/node';
-import { createDelta } from '../../../src/core/delta-builder';
-import { DefaultSchemaRegistry } from '../../../src/schema';
-import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, SchemaAppliedViewWithNesting } from '../../../src/schema';
-import { TypedCollectionImpl } from '../../../src/collections';
+import { RhizomeNode } from '@src/node';
+import { createDelta } from '@src/core/delta-builder';
+import { DefaultSchemaRegistry } from '@src/schema';
+import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, SchemaAppliedViewWithNesting } from '@src/schema';
+import { TypedCollectionImpl } from '@src/collections';
 
 describe('Multi-Pointer Delta Resolution', () => {
   let node: RhizomeNode;

@@ -1,4 +1,4 @@
-import { createDelta } from '../../../../src/core/delta-builder';
+import { createDelta } from '@src/core/delta-builder';
 import {DeltaV1, DeltaV2} from "../../../../src";
 
 describe("Delta", () => {

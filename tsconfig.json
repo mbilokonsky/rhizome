@@ -16,6 +16,10 @@
     "typeRoots": [
       "./node_modules/@types"
     ],
+    "paths": {
+      "@src": ["src"],
+      "@src/*": ["src/*"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": false

@@ -1,6 +1,6 @@
-import { MemoryDeltaStorage, LevelDBDeltaStorage, StorageFactory } from '../../src/storage';
-import { createDelta } from '../../src/core/delta-builder';
-import { DeltaQueryStorage } from '../../src/storage/interface';
+import { MemoryDeltaStorage, LevelDBDeltaStorage, StorageFactory } from '@src/storage';
+import { createDelta } from '@src/core/delta-builder';
+import { DeltaQueryStorage } from '@src/storage/interface';
 
 describe('Delta Storage', () => {
   const testDeltas = [

@@ -1,6 +1,6 @@
 import Debug from 'debug';
-import { createOrchestrator } from '../../src/orchestration';
-import type { NodeConfig, NodeHandle } from '../../src/orchestration';
+import { createOrchestrator } from '@src/orchestration';
+import type { NodeConfig, NodeHandle } from '@src/orchestration';
 
 // Increase test timeout to 30 seconds
 jest.setTimeout(30000);

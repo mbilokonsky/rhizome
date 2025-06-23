@@ -1,8 +1,8 @@
-import { createDelta } from '../../../../src/core/delta-builder';
-import { DeltaV1, DeltaV2 } from '../../../../src/core/delta';
-import { Lossless } from '../../../../src/views/lossless';
-import { RhizomeNode } from '../../../../src/node';
-import { TimestampResolver } from '../../../../src/views/resolvers/timestamp-resolvers';
+import { createDelta } from '@src/core/delta-builder';
+import { DeltaV1, DeltaV2 } from '@src/core/delta';
+import { Lossless } from '@src/views/lossless';
+import { RhizomeNode } from '@src/node';
+import { TimestampResolver } from '@src/views/resolvers/timestamp-resolvers';
 
 describe('DeltaBuilder', () => {
   const creator = 'creator-123';

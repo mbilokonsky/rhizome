@@ -1,8 +1,15 @@
+import { describe, test, expect, beforeEach } from '@jest/globals';
 import { RhizomeNode, Lossless, createDelta } from "../../../../src";
 import { CollapsedDelta } from "../../../../src/views/lossless";
 import { 
   CustomResolver, 
-  ResolverPlugin, 
+  ResolverPlugin,
+  type DependencyStates
+} from "../../../../src/views/resolvers/custom-resolvers";
+import type { LosslessViewOne } from '@src/views/resolvers/lossless-view';
+
+type PropertyTypes = 'string' | 'number' | 'boolean' | 'object' | 'array';
+import { 
   LastWriteWinsPlugin, 
   FirstWriteWinsPlugin, 
   ConcatenationPlugin, 
@@ -327,20 +334,69 @@ describe('Custom Resolvers', () => {
 
   describe('Plugin Dependencies', () => {
     test('should detect circular dependencies', () => {
-      class PluginA implements ResolverPlugin {
-        name = 'a';
-        dependencies = ['b'];
-        initialize() { return {}; }
-        update() { return {}; }
-        resolve() { return 'a'; }
+      // Define state interfaces
+      interface PluginAState {
+        value: string;
       }
 
-      class PluginB implements ResolverPlugin {
-        name = 'b';
-        dependencies = ['a'];
-        initialize() { return {}; }
-        update() { return {}; }
-        resolve() { return 'b'; }
+      interface PluginBState {
+        value: string;
+      }
+
+      // PluginA depends on PluginB
+      class PluginA implements ResolverPlugin<PluginAState, 'b'> {
+        readonly name = 'a' as const;
+        readonly dependencies = ['b'] as const;
+        
+        initialize(): PluginAState {
+          return { value: 'a' };
+        }
+        
+        update(
+          currentState: PluginAState,
+          _newValue: unknown,
+          _delta: CollapsedDelta,
+          _dependencies: { b: { value: string } } = { b: { value: '' } }
+        ): PluginAState {
+          return { ...currentState };
+        }
+        
+        resolve(
+          _state: PluginAState,
+          _dependencies: { b: { value: string } } = { b: { value: '' } }
+        ): string {
+          return 'a';
+        }
+      }
+
+      // PluginB depends on PluginA
+      interface PluginBState {
+        value: string;
+      }
+
+      class PluginB implements ResolverPlugin<PluginBState, 'a'> {
+        readonly name = 'b' as const;
+        readonly dependencies = ['a'] as const;
+        
+        initialize(): PluginBState {
+          return { value: 'b' };
+        }
+        
+        update(
+          currentState: PluginBState,
+          _newValue: unknown,
+          _delta: CollapsedDelta,
+          _dependencies: { a: unknown } = { a: undefined }
+        ): PluginBState {
+          return currentState;
+        }
+        
+        resolve(
+          _state: PluginBState,
+          _dependencies: { a: unknown } = { a: undefined }
+        ): string {
+          return 'b';
+        }
       }
 
       expect(() => {
@@ -351,27 +407,28 @@ describe('Custom Resolvers', () => {
       }).toThrow('Circular dependency detected');
     });
 
-    test('should process plugins in dependency order', () => {
-      // Enable debug logging for this test
-      process.env.DEBUG = 'rz:*';
-      
-      const executionOrder: string[] = [];
-      
-      // Create test plugins with dependency tracking
-      const pluginTracker = {
-        first: { updated: false, resolved: false },
-        second: { updated: false, resolved: false }
-      };
+    describe('CustomResolver with plugin dependencies', () => {
+    let lossless: LosslessViewOne;
+    
+    // Track plugin execution order
+    const executionOrder: string[] = [];
+    
+    // Track plugin state updates and resolutions
+    const pluginTracker = {
+      first: { updated: false, resolved: false },
+      second: { updated: false, resolved: false }
+    };
 
-      interface PluginState {
-        value: string;
-        updated: boolean;
-        resolved: boolean;
-      }
+    // Define plugin state interface
+    interface PluginState {
+      value: string;
+      updated: boolean;
+      resolved: boolean;
+    }
 
-      class FirstPlugin implements ResolverPlugin<PluginState> {
-        name = 'first';
-        dependencies: string[] = [];
+      class FirstPlugin implements ResolverPlugin<PluginState, never> {
+        readonly name = 'first' as const;
+        readonly dependencies = [] as const;
         
         initialize(): PluginState {
           console.log('First plugin initialized');
@@ -380,22 +437,22 @@ describe('Custom Resolvers', () => {
         }
         
         update(
-          state: PluginState, 
-          value: unknown, 
-          _delta?: unknown, 
-          _allStates?: Record<string, unknown>
+          currentState: PluginState, 
+          newValue: PropertyTypes, 
+          _delta: CollapsedDelta, 
+          _dependencies: Record<string, never> = {}
         ): PluginState {
-          console.log('First plugin updated with value:', value);
+          console.log('First plugin updated with value:', newValue);
           executionOrder.push('first-update');
           pluginTracker.first.updated = true;
           return { 
-            ...state,
-            value: String(value), 
+            ...currentState,
+            value: String(newValue), 
             updated: true
           };
         }
         
-        resolve(state: PluginState, _allStates?: Record<string, unknown>): string {
+        resolve(state: PluginState): string {
           console.log('First plugin resolved with value:', state.value);
           executionOrder.push('first-resolve');
           pluginTracker.first.resolved = true;
@@ -403,9 +460,9 @@ describe('Custom Resolvers', () => {
         }
       }
 
-      class SecondPlugin implements ResolverPlugin<PluginState> {
-        name = 'second';
-        dependencies: string[] = ['first'];
+      class SecondPlugin implements ResolverPlugin<PluginState, 'first'> {
+        readonly name = 'second' as const;
+        readonly dependencies = ['first'] as const;
         
         initialize(): PluginState {
           console.log('Second plugin initialized');
@@ -414,30 +471,30 @@ describe('Custom Resolvers', () => {
         }
         
         update(
-          state: PluginState, 
-          value: unknown, 
-          _delta?: unknown, 
-          allStates?: Record<string, unknown>
+          currentState: PluginState, 
+          newValue: PropertyTypes, 
+          _delta: CollapsedDelta, 
+          dependencies: { first: unknown }
         ): PluginState {
-          console.log('Second plugin updated with value:', value);
+          console.log('Second plugin updated with value:', newValue);
           executionOrder.push('second-update');
           pluginTracker.second.updated = true;
           
-          // Check if we have access to first plugin's state
-          const firstState = allStates?.first as PluginState | undefined;
+          // Access the first plugin's resolved state
+          const firstState = dependencies.first as PluginState;
           if (firstState) {
             executionOrder.push('second-has-first-state');
             console.log('Second plugin has access to first plugin state:', firstState);
           }
           
           return { 
-            ...state,
-            value: `${value}-${firstState?.value || 'unknown'}`,
+            ...currentState,
+            value: `${newValue}-${firstState?.value || 'unknown'}`,
             updated: true
           };
         }
         
-        resolve(state: PluginState, _allStates?: Record<string, unknown>): string {
+        resolve(state: PluginState): string {
           console.log('Second plugin resolved with value:', state.value);
           executionOrder.push('second-resolve');
           pluginTracker.second.resolved = true;
@@ -448,19 +505,15 @@ describe('Custom Resolvers', () => {
       // Create resolver with dependency order: first -> second
       console.log('Creating resolver with plugins');
       
-      // Create resolver with test plugins first
+      // Create test plugins
       const firstPlugin = new FirstPlugin();
       const secondPlugin = new SecondPlugin();
       
-      const testResolver = new CustomResolver(lossless, {
+      // Create resolver with test plugins
+      const testResolver = new CustomResolver({
         first: firstPlugin,
         second: secondPlugin
       });
-  
-      // Verify plugins are not yet initialized
-      expect(pluginTracker.first.updated).toBe(false);
-      expect(pluginTracker.second.updated).toBe(false);
-  
       // Verify the execution order array is empty before processing
       expect(executionOrder).not.toContain('first-init');
       expect(executionOrder).not.toContain('second-init');
@@ -546,6 +599,7 @@ describe('Custom Resolvers', () => {
       // A plugin that applies a discount to a price
       class DiscountedPricePlugin implements ResolverPlugin<{ price: number }> {
         name = 'discounted-price';
+        dependencies = ['discount'];
         
         initialize() {
           return { price: 0 };

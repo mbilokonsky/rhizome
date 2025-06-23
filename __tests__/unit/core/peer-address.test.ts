@@ -1,4 +1,4 @@
-import {parseAddressList, PeerAddress} from '../../../src/network/peers';
+import {parseAddressList, PeerAddress} from '@src/network/peers';
 
 describe('PeerAddress', () => {
   it('toString()', () => {

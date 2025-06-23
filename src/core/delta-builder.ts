@@ -85,9 +85,10 @@ export class DeltaBuilder {
 
   /**
    * Set a property on an entity
+   * ! Note that the way we are doing this is awkward/problematic for deltas that set multiple properties.
+   * ! entityLabel and property each need to be unique within a given delta
    */
   setProperty(entityId: string, property: string, value: string | number | boolean | null, entityLabel = "entity"): this {
-    // Note that entityLabe and property each need to be unique within a given delta
     this.addPointer(entityLabel, entityId, property)
     this.addPointer(property, value);
     return this;
