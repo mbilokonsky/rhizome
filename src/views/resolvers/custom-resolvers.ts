@@ -11,11 +11,19 @@ export interface ResolverPlugin<T = unknown> {
   initialize(): T;
 
   // Process a new value for the property
-  update(currentState: T, newValue: PropertyTypes, delta: CollapsedDelta): T;
+  update(
+    currentState: T, 
+    newValue: PropertyTypes, 
+    delta: CollapsedDelta,
+    allStates?: Record<PropertyID, unknown>
+  ): T;
 
   // Resolve the final value from the accumulated state
   // Returns undefined if no valid value could be resolved
-  resolve(state: T): PropertyTypes | undefined;
+  resolve(
+    state: T,
+    allStates?: Record<PropertyID, unknown>
+  ): PropertyTypes | undefined;
 }
 
 // Configuration for custom resolver
@@ -75,6 +83,13 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
       acc[cur.id] = { id: cur.id, properties: {} };
     }
 
+    // First pass: collect all property states for this entity
+    const allStates: Record<PropertyID, unknown> = {};
+    for (const [propertyId, propertyState] of Object.entries(acc[cur.id].properties)) {
+      allStates[propertyId] = propertyState.state;
+    }
+
+    // Second pass: update each property with access to all states
     for (const [propertyId, deltas] of Object.entries(cur.propertyDeltas)) {
       const plugin = this.config[propertyId];
       if (!plugin) continue;
@@ -85,6 +100,8 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
           plugin,
           state: plugin.initialize()
         };
+        // Update allStates with the new state
+        allStates[propertyId] = acc[cur.id].properties[propertyId].state;
       }
 
       const propertyState = acc[cur.id].properties[propertyId];
@@ -93,7 +110,14 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
       for (const delta of deltas || []) {
         const value = extractValueFromDelta(propertyId, delta);
         if (value !== undefined) {
-          propertyState.state = propertyState.plugin.update(propertyState.state, value, delta);
+          propertyState.state = propertyState.plugin.update(
+            propertyState.state,
+            value,
+            delta,
+            allStates
+          );
+          // Update allStates with the new state
+          allStates[propertyId] = propertyState.state;
         }
       }
     }
@@ -107,8 +131,18 @@ export class CustomResolver extends Lossy<CustomResolverAccumulator, CustomResol
     for (const [entityId, entity] of Object.entries(cur)) {
       const entityResult: { id: string; properties: EntityProperties } = { id: entityId, properties: {} };
 
+      // First pass: collect all states for this entity
+      const allStates: Record<PropertyID, unknown> = {};
       for (const [propertyId, propertyState] of Object.entries(entity.properties)) {
-        const resolvedValue = propertyState.plugin.resolve(propertyState.state);
+        allStates[propertyId] = propertyState.state;
+      }
+
+      // Second pass: resolve each property with access to all states
+      for (const [propertyId, propertyState] of Object.entries(entity.properties)) {
+        const resolvedValue = propertyState.plugin.resolve(
+          propertyState.state,
+          allStates
+        );
         // Only add the property if the resolved value is not undefined
         if (resolvedValue !== undefined) {
           entityResult.properties[propertyId] = resolvedValue;
@@ -137,7 +171,12 @@ export class LastWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTyp
     return { timestamp: 0 };
   }
 
-  update(currentState: { value?: PropertyTypes, timestamp: number }, newValue: PropertyTypes, delta: CollapsedDelta) {
+  update(
+    currentState: { value?: PropertyTypes, timestamp: number }, 
+    newValue: PropertyTypes, 
+    delta: CollapsedDelta,
+    _allStates?: Record<PropertyID, unknown>
+  ) {
     if (delta.timeCreated > currentState.timestamp) {
       return {
         value: newValue,
@@ -147,7 +186,10 @@ export class LastWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTyp
     return currentState;
   }
 
-  resolve(state: { value?: PropertyTypes, timestamp: number }): PropertyTypes {
+  resolve(
+    state: { value?: PropertyTypes, timestamp: number },
+    _allStates?: Record<PropertyID, unknown>
+  ): PropertyTypes {
     return state.value || '';
   }
 }
@@ -160,7 +202,12 @@ export class FirstWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTy
     return { timestamp: Infinity };
   }
 
-  update(currentState: { value?: PropertyTypes, timestamp: number }, newValue: PropertyTypes, delta: CollapsedDelta) {
+  update(
+    currentState: { value?: PropertyTypes, timestamp: number }, 
+    newValue: PropertyTypes, 
+    delta: CollapsedDelta,
+    _allStates?: Record<PropertyID, unknown>
+  ) {
     if (delta.timeCreated < currentState.timestamp) {
       return {
         value: newValue,
@@ -170,7 +217,10 @@ export class FirstWriteWinsPlugin implements ResolverPlugin<{ value?: PropertyTy
     return currentState;
   }
 
-  resolve(state: { value?: PropertyTypes, timestamp: number }): PropertyTypes {
+  resolve(
+    state: { value?: PropertyTypes, timestamp: number },
+    _allStates?: Record<PropertyID, unknown>
+  ): PropertyTypes {
     return state.value || '';
   }
 }
@@ -185,7 +235,12 @@ export class ConcatenationPlugin implements ResolverPlugin<{ values: { value: st
     return { values: [] };
   }
 
-  update(currentState: { values: { value: string, timestamp: number }[] }, newValue: PropertyTypes, delta: CollapsedDelta) {
+  update(
+    currentState: { values: { value: string, timestamp: number }[] }, 
+    newValue: PropertyTypes, 
+    delta: CollapsedDelta,
+    _allStates?: Record<PropertyID, unknown>
+  ) {
     if (typeof newValue === 'string') {
       // Check if this value already exists (avoid duplicates)
       const exists = currentState.values.some(v => v.value === newValue);
@@ -201,7 +256,10 @@ export class ConcatenationPlugin implements ResolverPlugin<{ values: { value: st
     return currentState;
   }
 
-  resolve(state: { values: { value: string, timestamp: number }[] }): PropertyTypes {
+  resolve(
+    state: { values: { value: string, timestamp: number }[] },
+    _allStates?: Record<PropertyID, unknown>
+  ): PropertyTypes {
     return state.values.map(v => v.value).join(this.separator);
   }
 }
@@ -214,13 +272,21 @@ export class MajorityVotePlugin implements ResolverPlugin<{ votes: Map<PropertyT
     return { votes: new Map() };
   }
 
-  update(currentState: { votes: Map<PropertyTypes, number> }, newValue: PropertyTypes, _delta: CollapsedDelta) {
+  update(
+    currentState: { votes: Map<PropertyTypes, number> }, 
+    newValue: PropertyTypes, 
+    _delta: CollapsedDelta,
+    _allStates?: Record<PropertyID, unknown>
+  ) {
     const currentCount = currentState.votes.get(newValue) || 0;
     currentState.votes.set(newValue, currentCount + 1);
     return currentState;
   }
 
-  resolve(state: { votes: Map<PropertyTypes, number> }): PropertyTypes {
+  resolve(
+    state: { votes: Map<PropertyTypes, number> },
+    _allStates?: Record<PropertyID, unknown>
+  ): PropertyTypes {
     let maxVotes = 0;
     let winner: PropertyTypes = '';
 
@@ -243,7 +309,12 @@ export class MinPlugin implements ResolverPlugin<{ min?: number }> {
     return {};
   }
 
-  update(currentState: { min?: number }, newValue: PropertyTypes, _delta: CollapsedDelta) {
+  update(
+    currentState: { min?: number }, 
+    newValue: PropertyTypes, 
+    _delta: CollapsedDelta,
+    _allStates?: Record<PropertyID, unknown>
+  ) {
     if (typeof newValue === 'number') {
       if (currentState.min === undefined || newValue < currentState.min) {
         return { min: newValue };
@@ -252,7 +323,10 @@ export class MinPlugin implements ResolverPlugin<{ min?: number }> {
     return currentState;
   }
 
-  resolve(state: { min?: number }): PropertyTypes | undefined {
+  resolve(
+    state: { min?: number },
+    _allStates?: Record<PropertyID, unknown>
+  ): PropertyTypes | undefined {
     return state.min;
   }
 }
@@ -264,7 +338,12 @@ export class MaxPlugin implements ResolverPlugin<{ max?: number }> {
     return {};
   }
 
-  update(currentState: { max?: number }, newValue: PropertyTypes, _delta: CollapsedDelta) {
+  update(
+    currentState: { max?: number }, 
+    newValue: PropertyTypes, 
+    _delta: CollapsedDelta,
+    _allStates?: Record<PropertyID, unknown>
+  ) {
     if (typeof newValue === 'number') {
       if (currentState.max === undefined || newValue > currentState.max) {
         return { max: newValue };
@@ -273,7 +352,10 @@ export class MaxPlugin implements ResolverPlugin<{ max?: number }> {
     return currentState;
   }
 
-  resolve(state: { max?: number }): PropertyTypes | undefined {
+  resolve(
+    state: { max?: number },
+    _allStates?: Record<PropertyID, unknown>
+  ): PropertyTypes | undefined {
     return state.max;
   }
 }

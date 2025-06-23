@@ -326,6 +326,97 @@ describe('Custom Resolvers', () => {
     });
   });
 
+  describe('Inter-Plugin Dependencies', () => {
+    test('should allow plugins to depend on other plugin states', () => {
+      // A plugin that applies a discount to a price
+      class DiscountedPricePlugin implements ResolverPlugin<{ price: number }> {
+        name = 'discounted-price';
+        
+        initialize() {
+          return { price: 0 };
+        }
+        
+        update(
+          currentState: { price: number }, 
+          newValue: PropertyTypes, 
+          _delta: CollapsedDelta,
+          _allStates?: Record<string, unknown>
+        ) {
+          if (typeof newValue === 'number') {
+            return { price: newValue };
+          }
+          return currentState;
+        }
+        
+        resolve(
+          state: { price: number },
+          allStates?: Record<string, unknown>
+        ): number | undefined {
+          // Get discount from another plugin's state
+          const discountState = allStates?.['discount'] as { value: number } | undefined;
+          if (discountState) {
+            return state.price * (1 - (discountState.value / 100));
+          }
+          return state.price;
+        }
+      }
+
+      // A simple discount plugin
+      class DiscountPlugin implements ResolverPlugin<{ value: number }> {
+        name = 'discount';
+        
+        initialize() {
+          return { value: 0 };
+        }
+        
+        update(
+          currentState: { value: number }, 
+          newValue: PropertyTypes,
+          _delta: CollapsedDelta,
+          _allStates?: Record<string, unknown>
+        ) {
+          if (typeof newValue === 'number') {
+            return { value: newValue };
+          }
+          return currentState;
+        }
+        
+        resolve(
+          state: { value: number },
+          _allStates?: Record<string, unknown>
+        ): number {
+          return state.value;
+        }
+      }
+
+      // Set base price
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('product1', 'price', 100, 'products')
+          .buildV1()
+      );
+
+      // Set discount (20%)
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty('product1', 'discount', 20, 'products')
+          .buildV1()
+      );
+
+      const resolver = new CustomResolver(lossless, {
+        price: new DiscountedPricePlugin(),
+        discount: new DiscountPlugin()
+      });
+
+      const result = resolver.resolve();
+      expect(result).toBeDefined();
+      expect(result!['product1'].properties.price).toBe(80); // 100 - 20%
+      expect(result!['product1'].properties.discount).toBe(20);
+    });
+  });
+
   describe('Custom Plugin Implementation', () => {
     test('should work with custom plugin', () => {
       // Custom plugin that counts the number of updates
