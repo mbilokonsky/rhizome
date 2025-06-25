@@ -27,7 +27,7 @@ export class MinPlugin<Target extends PropertyID> extends ResolverPlugin<MinPlug
 
   update(
     currentState: MinPluginState, 
-    newValue: PropertyTypes, 
+    newValue?: PropertyTypes, 
   ): MinPluginState {
     const numValue = newValue as number;
     if (currentState.min === undefined || numValue < currentState.min) {

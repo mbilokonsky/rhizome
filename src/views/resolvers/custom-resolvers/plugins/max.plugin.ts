@@ -1,5 +1,4 @@
 import { PropertyID, PropertyTypes } from "@src/core/types";
-import { CollapsedDelta } from "@src/views/lossless";
 import { ResolverPlugin, DependencyStates } from "../plugin";
 
 type MaxPluginState = {
@@ -29,7 +28,6 @@ export class MaxPlugin<Target extends PropertyID> extends ResolverPlugin<MaxPlug
   update(
     currentState: MaxPluginState, 
     newValue?: PropertyTypes,
-    _delta?: CollapsedDelta,
   ): MaxPluginState {
     const numValue = newValue as number;
     if (currentState.max === undefined || numValue > currentState.max) {
@@ -40,7 +38,6 @@ export class MaxPlugin<Target extends PropertyID> extends ResolverPlugin<MaxPlug
 
   resolve(
     state: MaxPluginState,
-    _dependencies?: DependencyStates
   ): PropertyTypes | undefined {
     return state.max;
   }

@@ -64,7 +64,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
    * @param propertyId The key by which a plugin is registered
    * @returns The base name of the plugin
    */
-  pluginBasenameFromKey(propertyId: PropertyID): PropertyID {
+  pluginBasenameFromKey(propertyId: string): string {
     return this.config[propertyId]?.name || propertyId;
   }
 
@@ -73,11 +73,21 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
    * @param alias The alias of the plugin
    * @returns The key by which it is registered
    */
-  pluginKeyFromBasename(alias: PropertyID): PropertyID {
-    const entry = Object.entries(this.config).find(([_, plugin]) => plugin.name === alias);
-    if (!entry) return alias;
+  pluginKeyFromBasename(name: string): string {
+    const entry = Object.entries(this.config).find(([_, plugin]) => plugin.name === name);
+    if (!entry) return name;
     return entry[0];
   }
+
+  private logGraph(): void {
+    // Log the final dependency graph
+    const graphLog: Record<string, string[]> = {};
+    this.dependencyGraph.forEach((deps, plugin) => {
+      graphLog[plugin] = Array.from(deps);
+    });
+    debug(`Dependency graph: ${JSON.stringify(graphLog, null, 2)}`);
+  }
+    
 
   /**
    * Build the dependency graph for all plugins.
@@ -87,16 +97,15 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     debug('Building dependency graph...');
     
     // Initialize the graph with all plugins
-    Object.keys(this.config).forEach(propertyId => {
-      const pluginId = this.pluginBasenameFromKey(propertyId);
-      this.dependencyGraph.set(pluginId, new Set());
-      debug(`Added plugin node: ${pluginId} (from property: ${propertyId})`);
+    Object.keys(this.config).forEach(pluginKey => {
+      this.dependencyGraph.set(pluginKey, new Set());
+      debug(`Added plugin node: ${pluginKey}`);
     });
 
     debug('Processing plugin dependencies...');
     // Add edges based on dependencies
-    Object.entries(this.config).forEach(([propertyId, plugin]) => {
-      const pluginId = plugin.name || propertyId;
+    Object.entries(this.config).forEach(([pluginKey, plugin]) => {
+      const pluginId = plugin.name || pluginKey;
       const deps = plugin.dependencies || [];
       
       if (deps.length === 0) {
@@ -108,29 +117,27 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
       deps.forEach((depId: string) => {
         // This dependency may have an alias in our current config
         const depKey = this.pluginKeyFromBasename(depId);
-        debug(`Processing dependency: ${depId} (resolved to key: ${depKey}) for plugin ${pluginId}`);
+        debug(`Processing dependency ${depKey} for plugin ${pluginKey}`);
         
         if (!this.config[depKey]) {
-          const errorMsg = `Dependency ${depId} not found for plugin ${propertyId}`;
+          // TODO: This could still be a property, not a plugin
+          const errorMsg = `Dependency ${depKey} not found for plugin ${pluginKey}`;
           debug(`Error: ${errorMsg}`);
           throw new Error(errorMsg);
         }
         
         // Add the dependency edge
-        this.dependencyGraph.get(depId)?.add(pluginId);
-        debug(`Added edge: ${depId} -> ${pluginId}`);
+        const dep = this.dependencyGraph.get(depKey)
+        if (!dep) {
+          throw new Error(`Dependency ${depKey} not found in dependency graph`);
+        }
+        dep.add(pluginKey);
       });
-    });
-    
-    // Log the final dependency graph
-    const graphLog: Record<string, string[]> = {};
-    this.dependencyGraph.forEach((deps, plugin) => {
-      graphLog[plugin] = Array.from(deps);
     });
     
     debug('Dependency graph construction complete');
     debug(`Config: ${JSON.stringify(this.config, null, 2)}`);
-    debug(`Dependency graph: ${JSON.stringify(graphLog, null, 2)}`);
+    this.logGraph();
   }
 
   /**
@@ -188,39 +195,31 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
 
   /**
    * Get the resolved states of all dependencies for a plugin
-   * @param entityState The state of the entity
+   * @param entityPluginStates The state of the entity
    * @param dependencies The dependencies to resolve
    * 
    */
   private getDependencyStates(
-    entityState: EntityState,
-    plugin: ResolverPlugin<unknown, string>
+    entityPluginStates: EntityState,
+    pluginKey: string
   ): DependencyStates {
-    const dependencyStates = {} as DependencyStates;
+    const plugin = this.config[pluginKey];
+    if (!plugin) throw new Error(`Plugin ${pluginKey} not found`);
 
-    for (const depId of plugin.dependencies || []) {
-      const depKey = this.pluginKeyFromBasename(depId);
+    const dependencyStates: DependencyStates = {};
+
+    for (const depKey of this.executionOrder) {
+      if (depKey === pluginKey) continue;
       const depPlugin = this.config[depKey];
-
-      // TODO: If this is not a plugin, see if it's an entity property, and include it
-
-      const depValue = entityState[depKey];
-      debug(`depId: ${depId}, depKey: ${depKey}, depPlugin: ${JSON.stringify(depPlugin)}, depValue: ${JSON.stringify(depValue)}`)
-      if (depValue) {
-        // Resolve the dependency's dependencies first
-        const depDependencies = this.getDependencyStates(
-          entityState,
-          depPlugin
-        );
-        
-        // Resolve the dependency's state
-        dependencyStates[depId] = depPlugin.resolve(
-          depValue,
-          depDependencies
-        );
+      if (depPlugin) {
+        if (!entityPluginStates[depKey]) {
+          dependencyStates[depKey] = depPlugin.initialize(dependencyStates);
+          entityPluginStates[depKey] = dependencyStates[depKey];
+        }
+        dependencyStates[depKey] = depPlugin.resolve(entityPluginStates[depKey], dependencyStates);
       }
     }
-    
+
     return dependencyStates;
   }
 
@@ -230,14 +229,13 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     }
     const entityState = acc[entityId];
 
-    for (const pluginId of this.executionOrder) {
-      const pluginKey = this.pluginKeyFromBasename(pluginId);
+    for (const pluginKey of this.executionOrder) {
       const plugin = this.config[pluginKey];
-      if (!plugin) throw new Error(`Plugin for property ${pluginId} not found`);
+      if (!plugin) throw new Error(`Plugin ${pluginKey} not found`);
 
       // We need to resolve dependencies, including entity properties that are not plugins.
-      const dependencies = this.getDependencyStates(entityState, plugin);
-      debug('Dependencies for', pluginId, ':', JSON.stringify(dependencies));
+      const dependencies = this.getDependencyStates(entityState, pluginKey);
+      debug('Dependencies for', pluginKey, ':', JSON.stringify(dependencies));
 
       // Initialize the plugin if it hasn't been initialized yet
       entityState[pluginKey] = entityState[pluginKey] ?? plugin.initialize(dependencies);
@@ -276,6 +274,8 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
               // It's possible that there are multiple deltas in this set with the same property ID.
               // That can only happen if they are part of a transaction. Otherwise this function is
               // only called once per delta, per entity affected.
+              // TODO: More flexible/robust error handling protocols?
+              // Some views might be more tolerant of errors than others.
               throw new Error(`Duplicate property ID ${propertyId} found in delta ${delta.id}`);
             }
             deltaPropertyValues[propertyId] = pointer[propertyId];
@@ -290,9 +290,10 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
       }
 
       // Update the plugin state with the new delta
-      const dependencies = this.getDependencyStates(entityState, plugin);
+      const dependencies = this.getDependencyStates(entityState, pluginKey);
       entityState[pluginKey] = plugin.applyUpdate(pluginState, propertyValue, updateDelta, dependencies);
-      debugState(`Updated entity state for ${entityId}:`, JSON.stringify(entityState[pluginKey]));
+      debugState(`Updated state for entity ${entityId} plugin ${pluginKey}:`, 
+        JSON.stringify(entityState[pluginKey]));
     }
     
     return acc;
@@ -312,21 +313,20 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
         properties: {}
       };
 
-      for (const propertyId of this.executionOrder) {
-        const pluginKey = this.pluginKeyFromBasename(propertyId);
+      for (const pluginKey of this.executionOrder) {
         const plugin = this.config[pluginKey];
-        if (!plugin) throw new Error(`Plugin for property ${propertyId} not found`);
+        if (!plugin) throw new Error(`Plugin ${pluginKey} not found`);
         
-        debug(`Processing property: ${propertyId} (key: ${pluginKey})`);
-        const dependencies = this.getDependencyStates(acc[entityId], plugin);
-        debug(`Dependencies for ${propertyId}:`, JSON.stringify(dependencies));
+        debug(`Processing property: ${pluginKey}`);
+        const dependencies = this.getDependencyStates(acc[entityId], pluginKey);
+        debug(`Dependencies for ${pluginKey}:`, JSON.stringify(dependencies));
         const state = acc[entityId][pluginKey] || plugin.initialize(dependencies);
-        debug(`State for ${propertyId}:`, JSON.stringify(state));
+        debug(`State for ${pluginKey}:`, JSON.stringify(state));
 
         const resolvedValue = plugin.resolve(state, dependencies);
-        if (resolvedValue === undefined) throw new Error(`Resolved value for property ${propertyId} is undefined`)
+        if (resolvedValue === undefined) throw new Error(`Resolved value for property ${pluginKey} is undefined`)
         
-        debug(`Resolved value for ${propertyId}:`, resolvedValue);
+        debug(`Resolved value for ${pluginKey}:`, resolvedValue);
         result[entityId].properties[pluginKey] = resolvedValue;
       }
     }
