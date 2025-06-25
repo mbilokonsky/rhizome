@@ -72,7 +72,7 @@ class LosslessEntity {
 export class Lossless {
   domainEntities = new LosslessEntityMap();
   transactions: Transactions;
-  referencedAs = new Map<string, Set<DomainEntityID>>();
+  referencedAs = new Map<string, Set<string>>();
   eventStream = new EventEmitter();
   
   // Track all deltas by ID for negation processing
@@ -155,19 +155,6 @@ export class Lossless {
       }
     }
 
-    for (const {target, localContext} of delta.pointers) {
-      if (typeof target === "string" && this.domainEntities.has(target)) {
-        if (this.domainEntities.has(target)) {
-          let referencedAs = this.referencedAs.get(localContext);
-          if (!referencedAs) {
-            referencedAs = new Set<string>();
-            this.referencedAs.set(localContext, referencedAs);
-          }
-          referencedAs.add(target);
-        }
-      }
-    }
-
     const transactionId = this.transactions.ingestDelta(delta, targets);
 
     if (!transactionId) {
@@ -232,8 +219,8 @@ export class Lossless {
       const ent = this.domainEntities.get(id);
       if (!ent) continue;
 
-
       const referencedAs = new Set<string>();
+
       const propertyDeltas: {
         [key: PropertyID]: CollapsedDelta[]
       } = {};
@@ -272,15 +259,11 @@ export class Lossless {
 
           const pointers: CollapsedPointer[] = [];
 
-          for (const {localContext, target, targetContext} of delta.pointers) {
-            if (targetContext) {
-              // Only store primitive pointers in the collapsed delta
-              continue;
-            }
-            pointers.push({[localContext]: target});
+          for (const {localContext, target} of delta.pointers) {
             if (target === ent.id) {
               referencedAs.add(localContext);
             }
+            pointers.push({[localContext]: target});
           }
 
           visibleDeltas.push({
@@ -293,6 +276,14 @@ export class Lossless {
         if (visibleDeltas.length > 0) {
           propertyDeltas[key] = visibleDeltas;
         }
+      }
+
+      if (this.referencedAs.has(ent.id)) {
+        for (const ref of referencedAs) {
+          this.referencedAs.get(ent.id)!.add(ref);
+        }
+      } else { 
+        this.referencedAs.set(ent.id, referencedAs);
       }
 
       // Only include entity in view if it has visible deltas

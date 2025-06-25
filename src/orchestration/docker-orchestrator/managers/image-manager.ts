@@ -1,4 +1,4 @@
-import Docker, { DockerOptions } from 'dockerode';
+import Docker from 'dockerode';
 import * as path from 'path';
 import { promises as fs } from 'fs';
 import * as tar from 'tar-fs';
@@ -63,9 +63,9 @@ export class ImageManager implements IImageManager {
     debug('Created build context tar stream');
     
     testImageBuildPromise = new Promise<void>((resolve, reject) => {
-      const log = (...args: any[]) => {
+      const log = (...args: unknown[]) => {
         const message = args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+          typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
         ).join(' ');
         debug(message);
       };
@@ -111,7 +111,7 @@ export class ImageManager implements IImageManager {
                   // Log any other non-empty JSON objects
                   log(`[Docker Build] ${JSON.stringify(json)}`);
                 }
-              } catch (e) {
+              } catch (_e) {
                 // If not JSON, log as plain text if not empty
                 if (line.trim()) {
                   log(`[Docker Build] ${line}`);

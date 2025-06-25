@@ -269,7 +269,7 @@ export class QueryEngine {
         case 'primitive': {
           // Use last-write-wins for primitives
           const deltasSorted = deltas.sort((a, b) => b.timeCreated - a.timeCreated);
-          for (let delta of deltasSorted) {
+          for (const delta of deltasSorted) {
             const primitiveValue = this.extractPrimitiveValue(delta, propertyId);
             if (primitiveValue !== null) {
               obj[propertyId] = primitiveValue;

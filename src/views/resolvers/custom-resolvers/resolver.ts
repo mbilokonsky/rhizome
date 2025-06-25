@@ -199,7 +199,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
    */
   reducer(acc: Accumulator, {id: entityId, propertyDeltas}: LosslessViewOne): Accumulator {
     debug(`Processing deltas for entity: ${entityId}`);
-    debug('Property deltas:', JSON.stringify(propertyDeltas, null, 2));
+    debug('Property deltas:', JSON.stringify(propertyDeltas));
     
     if (!acc[entityId]) {
       acc[entityId] = {};
@@ -246,7 +246,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
 
       // Update the plugin state with the new delta
       entityState[pluginKey] = plugin.update(pluginState, propertyValue, updateDelta, dependencies);
-      debugState(`Updated entity state for ${entityId}:`, JSON.stringify(entityState[pluginKey], null, 2));
+      debugState(`Updated entity state for ${entityId}:`, JSON.stringify(entityState[pluginKey]));
     }
     
     return acc;
@@ -254,7 +254,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
 
   resolver(acc: Accumulator, entityIds: DomainEntityID[]) {
     const result: Result = {}; 
-    debug('Initial accumulator state:', JSON.stringify(acc, null, 2));
+    debug('Initial accumulator state:', JSON.stringify(acc));
     
     for (const entityId in acc) {
       if (!entityIds.includes(entityId)) continue;
@@ -270,9 +270,9 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
         
         debug(`Processing property: ${propertyId} (key: ${pluginKey})`);
         const dependencies = this.getDependencyStates(acc[entityId], plugin);
-        debug(`Dependencies for ${propertyId}:`, JSON.stringify(dependencies, null, 2));
+        debug(`Dependencies for ${propertyId}:`, JSON.stringify(dependencies));
         const state = acc[entityId][pluginKey] || plugin.initialize(dependencies);
-        debug(`State for ${propertyId}:`, JSON.stringify(state, null, 2));
+        debug(`State for ${propertyId}:`, JSON.stringify(state));
 
         const resolvedValue = plugin.resolve(state, dependencies);
         if (resolvedValue === undefined) throw new Error(`Resolved value for property ${propertyId} is undefined`)

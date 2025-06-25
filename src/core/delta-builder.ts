@@ -2,6 +2,9 @@ import { DeltaV1, DeltaV2 } from './delta';
 import { randomUUID } from 'crypto';
 import { PropertyTypes } from './types';
 import { PointersV2 } from './delta';
+import Debug from 'debug';
+
+const debug = Debug('rz:delta-builder');
 
 /**
  * A fluent builder for creating Delta objects with proper validation and type safety.
@@ -77,9 +80,11 @@ export class DeltaBuilder {
   addPointer(localContext: string, target: string | number | boolean | null, targetContext?: string): this {
     const pointerTarget =  (targetContext && typeof target === 'string') 
       ? { [target]: targetContext } : target;
-    if (this.pointers[localContext] && 
+    // Prevent duplicate primitive properties with the same key
+    if (this.pointers[localContext] &&
       JSON.stringify(this.pointers[localContext]) !== JSON.stringify(pointerTarget)
     ) {
+      debug(`Pointer for '${localContext}' already exists with different value: ${JSON.stringify(this.pointers[localContext])} !== ${JSON.stringify(pointerTarget)}`);
       throw new Error(`Pointer for ${localContext} already exists with different value`);
     }
     this.pointers[localContext] = pointerTarget;

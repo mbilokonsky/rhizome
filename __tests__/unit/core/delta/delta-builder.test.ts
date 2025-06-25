@@ -46,8 +46,8 @@ describe('DeltaBuilder', () => {
 
       // Verify that the entity property resolves correctly
       const lossless = new Lossless(node);
-      lossless.ingestDelta(delta);
       const lossy = new TimestampResolver(lossless);
+      lossless.ingestDelta(delta);
       const result = lossy.resolve();
       expect(result).toBeDefined();
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
@@ -71,8 +71,8 @@ describe('DeltaBuilder', () => {
 
       // Verify that the entity property resolves correctly
       const lossless = new Lossless(node);
-      lossless.ingestDelta(delta);
       const lossy = new TimestampResolver(lossless);
+      lossless.ingestDelta(delta);
       const result = lossy.resolve();
       expect(result).toBeDefined();
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
@@ -171,8 +171,8 @@ describe('DeltaBuilder', () => {
       expect(delta.pointers).toHaveProperty('type', 'follows');
 
       const lossless = new Lossless(node);
-      lossless.ingestDelta(delta);
       const lossy = new TimestampResolver(lossless);
+      lossless.ingestDelta(delta);
       const result = lossy.resolve([relId]);
       expect(result).toBeDefined();
       expect(result![relId]).toMatchObject({
@@ -201,8 +201,8 @@ describe('DeltaBuilder', () => {
       expect(delta.pointers).toHaveProperty('version', 1);
 
       const lossless = new Lossless(node);
-      lossless.ingestDelta(delta);
       const lossy = new TimestampResolver(lossless);
+      lossless.ingestDelta(delta);
       const result = lossy.resolve([relId]);
       expect(result).toBeDefined();
       expect(result![relId]).toMatchObject({

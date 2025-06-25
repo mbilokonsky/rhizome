@@ -351,8 +351,8 @@ describe('Negation System', () => {
     test('should handle self-referential entities in negations', () => {
       // Create a delta that references itself
       const selfRefDelta = createDelta('user1', 'host1')
-        .setProperty('node1', 'parent', 'node1')
-        .setProperty('node1', 'child', 'node1') // Self-reference
+        .setProperty('node1', 'parent', 'node1', 'node-as-parent')
+        .setProperty('node1', 'child', 'node1', 'node-as-child') // Self-reference
         .buildV1();
 
       const negationDelta = createDelta('admin', 'host1').negate(selfRefDelta.id).buildV1();

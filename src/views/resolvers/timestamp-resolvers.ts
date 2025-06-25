@@ -158,7 +158,7 @@ export class LexicographicTimestampResolver extends TimestampResolver {
 }
 
 // Resolve a value for an entity by last write wins
-export function lastValueFromDeltas(
+export function latestFromCollapsedDeltas(
   key: string,
   deltas?: CollapsedDelta[]
 ): {
