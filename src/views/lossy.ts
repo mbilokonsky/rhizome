@@ -62,7 +62,7 @@ export abstract class Lossy<Accumulator, Result = Accumulator> {
   // Resolve the current state of the view
   resolve(entityIds?: DomainEntityID[]): Result | undefined {
     if (!this.accumulator) {
-      return undefined;
+      this.accumulator =this.initializer?.() || {} as Accumulator;
     }
 
     if (!entityIds) {

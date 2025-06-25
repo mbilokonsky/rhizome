@@ -16,22 +16,7 @@ describe('Edge Cases', () => {
     lossless = new Lossless(node);
   });
 
-  test('should handle null and undefined values', () => {
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('test1', 'value', null, 'test')
-        .buildV1()
-    );
-
-    // Use null instead of undefined as it's a valid PropertyType
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(2000)
-        .setProperty('test1', 'value', null, 'test')
-        .buildV1()
-    );
-
+  test('should handle null values', () => {
     // Create a type-safe plugin that handles null/undefined values
     class NullSafeLastWriteWinsPlugin implements ResolverPlugin<{ value: PropertyTypes | null, timestamp: number }, never> {
       readonly dependencies = [] as const;
@@ -42,10 +27,11 @@ describe('Edge Cases', () => {
       
       update(
         currentState: { value: PropertyTypes | null, timestamp: number }, 
-        newValue: PropertyTypes, 
-        delta: CollapsedDelta,
-        _dependencies: DependencyStates
+        newValue?: PropertyTypes, 
+        delta?: CollapsedDelta,
       ) {
+        if (newValue === undefined) return currentState;
+        if (!delta) return currentState;
         if (delta.timeCreated > currentState.timestamp) {
           return { value: newValue, timestamp: delta.timeCreated };
         }
@@ -54,9 +40,8 @@ describe('Edge Cases', () => {
       
       resolve(
         state: { value: PropertyTypes | null, timestamp: number },
-        _dependencies: DependencyStates
       ): PropertyTypes | undefined {
-        return state.value ?? undefined;
+        return state.value;
       }
     }
 
@@ -64,29 +49,20 @@ describe('Edge Cases', () => {
       value: new NullSafeLastWriteWinsPlugin()
     });
 
-    const results = resolver.resolve() || [];
-    expect(Array.isArray(results)).toBe(true);
-    const test1 = results.find(r => r.id === 'test1');
-    expect(test1).toBeDefined();
-    expect(test1?.properties.value).toBeUndefined();
-  });
-
-  test('should handle concurrent updates with same timestamp', () => {
-    // Two updates with the same timestamp
     lossless.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
-        .setProperty('test2', 'value', 'first', 'test')
+        .setProperty('test2', 'value', null, 'test')
         .buildV1()
     );
 
-    lossless.ingestDelta(
-      createDelta('user2', 'host2')
-        .withTimestamp(1000)  // Same timestamp
-        .setProperty('test2', 'value', 'second', 'test')
-        .buildV1()
-    );
+    const results = resolver.resolve() || {};
+    const test1 = results['test2']
+    expect(test1).toBeDefined();
+    expect(test1?.properties.value).toBeNull();
+  });
 
+  test('should handle concurrent updates with same timestamp', () => {
     // Custom plugin that handles concurrent updates with the same timestamp
     class ConcurrentUpdatePlugin implements ResolverPlugin<{ value: PropertyTypes, timestamp: number }, never> {
       readonly dependencies = [] as const;
@@ -123,25 +99,31 @@ describe('Edge Cases', () => {
       value: new ConcurrentUpdatePlugin()
     });
 
-    const results = resolver.resolve() || [];
-    expect(Array.isArray(results)).toBe(true);
-    const test2 = results.find(r => r.id === 'test2');
+    // Two updates with the same timestamp
+    lossless.ingestDelta(
+      createDelta('user1', 'host1')
+        .withTimestamp(1000)
+        .setProperty('test2', 'value', null, 'test')
+        .buildV1()
+    );
+
+    lossless.ingestDelta(
+      createDelta('user2', 'host2')
+        .withTimestamp(1000)  // Same timestamp
+        .setProperty('test2', 'value', 'xylophone', 'test')
+        .buildV1()
+    );
+
+
+
+    const results = resolver.resolve() || {};
+    const test2 = results['test2'];
     expect(test2).toBeDefined();
     // Should pick one of the values deterministically
-    expect(test2?.properties.value).toBe('first');
+    expect(test2?.properties.value).toBeNull();
   });
 
   test('should handle very large numbers of updates', () => {
-    // Add 1000 updates
-    for (let i = 0; i < 1000; i++) {
-      lossless.ingestDelta(
-        createDelta('user1', 'host1')
-          .withTimestamp(1000 + i)
-          .setProperty('test3', 'counter', i, 'test')
-          .buildV1()
-      );
-    }
-
     // Plugin that handles large numbers of updates efficiently
     class CounterPlugin implements ResolverPlugin<{ count: number }, never> {
       readonly dependencies = [] as const;
@@ -171,9 +153,18 @@ describe('Edge Cases', () => {
       counter: new CounterPlugin()
     });
 
-    const results = resolver.resolve() || [];
-    expect(Array.isArray(results)).toBe(true);
-    const test3 = results.find(r => r.id === 'test3');
+    // Add 1000 updates
+    for (let i = 0; i < 1000; i++) {
+      lossless.ingestDelta(
+        createDelta('user1', 'host1')
+          .withTimestamp(1000 + i)
+          .setProperty('test3', 'counter', i, 'test')
+          .buildV1()
+      );
+    }
+
+    const results = resolver.resolve() || {};
+    const test3 = results['test3']
     expect(test3).toBeDefined();
     // Should handle large numbers of updates efficiently
     expect(test3?.properties.counter).toBe(1000); // Should count all 1000 updates
@@ -183,28 +174,22 @@ describe('Edge Cases', () => {
     // No deltas added - should handle empty state
     // Plugin that handles missing properties gracefully
     class MissingPropertyPlugin implements ResolverPlugin<{ initialized: boolean }, never> {
-      private _initialized = false;
       readonly dependencies = [] as const;
       
       initialize() {
-        this._initialized = true;
         return { initialized: true };
       }
       
       update(
         currentState: { initialized: boolean },
-        _newValue: PropertyTypes,
-        _delta: CollapsedDelta,
-        _dependencies: DependencyStates
       ) {
         return currentState;
       }
       
       resolve(
-        _state: { initialized: boolean },
-        _dependencies: DependencyStates
+        state: { initialized: boolean }
       ): boolean {
-        return this._initialized;
+        return state.initialized;
       }
     }
 

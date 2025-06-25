@@ -5,8 +5,8 @@ import { ResolverPlugin, DependencyStates } from "./plugin";
 import { EntityRecord } from "@src/core/entity";
 import Debug from 'debug';
 
-const debug = Debug('rz:resolver');
-const debugState = Debug('rz:resolver:state');
+const debug = Debug('rz:custom-resolver');
+const debugState = Debug('rz:custom-resolver:state');
 
 /**
  * The state of a property for a single entity
@@ -224,17 +224,36 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     return dependencyStates;
   }
 
+  private initializePlugins(acc: Accumulator, entityId: DomainEntityID) {
+    if (!acc[entityId]) {
+      acc[entityId] = {};
+    }
+    const entityState = acc[entityId];
+
+    for (const pluginId of this.executionOrder) {
+      const pluginKey = this.pluginKeyFromBasename(pluginId);
+      const plugin = this.config[pluginKey];
+      if (!plugin) throw new Error(`Plugin for property ${pluginId} not found`);
+
+      // We need to resolve dependencies, including entity properties that are not plugins.
+      const dependencies = this.getDependencyStates(entityState, plugin);
+      debug('Dependencies for', pluginId, ':', JSON.stringify(dependencies));
+
+      // Initialize the plugin if it hasn't been initialized yet
+      entityState[pluginKey] = entityState[pluginKey] ?? plugin.initialize(dependencies);
+    }
+
+    return { entityState };
+  }
+  
   /**
    * Update the state with new deltas from the view
    */
   reducer(acc: Accumulator, {id: entityId, propertyDeltas}: LosslessViewOne): Accumulator {
     debug(`Processing deltas for entity: ${entityId}`);
     debug('Property deltas:', JSON.stringify(propertyDeltas));
-    
-    if (!acc[entityId]) {
-      acc[entityId] = {};
-    }
-    const entityState = acc[entityId];
+
+    const { entityState } = this.initializePlugins(acc, entityId);
 
     // Now let's go through each plugin in order. 
     for (const pluginId of this.executionOrder) {
@@ -244,12 +263,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
 
       debug(`Processing plugin: ${pluginId} (key: ${pluginKey})`);
 
-      // We need to resolve dependencies, including entity properties that are not plugins.
-      const dependencies = this.getDependencyStates(entityState, plugin);
-      debug('Dependencies for', pluginId, ':', JSON.stringify(dependencies));
-
-      // Initialize the plugin if it hasn't been initialized yet
-      const pluginState = entityState[pluginKey] ?? plugin.initialize(dependencies);
+      const pluginState = entityState[pluginKey];
 
       const deltaPropertyValues : Record<PropertyID, PropertyTypes> = {};
       let propertyValue : PropertyTypes | undefined;
@@ -276,6 +290,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
       }
 
       // Update the plugin state with the new delta
+      const dependencies = this.getDependencyStates(entityState, plugin);
       entityState[pluginKey] = plugin.update(pluginState, propertyValue, updateDelta, dependencies);
       debugState(`Updated entity state for ${entityId}:`, JSON.stringify(entityState[pluginKey]));
     }
@@ -286,9 +301,12 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
   resolver(acc: Accumulator, entityIds: DomainEntityID[]) {
     const result: Result = {}; 
     debug('Initial accumulator state:', JSON.stringify(acc));
-    
+
     for (const entityId in acc) {
       if (!entityIds.includes(entityId)) continue;
+
+      this.initializePlugins(acc, entityId);
+    
       result[entityId] = {
         id: entityId,
         properties: {}
@@ -312,6 +330,8 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
         result[entityId].properties[pluginKey] = resolvedValue;
       }
     }
+
+    debug(`Result:`, JSON.stringify(result));
     
     return result;
   }
