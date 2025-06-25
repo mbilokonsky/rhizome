@@ -1,8 +1,7 @@
 import { EntityProperties } from "../../core/entity";
-import { Lossless, LosslessViewOne, CollapsedDelta } from "../lossless";
+import { Lossless, LosslessViewOne, CollapsedDelta, valueFromCollapsedDelta } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany } from "../../core/types";
-import { valueFromCollapsedDelta } from "./aggregation-resolvers";
 
 export type TimestampedProperty = {
   value: PropertyTypes,

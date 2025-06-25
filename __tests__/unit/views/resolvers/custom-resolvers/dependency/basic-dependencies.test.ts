@@ -23,7 +23,8 @@ describe('Basic Dependency Resolution', () => {
         return { value: '' };
       }
 
-      update(_currentState: { value: string }, newValue: PropertyTypes) {
+      update(currentState: { value: string }, newValue: PropertyTypes) {
+        if (newValue === undefined) return currentState;
         return { value: String(newValue) };
       }
 
@@ -40,8 +41,9 @@ describe('Basic Dependency Resolution', () => {
         return { value: '' };
       }
 
-      update(_currentState: { value: string }, newValue: PropertyTypes, _delta: CollapsedDelta, dependencies: { first: string }) {
-        return { value: `${dependencies.first}_${newValue}` };
+      update(currentState: { value: string }, newValue?: PropertyTypes, _delta?: CollapsedDelta, dependencies?: { first: string }) {
+        if (newValue === undefined) return currentState;
+        return { value: `${dependencies?.first}_${newValue}` };
       }
 
       resolve(state: { value: string }) {

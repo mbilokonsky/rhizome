@@ -8,8 +8,8 @@ import {
   AverageResolver,
   CountResolver,
   AggregationType
-} from "../../../../src";
-import { createDelta } from "../../../../src/core/delta-builder";
+} from "@src";
+import { createDelta } from "@src/core/delta-builder";
 
 describe('Aggregation Resolvers', () => {
   let node: RhizomeNode;
@@ -22,6 +22,8 @@ describe('Aggregation Resolvers', () => {
 
   describe('Basic Aggregation', () => {
     test('should aggregate numbers using min resolver', () => {
+      const minResolver = new MinResolver(lossless, ['score']);
+
       // Add first entity with score 10
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
@@ -40,7 +42,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const minResolver = new MinResolver(lossless, ['score']);
       const result = minResolver.resolve();
       
       expect(result).toBeDefined();
@@ -51,6 +52,8 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should aggregate numbers using max resolver', () => {
+      const maxResolver = new MaxResolver(lossless, ['score']);
+
       // Add deltas for entities
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
@@ -67,7 +70,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const maxResolver = new MaxResolver(lossless, ['score']);
       const result = maxResolver.resolve();
       
       expect(result).toBeDefined();
@@ -77,6 +79,8 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should aggregate numbers using sum resolver', () => {
+      const sumResolver = new SumResolver(lossless, ['value']);
+
       // Add first value for entity1
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 10, 'collection')
@@ -95,7 +99,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const sumResolver = new SumResolver(lossless, ['value']);
       const result = sumResolver.resolve();
       
       expect(result).toBeDefined();
@@ -104,6 +107,8 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should aggregate numbers using average resolver', () => {
+      const avgResolver = new AverageResolver(lossless, ['score']);
+
       // Add multiple scores for entity1
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
@@ -121,7 +126,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const avgResolver = new AverageResolver(lossless, ['score']);
       const result = avgResolver.resolve();
       
       expect(result).toBeDefined();
@@ -130,6 +134,8 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should count values using count resolver', () => {
+      const countResolver = new CountResolver(lossless, ['visits']);
+
       // Add multiple visit deltas for entity1
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'visits', 1, 'collection')
@@ -147,7 +153,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const countResolver = new CountResolver(lossless, ['visits']);
       const result = countResolver.resolve();
       
       expect(result).toBeDefined();
@@ -158,6 +163,12 @@ describe('Aggregation Resolvers', () => {
 
   describe('Custom Aggregation Configuration', () => {
     test('should handle mixed aggregation types', () => {
+      const resolver = new AggregationResolver(lossless, {
+        min_val: 'min' as AggregationType,
+        max_val: 'max' as AggregationType,
+        sum_val: 'sum' as AggregationType
+      }); 
+      
       // Add first set of values
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'min_val', 10, 'collection')
@@ -190,11 +201,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new AggregationResolver(lossless, {
-        min_val: 'min' as AggregationType,
-        max_val: 'max' as AggregationType,
-        sum_val: 'sum' as AggregationType
-      });
       
       const result = resolver.resolve();
       expect(result).toBeDefined();
@@ -206,6 +212,11 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should ignore non-numeric values', () => {
+      const resolver = new AggregationResolver(lossless, {
+        score: 'sum' as AggregationType,
+        name: 'count' as AggregationType
+      });
+      
       // Add numeric value
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
@@ -224,8 +235,7 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const sumResolver = new SumResolver(lossless, ['score', 'name']);
-      const result = sumResolver.resolve();
+      const result = resolver.resolve();
       
       expect(result).toBeDefined();
       const entity = result!['entity1'];
@@ -234,13 +244,13 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle empty value arrays', () => {
+      const sumResolver = new SumResolver(lossless, ['score']);
       // Create entity with non-aggregated property
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'name', 'test', 'collection')
         .buildV1()
       );
 
-      const sumResolver = new SumResolver(lossless, ['score']);
       const result = sumResolver.resolve();
       
       expect(result).toBeDefined();
@@ -251,12 +261,13 @@ describe('Aggregation Resolvers', () => {
 
   describe('Edge Cases', () => {
     test('should handle single value aggregations', () => {
+      const avgResolver = new AverageResolver(lossless, ['value']);
+
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 42, 'collection')
         .buildV1()
       );
 
-      const avgResolver = new AverageResolver(lossless, ['value']);
       const result = avgResolver.resolve();
       
       expect(result).toBeDefined();
@@ -264,6 +275,8 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle zero values', () => {
+      const sumResolver = new SumResolver(lossless, ['value']);
+      
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 0, 'collection')
         .buildV1()
@@ -274,7 +287,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const sumResolver = new SumResolver(lossless, ['value']);
       const result = sumResolver.resolve();
       
       expect(result).toBeDefined();
@@ -282,6 +294,8 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle negative values', () => {
+      const minResolver = new MinResolver(lossless, ['value']);
+      
       lossless.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', -5, 'collection')
         .buildV1()
@@ -292,7 +306,6 @@ describe('Aggregation Resolvers', () => {
         .buildV1()
       );
 
-      const minResolver = new MinResolver(lossless, ['value']);
       const result = minResolver.resolve();
       
       expect(result).toBeDefined();

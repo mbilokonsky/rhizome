@@ -1,7 +1,8 @@
 import { Lossless, LosslessViewOne } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
-import { CollapsedDelta } from "../lossless";
+import { valueFromCollapsedDelta } from "../lossless";
+import { EntityRecord, EntityRecordMany } from "@src/core/entity";
 
 export type AggregationType = 'min' | 'max' | 'sum' | 'average' | 'count';
 
@@ -27,22 +28,30 @@ export type AggregatedViewOne = {
 export type AggregatedViewMany = ViewMany<AggregatedViewOne>;
 
 type Accumulator = AggregatedViewMany;
+type Result = EntityRecordMany;
 
-// Extract a particular value from a delta's pointers
-export function valueFromCollapsedDelta(
-  key: string,
-  delta: CollapsedDelta
-): string | number | undefined {
-  for (const pointer of delta.pointers) {
-    for (const [k, value] of Object.entries(pointer)) {
-      if (k === key && (typeof value === "string" || typeof value === "number")) {
-        return value;
-      }
-    }
+function aggregateValues(values: number[], type: AggregationType): number {
+  if (values.length === 0) return 0;
+
+  switch (type) {
+    case 'min':
+      return Math.min(...values);
+    case 'max':
+      return Math.max(...values);
+    case 'sum':
+      return values.reduce((sum, val) => sum + val, 0);
+    case 'average':
+      return values.reduce((sum, val) => sum + val, 0) / values.length;
+    case 'count':
+      // For count, we want to count all values, including duplicates
+      // So we use the length of the values array directly
+      return values.length;
+    default:
+      throw new Error(`Unknown aggregation type: ${type}`);
   }
 }
 
-export class AggregationResolver extends Lossy<Accumulator> {
+export class AggregationResolver extends Lossy<Accumulator, Result> {
   constructor(
     lossless: Lossless,
     private config: AggregationConfig
@@ -67,19 +76,43 @@ export class AggregationResolver extends Lossy<Accumulator> {
       }
 
       // Extract numeric values from all deltas for this property
-      const newValues: number[] = [];
       for (const delta of deltas || []) {
         const value = valueFromCollapsedDelta(propertyId, delta);
         if (typeof value === 'number') {
-          newValues.push(value);
+          if (this.config[propertyId] === 'count') {
+            // For count, include all values (including duplicates)
+            acc[cur.id].properties[propertyId].values.push(value);
+          } else {
+            // For other aggregations, only add unique values
+            if (!acc[cur.id].properties[propertyId].values.includes(value)) {
+              acc[cur.id].properties[propertyId].values.push(value);
+            }
+          }
         }
       }
-
-      // Update the values array (avoiding duplicates by clearing and rebuilding)
-      acc[cur.id].properties[propertyId].values = newValues;
     }
 
     return acc;
+  }
+
+  resolver(cur: Accumulator): Result {
+    const res: Result = {};
+
+    for (const [id, entity] of Object.entries(cur)) {
+      const entityResult: EntityRecord = { id, properties: {} };
+
+      for (const [propertyId, aggregatedProp] of Object.entries(entity.properties)) {
+        const result = aggregateValues(aggregatedProp.values, aggregatedProp.type);
+        entityResult.properties[propertyId] = result;
+      }
+
+      // Only include entities that have at least one aggregated property
+      if (Object.keys(entityResult.properties).length > 0) {
+        res[id] = entityResult;
+      }
+    }
+
+    return res;
   }
 }
 

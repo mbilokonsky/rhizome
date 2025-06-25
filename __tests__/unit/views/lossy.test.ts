@@ -1,11 +1,11 @@
 import Debug from 'debug';
-import { PointerTarget } from "../../../src/core/delta";
-import { Lossless, LosslessViewOne } from "../../../src/views/lossless";
-import { Lossy } from "../../../src/views/lossy";
-import { RhizomeNode } from "../../../src/node";
-import { valueFromCollapsedDelta } from "../../../src/views/resolvers/aggregation-resolvers";
-import { latestFromCollapsedDeltas } from "../../../src/views/resolvers/timestamp-resolvers";
-import { createDelta } from "../../../src/core/delta-builder";
+import { PointerTarget } from "@src/core/delta";
+import { Lossless, LosslessViewOne } from "@src/views/lossless";
+import { Lossy } from "@src/views/lossy";
+import { RhizomeNode } from "@src/node";
+import { valueFromCollapsedDelta } from "@src/views/lossless";
+import { latestFromCollapsedDeltas } from "@src/views/resolvers/timestamp-resolvers";
+import { createDelta } from "@src/core/delta-builder";
 const debug = Debug('rz:test:lossy');
 
 type Role = {

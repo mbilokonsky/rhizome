@@ -18,6 +18,20 @@ export type CollapsedDelta = Omit<DeltaNetworkImageV1, 'pointers'> & {
   pointers: CollapsedPointer[];
 };
 
+// Extract a particular value from a delta's pointers
+export function valueFromCollapsedDelta(
+  key: string,
+  delta: CollapsedDelta
+): string | number | undefined {
+  for (const pointer of delta.pointers) {
+    for (const [k, value] of Object.entries(pointer)) {
+      if (k === key && (typeof value === "string" || typeof value === "number")) {
+        return value;
+      }
+    }
+  }
+}
+
 export type LosslessViewOne = {
   id: DomainEntityID,
   referencedAs: string[];

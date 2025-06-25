@@ -18,6 +18,8 @@ export type EntityRecord = {
   properties: EntityProperties;
 };
 
+export type EntityRecordMany = Record<string, EntityRecord>;
+
 export class Entity {
   properties: EntityProperties = {};
   ahead = 0;
