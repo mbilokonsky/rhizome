@@ -1,4 +1,6 @@
 import {randomUUID} from "crypto";
+import dotenv from 'dotenv';
+dotenv.config();
 
 // _HOST refers to the address from an external perspective
 // _ADDR refers to the interface address from the service's perspective
@@ -25,3 +27,5 @@ export const HTTP_API_PORT = parseInt(process.env.RHIZOME_HTTP_API_PORT || '3000
 export const HTTP_API_ENABLE = process.env.RHIZOME_HTTP_API_ENABLE === 'true';
 
 export const PUB_SUB_TOPIC = process.env.RHIZOME_PUB_SUB_TOPIC || `deltas-${randomUUID()}`;
+
+export const DOCKER_ENABLE = process.env.RHIZOME_DOCKER_ENABLE === 'true';

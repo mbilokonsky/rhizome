@@ -1,0 +1,11 @@
+#!/bin/env bash
+
+DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+
+${DIR}/list_tests |
+  sort |
+  uniq -d |
+  while read title; do
+    grep -Rn --color "$title" __tests__
+    echo
+  done

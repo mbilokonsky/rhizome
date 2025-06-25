@@ -17,8 +17,10 @@
       "./node_modules/@types"
     ],
     "paths": {
-      "@src": ["src"],
-      "@src/*": ["src/*"]
+      "@src": ["./src"],
+      "@src/*": ["./src/*"],
+      "@test-helpers": ["__tests__/__helpers__"],
+      "@test-helpers/*": ["__tests__/__helpers__/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

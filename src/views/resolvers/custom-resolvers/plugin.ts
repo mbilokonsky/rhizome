@@ -4,48 +4,53 @@ import { CollapsedDelta } from "../../lossless";
 /**
  * Type representing a mapping of dependency names to their state types
  */
-export type DependencyStates<D extends string> = {
-  [K in D]: unknown;
-};
+// export type DependencyStates = {
+//   [K in D]: unknown;
+// };
+
+export type DependencyStates = Record<string, unknown>;
 
 /**
  * Plugin interface for custom resolvers with type-safe dependencies
  * @template T - Type of the plugin's internal state
  * @template D - Union type of dependency names (e.g., 'discount' | 'tax')
  */
-export interface ResolverPlugin<
+export abstract class ResolverPlugin<
   T = unknown,
   D extends string = never
 > {
-  name: string;
+
+  name?: PropertyID;
 
   /**
    * Array of property IDs that this plugin depends on.
-   * These properties will be processed before this plugin.
+   * The plugins corresponding to these properties will be processed before this plugin.
    */
   dependencies?: readonly D[];
 
   /**
    * Initialize the state for a property
    */
-  initialize(): T;
+  abstract initialize(
+    dependencies: DependencyStates
+  ): T;
 
   /**
    * Process a new value for the property
    */
-  update(
+  abstract update(
     currentState: T,
-    newValue: PropertyTypes,
-    delta: CollapsedDelta,
-    dependencies: DependencyStates<D>
+    newValue?: PropertyTypes,
+    delta?: CollapsedDelta,
+    dependencies?: DependencyStates
   ): T;
 
   /**
    * Resolve the final value from the accumulated state
    */
-  resolve(
+  abstract resolve(
     state: T,
-    dependencies: DependencyStates<D>
+    dependencies: DependencyStates
   ): PropertyTypes | undefined;
 }
 

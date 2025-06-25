@@ -29,9 +29,9 @@ const ast = jsonToAst(exampleJson, {
   // filter: (node) => !node.path || node.path.includes('address')
 });
 
-console.log("Original JSON:", JSON.stringify(exampleJson, null, 2));
+debug("Original JSON:", JSON.stringify(exampleJson, null, 2));
 
-console.log("\nAST:", JSON.stringify(ast, null, 2));
+debug("\nAST:", JSON.stringify(ast, null, 2));
 
 // Example of traversing the AST
 function traverse(node: any, indent = 0) {
@@ -40,12 +40,12 @@ function traverse(node: any, indent = 0) {
   const value = node.value !== undefined ? `: ${JSON.stringify(node.value)}` : '';
   const path = node.path ? ` [${node.path}]` : '';
   
-  console.log(`${padding}${type}${value}${path}`);
+  debug(`${padding}${type}${value}${path}`);
   
   if (node.children) {
     node.children.forEach((child: any) => traverse(child, indent + 2));
   }
 }
 
-console.log('\nTraversed AST:');
+debug('\nTraversed AST:');
 traverse(ast);

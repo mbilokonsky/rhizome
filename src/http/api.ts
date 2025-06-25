@@ -135,7 +135,7 @@ export class HttpApi {
     // View a single transaction
     this.router.get('/transaction/:id', (req: express.Request, res: express.Response) => {
       const {params: {id}} = req;
-      const v = this.rhizomeNode.lossless.view([id]);
+      const v = this.rhizomeNode.lossless.compose([id]);
       const ent = v[id];
       if (!ent.referencedAs.includes("_transaction")) {
         res.status(400).json({error: "Entity is not a transaction", id});
@@ -151,7 +151,7 @@ export class HttpApi {
     // Get a lossless view of a single domain entity
     this.router.get('/lossless/:id', (req: express.Request, res: express.Response) => {
       const {params: {id}} = req;
-      const v = this.rhizomeNode.lossless.view([id]);
+      const v = this.rhizomeNode.lossless.compose([id]);
       const ent = v[id];
 
       res.json({

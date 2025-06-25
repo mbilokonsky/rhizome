@@ -11,14 +11,14 @@ import {
 describe("Delta Validation", () => {
   describe("Invalid Delta Formats", () => {
     describe("DeltaV1 validation", () => {
-      it("should throw error for non-object delta", () => {
+      test("should throw error for non-object delta", () => {
         expect(() => validateDeltaNetworkImageV1(null)).toThrow(InvalidDeltaFormatError);
         expect(() => validateDeltaNetworkImageV1("string")).toThrow(InvalidDeltaFormatError);
         expect(() => validateDeltaNetworkImageV1(123)).toThrow(InvalidDeltaFormatError);
         expect(() => validateDeltaNetworkImageV1([])).toThrow(InvalidDeltaFormatError);
       });
 
-      it("should throw error for invalid ID types", () => {
+      test("should throw error for invalid ID types", () => {
         const invalidDeltas = [
           { id: null, timeCreated: 123, host: "host", creator: "creator", pointers: [] },
           { id: 123, timeCreated: 123, host: "host", creator: "creator", pointers: [] },
@@ -31,7 +31,7 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for invalid timestamp", () => {
+      test("should throw error for invalid timestamp", () => {
         const invalidDeltas = [
           { id: "id", timeCreated: "123", host: "host", creator: "creator", pointers: [] },
           { id: "id", timeCreated: -123, host: "host", creator: "creator", pointers: [] },
@@ -44,7 +44,7 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for invalid host/creator", () => {
+      test("should throw error for invalid host/creator", () => {
         const invalidDeltas = [
           { id: "id", timeCreated: 123, host: null, creator: "creator", pointers: [] },
           { id: "id", timeCreated: 123, host: "", creator: "creator", pointers: [] },
@@ -59,7 +59,7 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for non-array pointers", () => {
+      test("should throw error for non-array pointers", () => {
         const invalidDeltas = [
           { id: "id", timeCreated: 123, host: "host", creator: "creator", pointers: null },
           { id: "id", timeCreated: 123, host: "host", creator: "creator", pointers: {} },
@@ -72,12 +72,12 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for empty pointers array", () => {
+      test("should throw error for empty pointers array", () => {
         const delta = { id: "id", timeCreated: 123, host: "host", creator: "creator", pointers: [] };
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(InvalidDeltaFormatError);
       });
 
-      it("should throw error for invalid pointer structure", () => {
+      test("should throw error for invalid pointer structure", () => {
         const invalidPointers = [
           [null],
           ["string"],
@@ -96,7 +96,7 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for invalid targetContext", () => {
+      test("should throw error for invalid targetContext", () => {
         const invalidPointers = [
           [{ localContext: "context", target: "target", targetContext: null }],
           [{ localContext: "context", target: "target", targetContext: "" }],
@@ -110,7 +110,7 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for pointer consistency violation", () => {
+      test("should throw error for pointer consistency violation", () => {
         // If targetContext exists, target must be a string (reference)
         const pointers = [{ localContext: "context", target: 123, targetContext: "property" }];
         const delta = { id: "id", timeCreated: 123, host: "host", creator: "creator", pointers };
@@ -119,14 +119,14 @@ describe("Delta Validation", () => {
     });
 
     describe("DeltaV2 validation", () => {
-      it("should throw error for non-object delta", () => {
+      test("should throw error for non-object delta", () => {
         expect(() => validateDeltaNetworkImageV2(null)).toThrow(InvalidDeltaFormatError);
         expect(() => validateDeltaNetworkImageV2("string")).toThrow(InvalidDeltaFormatError);
         expect(() => validateDeltaNetworkImageV2(123)).toThrow(InvalidDeltaFormatError);
         expect(() => validateDeltaNetworkImageV2([])).toThrow(InvalidDeltaFormatError);
       });
 
-      it("should throw error for invalid pointers object", () => {
+      test("should throw error for invalid pointers object", () => {
         const invalidDeltas = [
           { id: "id", timeCreated: 123, host: "host", creator: "creator", pointers: null },
           { id: "id", timeCreated: 123, host: "host", creator: "creator", pointers: [] },
@@ -139,12 +139,12 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for empty pointers object", () => {
+      test("should throw error for empty pointers object", () => {
         const delta = { id: "id", timeCreated: 123, host: "host", creator: "creator", pointers: {} };
         expect(() => validateDeltaNetworkImageV2(delta)).toThrow(InvalidDeltaFormatError);
       });
 
-      it("should throw error for invalid pointer keys", () => {
+      test("should throw error for invalid pointer keys", () => {
         const invalidPointers = [
           { "": "value" }
         ];
@@ -155,7 +155,7 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for invalid pointer values", () => {
+      test("should throw error for invalid pointer values", () => {
         const invalidPointers = [
           { key: undefined },
           { key: [] }
@@ -167,7 +167,7 @@ describe("Delta Validation", () => {
         });
       });
 
-      it("should throw error for invalid reference format", () => {
+      test("should throw error for invalid reference format", () => {
         const invalidReferences = [
           { key: {} }, // Empty reference
           { key: { ref1: "val1", ref2: "val2" } }, // Multiple keys
@@ -187,31 +187,31 @@ describe("Delta Validation", () => {
 
   describe("Missing Required Fields", () => {
     describe("DeltaV1", () => {
-      it("should throw MissingRequiredFieldError for missing id", () => {
+      test("should throw MissingRequiredFieldError for missing id", () => {
         const delta = { timeCreated: 123, host: "host", creator: "creator", pointers: [] };
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(MissingRequiredFieldError);
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(/id/);
       });
 
-      it("should throw MissingRequiredFieldError for missing timeCreated", () => {
+      test("should throw MissingRequiredFieldError for missing timeCreated", () => {
         const delta = { id: "id", host: "host", creator: "creator", pointers: [] };
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(MissingRequiredFieldError);
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(/timeCreated/);
       });
 
-      it("should throw MissingRequiredFieldError for missing host", () => {
+      test("should throw MissingRequiredFieldError for missing host", () => {
         const delta = { id: "id", timeCreated: 123, creator: "creator", pointers: [] };
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(MissingRequiredFieldError);
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(/host/);
       });
 
-      it("should throw MissingRequiredFieldError for missing creator", () => {
+      test("should throw MissingRequiredFieldError for missing creator", () => {
         const delta = { id: "id", timeCreated: 123, host: "host", pointers: [] };
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(MissingRequiredFieldError);
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(/creator/);
       });
 
-      it("should throw MissingRequiredFieldError for missing pointers", () => {
+      test("should throw MissingRequiredFieldError for missing pointers", () => {
         const delta = { id: "id", timeCreated: 123, host: "host", creator: "creator" };
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(MissingRequiredFieldError);
         expect(() => validateDeltaNetworkImageV1(delta)).toThrow(/pointers/);
@@ -219,7 +219,7 @@ describe("Delta Validation", () => {
     });
 
     describe("DeltaV2", () => {
-      it("should throw MissingRequiredFieldError for all missing fields", () => {
+      test("should throw MissingRequiredFieldError for all missing fields", () => {
         const requiredFields = ["id", "timeCreated", "host", "creator", "pointers"];
         
         requiredFields.forEach(field => {
@@ -240,7 +240,7 @@ describe("Delta Validation", () => {
   });
 
   describe("Valid Delta Formats", () => {
-    it("should accept valid DeltaV1", () => {
+    test("should accept valid DeltaV1", () => {
       const validDeltas = [
         {
           id: "uuid-123",
@@ -274,7 +274,7 @@ describe("Delta Validation", () => {
       });
     });
 
-    it("should accept valid DeltaV2", () => {
+    test("should accept valid DeltaV2", () => {
       const validDeltas = [
         {
           id: "uuid-123",
@@ -310,7 +310,7 @@ describe("Delta Validation", () => {
   });
 
   describe("Delta class integration", () => {
-    it("should validate when creating DeltaV1 from network image", () => {
+    test("should validate when creating DeltaV1 from network image", () => {
       const invalidDelta = {
         id: "id",
         timeCreated: "not-a-number",
@@ -322,7 +322,7 @@ describe("Delta Validation", () => {
       expect(() => DeltaV1.fromNetworkImage(invalidDelta as never)).toThrow(InvalidDeltaFormatError);
     });
 
-    it("should validate when creating DeltaV2 from network image", () => {
+    test("should validate when creating DeltaV2 from network image", () => {
       const invalidDelta = {
         id: "id",
         timeCreated: 123,
@@ -334,7 +334,7 @@ describe("Delta Validation", () => {
       expect(() => DeltaV2.fromNetworkImage(invalidDelta as never)).toThrow(InvalidDeltaFormatError);
     });
 
-    it("should accept valid network images", () => {
+    test("should accept valid network images", () => {
       const validV1 = {
         id: "uuid-123",
         timeCreated: 123456789,

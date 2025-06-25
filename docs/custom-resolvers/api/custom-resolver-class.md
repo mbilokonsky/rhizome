@@ -71,7 +71,7 @@ Processes all entities in the view and returns the resolved values.
 **Example:**
 ```typescript
 const results = resolver.resolve();
-console.log(results);
+debug(results);
 // {
 //   'entity1': {
 //     id: 'entity1',
@@ -94,7 +94,7 @@ Processes a single entity and returns its resolved values.
 ```typescript
 const result = resolver.resolveEntity('order-123');
 if (result) {
-  console.log(`Order total: ${result.properties.total}`);
+  debug(`Order total: ${result.properties.total}`);
 }
 ```
 
@@ -107,7 +107,7 @@ Gets the current processing order of properties based on their dependencies.
 **Example:**
 ```typescript
 const order = resolver.getProcessingOrder();
-console.log('Processing order:', order);
+debug('Processing order:', order);
 // ['price', 'discount', 'total']
 ```
 
@@ -121,7 +121,7 @@ Gets the dependency graph used for resolution.
 ```typescript
 const graph = resolver.getDependencyGraph();
 for (const [prop, deps] of graph.entries()) {
-  console.log(`${prop} depends on:`, [...deps]);
+  debug(`${prop} depends on:`, [...deps]);
 }
 ```
 
@@ -165,7 +165,6 @@ const resolver = new CustomResolver(view, {
   
   // Complex plugin with multiple dependencies
   subtotal: new class implements ResolverPlugin<SubtotalState, 'unitPrice' | 'quantity'> {
-    readonly name = 'subtotal' as const;
     readonly dependencies = ['unitPrice', 'quantity'] as const;
     
     initialize() { return { value: 0 }; }
@@ -184,11 +183,11 @@ const resolver = new CustomResolver(view, {
 
 // Resolve all entities
 const results = resolver.resolve();
-console.log(results);
+debug(results);
 
 // Or resolve a single entity
 const order = resolver.resolveEntity('order-123');
-console.log(order);
+debug(order);
 ```
 
 ## Best Practices

@@ -1,73 +1,59 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta } from '@src';
-import { CustomResolver, ConcatenationPlugin } from '@src/views/resolvers/custom-resolvers';
+import { describe, test, expect } from '@jest/globals';
+import { ConcatenationPlugin } from '@src/views/resolvers/custom-resolvers';
+import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver-test-helper';
 
 describe('ConcatenationPlugin', () => {
-  let node: RhizomeNode;
-  let lossless: Lossless;
-
-  beforeEach(() => {
-    node = new RhizomeNode();
-    lossless = new Lossless(node);
+  test('should join string values chronologically', async () => {
+    // Define test data
+    const entityId = 'entity1';
+    
+    // Run test & verify results
+    const result = await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        tags: new ConcatenationPlugin()
+      },
+      deltas: [
+        createTestDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty(entityId, 'tags', 'red', 'color1')
+          .buildV1(),
+        createTestDelta('user1', 'host1')
+          .withTimestamp(3000)
+          .setProperty(entityId, 'tags', 'blue', 'color2')
+          .buildV1(),
+        createTestDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty(entityId, 'tags', 'green', 'color3')
+          .buildV1()
+      ],
+    });
+    expect(result).toBeDefined();
+    expect(result?.properties.tags).toBe('red green blue');
   });
 
-  test('should join string values chronologically', () => {
-    // First tag
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('entity1', 'tags', 'red', 'collection')
-        .buildV1()
-    );
-
-    // Second tag (with later timestamp)
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(3000)
-        .setProperty('entity1', 'tags', 'blue', 'collection')
-        .buildV1()
-    );
-
-    // Third tag (with middle timestamp, should be inserted in the middle)
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(2000)
-        .setProperty('entity1', 'tags', 'green', 'collection')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      tags: new ConcatenationPlugin()
+  test('should handle empty values', async () => {
+    // Define test data
+    const entityId = 'entity1';
+    
+    // Run test & verify results
+    const result = await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        tags: new ConcatenationPlugin()
+      },
+      deltas: [
+        createTestDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty(entityId, 'tags', null, 'tag1')
+          .buildV1(),
+        createTestDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty(entityId, 'tags', 'blue', 'tag2')
+          .buildV1()
+      ],
     });
-
-    const result = resolver.resolve();
     expect(result).toBeDefined();
-    expect(result!['entity1'].properties.tags).toEqual(['red', 'green', 'blue']);
-  });
-
-  test('should handle empty values', () => {
-    // Empty array
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('entity1', 'tags', [], 'collection')
-        .buildV1()
-    );
-
-    // Add a value
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(2000)
-        .setProperty('entity1', 'tags', 'blue', 'collection')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      tags: new ConcatenationPlugin()
-    });
-
-    const result = resolver.resolve();
-    expect(result).toBeDefined();
-    expect(result!['entity1'].properties.tags).toEqual(['blue']);
+    expect(result?.properties.tags).toBe('blue');
   });
 });

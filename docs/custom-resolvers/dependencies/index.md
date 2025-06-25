@@ -22,7 +22,6 @@ The Custom Resolver system provides a powerful dependency management system that
 
 ```typescript
 class TotalPricePlugin implements ResolverPlugin<TotalState, 'price' | 'tax'> {
-  readonly name = 'total' as const;
   readonly dependencies = ['price', 'tax'] as const;
   
   initialize(): TotalState {
@@ -33,7 +32,7 @@ class TotalPricePlugin implements ResolverPlugin<TotalState, 'price' | 'tax'> {
     state: TotalState,
     _newValue: unknown,
     _delta: CollapsedDelta,
-    deps: DependencyStates<'price' | 'tax'>
+    deps: DependencyStates
   ): TotalState {
     const price = deps.price as number;
     const tax = deps.tax as number;

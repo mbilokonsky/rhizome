@@ -2,7 +2,7 @@ import { jsonToAst } from '@src/utils/json-ast';
 import { JsonNode } from '@src/utils/json-ast/types';
 
 describe('jsonToAst', () => {
-  it('should handle primitive values', () => {
+  test('should handle primitive values', () => {
     expect(jsonToAst(42)).toMatchObject({
       type: 'number',
       value: 42
@@ -24,7 +24,7 @@ describe('jsonToAst', () => {
     });
   });
 
-  it('should handle empty objects and arrays', () => {
+  test('should handle empty objects and arrays', () => {
     const emptyObj = jsonToAst({});
     expect(emptyObj).toMatchObject({
       type: 'object',
@@ -38,7 +38,7 @@ describe('jsonToAst', () => {
     });
   });
 
-  it('should handle nested objects', () => {
+  test('should handle nested objects', () => {
     const ast = jsonToAst({
       name: 'test',
       nested: { value: 42 }
@@ -68,7 +68,7 @@ describe('jsonToAst', () => {
     });
   });
 
-  it('should handle arrays', () => {
+  test('should handle arrays', () => {
     const ast = jsonToAst([1, 'two', true]);
     
     expect(ast.type).toBe('array');
@@ -90,7 +90,7 @@ describe('jsonToAst', () => {
     });
   });
 
-  it('should include paths when includePath is true', () => {
+  test('should include paths when includePath is true', () => {
     const ast = jsonToAst({
       user: {
         name: 'test',
@@ -116,7 +116,7 @@ describe('jsonToAst', () => {
     expect(rolesNode?.children?.[0].path).toBe('user.roles[0]');
   });
 
-  it('should respect maxDepth option', () => {
+  test('should respect maxDepth option', () => {
     const deepObject = {
       level1: {
         level2: {
@@ -139,7 +139,7 @@ describe('jsonToAst', () => {
     expect(level2?.path).toBe('level1.level2');
   });
 
-  it('should apply filter function when provided', () => {
+  test('should apply filter function when provided', () => {
     const data = {
       name: 'test',
       age: 42,

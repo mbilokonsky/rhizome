@@ -1,5 +1,4 @@
 import { PropertyTypes } from "../../../../core/types";
-import { CollapsedDelta } from "../../../../views/lossless";
 import { ResolverPlugin } from "../plugin";
 
 type MajorityVoteState = {
@@ -11,8 +10,7 @@ type MajorityVoteState = {
  * 
  * Returns the value that appears most frequently
  */
-export class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState> {
-  readonly name = 'majority-vote';
+export class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState, never> {
   readonly dependencies = [] as const;
 
   initialize(): MajorityVoteState {
@@ -22,8 +20,6 @@ export class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState> {
   update(
     currentState: MajorityVoteState, 
     newValue: PropertyTypes, 
-    _delta: CollapsedDelta,
-    _dependencies: Record<string, never> = {}
   ): MajorityVoteState {
     const currentCount = currentState.votes.get(newValue) || 0;
     // Create a new Map to ensure immutability
@@ -34,7 +30,6 @@ export class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState> {
 
   resolve(
     state: MajorityVoteState,
-    _dependencies: Record<string, never> = {}
   ): PropertyTypes | undefined {
     let maxCount = 0;
     let result: PropertyTypes | undefined;

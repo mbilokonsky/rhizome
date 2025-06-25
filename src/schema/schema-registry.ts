@@ -478,7 +478,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
           for (const referenceId of referenceIds) {
             try {
               // Get the referenced entity's lossless view
-              const referencedViews = losslessView.view([referenceId]);
+              const referencedViews = losslessView.compose([referenceId]);
               const referencedView = referencedViews[referenceId];
               
               if (referencedView) {
@@ -534,7 +534,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
         
         // Count entity references vs scalars
         if (typeof target === 'string') {
-          const referencedViews = losslessView.view([target]);
+          const referencedViews = losslessView.compose([target]);
           if (referencedViews[target]) {
             entityReferenceCount++;
           } else {
@@ -567,7 +567,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
         if (typeof target === 'string') {
           // Try to resolve as entity reference
           try {
-            const referencedViews = losslessView.view([target]);
+            const referencedViews = losslessView.compose([target]);
             const referencedView = referencedViews[target];
             
             if (referencedView) {
@@ -600,7 +600,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
           if (typeof target === 'string') {
             // Try to resolve as entity reference
             try {
-              const referencedViews = losslessView.view([target]);
+              const referencedViews = losslessView.compose([target]);
               const referencedView = referencedViews[target];
               
               if (referencedView) {

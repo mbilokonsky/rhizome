@@ -60,12 +60,12 @@ node.lossless.ingestDelta(unsafeDelta);
 
 // 5. Check validation status after the fact
 const stats = collection.getValidationStats();
-console.log(`Valid: ${stats.validEntities}, Invalid: ${stats.invalidEntities}`);
+debug(`Valid: ${stats.validEntities}, Invalid: ${stats.invalidEntities}`);
 
 // Get details about invalid entities
 const invalidUsers = collection.getInvalidEntities();
 invalidUsers.forEach(user => {
-  console.log(`User ${user.entityId} is invalid:`, user.errors);
+  debug(`User ${user.entityId} is invalid:`, user.errors);
 });
 ```
 

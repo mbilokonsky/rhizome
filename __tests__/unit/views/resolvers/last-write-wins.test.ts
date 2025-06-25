@@ -2,7 +2,7 @@ import Debug from "debug";
 import { createDelta } from '@src/core/delta-builder';
 import { Lossless, RhizomeNode } from '@src';
 import { TimestampResolver } from '@src/views/resolvers/timestamp-resolvers';
-const debug = Debug('test:last-write-wins');
+const debug = Debug('rz:test:last-write-wins');
 
 // This was initially written to test a LastWriteWins resolver, but that has been
 // superceded by the TimestampResolver.
@@ -27,7 +27,7 @@ describe('Last write wins', () => {
       );
     });
 
-    it('our resolver should return the most recently written value', () => {
+    test('our resolver should return the most recently written value', () => {
       const result = lossy.resolve(["broccoli"]);
       debug('result', result);
       expect(result).toMatchObject({

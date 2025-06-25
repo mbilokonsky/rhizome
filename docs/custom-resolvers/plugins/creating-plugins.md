@@ -12,7 +12,6 @@ A minimal plugin must implement the `ResolverPlugin` interface:
 import { ResolverPlugin } from '../resolver';
 
 class MyPlugin implements ResolverPlugin<MyState> {
-  readonly name = 'my-plugin' as const;
   
   initialize(): MyState {
     // Return initial state
@@ -42,7 +41,6 @@ To depend on other properties, specify the dependency types:
 
 ```typescript
 class DiscountedPricePlugin implements ResolverPlugin<DiscountState, 'basePrice' | 'discount'> {
-  readonly name = 'discounted-price' as const;
   readonly dependencies = ['basePrice', 'discount'] as const;
   
   initialize(): DiscountState {
@@ -53,7 +51,7 @@ class DiscountedPricePlugin implements ResolverPlugin<DiscountState, 'basePrice'
     state: DiscountState,
     _newValue: unknown,
     _delta: CollapsedDelta,
-    deps: DependencyStates<'basePrice' | 'discount'>
+    deps: DependencyStates
   ): DiscountState {
     const basePrice = deps.basePrice as number;
     const discount = deps.discount as number;
@@ -92,7 +90,7 @@ describe('DiscountedPricePlugin', () => {
     });
   });
   
-  it('applies discount to base price', () => {
+  test('applies discount to base price', () => {
     // Test your plugin's behavior
   });
 });
@@ -116,7 +114,7 @@ Add logging to track state changes and resolution:
 
 ```typescript
 update(currentState: MyState, newValue: unknown): MyState {
-  console.log('Updating with:', { currentState, newValue });
+  debug('Updating with:', { currentState, newValue });
   // ...
 }
 ```

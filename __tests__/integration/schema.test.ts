@@ -24,7 +24,7 @@ describe('Schema System', () => {
 
   describe('Schema Builder', () => {
 
-    it('should create a basic schema', () => {
+    test('should create a basic schema', () => {
       const schema = SchemaBuilder
         .create('user')
         .name('User')
@@ -46,7 +46,7 @@ describe('Schema System', () => {
       expect(schema.requiredProperties).toContain('name');
     });
 
-    it('should create schema with references', () => {
+    test('should create schema with references', () => {
       const schema = SchemaBuilder
         .create('post')
         .name('Post')
@@ -67,7 +67,7 @@ describe('Schema System', () => {
       });
     });
 
-    it('should enforce required fields', () => {
+    test('should enforce required fields', () => {
       expect(() => {
         SchemaBuilder.create('').build();
       }).toThrow('Schema must have id and name');
@@ -79,7 +79,7 @@ describe('Schema System', () => {
   });
 
   describe('Schema Registry', () => {
-    it('should register and retrieve schemas', () => {
+    test('should register and retrieve schemas', () => {
       const schema = CommonSchemas.User();
       schemaRegistry.register(schema);
 
@@ -90,7 +90,7 @@ describe('Schema System', () => {
       expect(all).toContain(schema);
     });
 
-    it('should validate schema structure', () => {
+    test('should validate schema structure', () => {
       const invalidSchema = {
         id: 'invalid',
         name: 'Invalid',
@@ -104,7 +104,7 @@ describe('Schema System', () => {
       }).toThrow('Unknown schema type');
     });
 
-    it('should validate required properties exist', () => {
+    test('should validate required properties exist', () => {
       const schema = SchemaBuilder
         .create('test')
         .name('Test')
@@ -117,7 +117,7 @@ describe('Schema System', () => {
       }).toThrow("Required property 'nonexistent' not found");
     });
 
-    it('should detect circular dependencies', () => {
+    test('should detect circular dependencies', () => {
       // Create schemas with circular references
       const userSchema = SchemaBuilder
         .create('user')
@@ -151,7 +151,7 @@ describe('Schema System', () => {
       expect(schemaRegistry.hasCircularDependencies()).toBe(true);
     });
 
-    it('should validate lossless views against schemas', () => {
+    test('should validate lossless views against schemas', () => {
       const userSchema = CommonSchemas.User();
       schemaRegistry.register(userSchema);
 
@@ -206,7 +206,7 @@ describe('Schema System', () => {
       );
     });
 
-    it('should validate primitive types', () => {
+    test('should validate primitive types', () => {
       const schema = SchemaBuilder
         .create('test')
         .name('Test')
@@ -248,7 +248,7 @@ describe('Schema System', () => {
   });
 
   describe('Typed Collection', () => {
-    it('should create typed collection with schema validation', () => {
+    test('should create typed collection with schema validation', () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;
@@ -261,7 +261,7 @@ describe('Schema System', () => {
       expect(collection.name).toBe('users');
     });
 
-    it('should validate entities against schema', () => {
+    test('should validate entities against schema', () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;
@@ -280,7 +280,7 @@ describe('Schema System', () => {
       expect(invalidResult.valid).toBe(false);
     });
 
-    it('should enforce strict validation on put operations', async () => {
+    test('should enforce strict validation on put operations', async () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;
@@ -296,7 +296,7 @@ describe('Schema System', () => {
       await expect(collection.put('user2', { email: 'invalid@test.com' })).rejects.toThrow(SchemaValidationError);
     });
 
-    it('should provide validation statistics', async () => {
+    test('should provide validation statistics', async () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;
@@ -322,7 +322,7 @@ describe('Schema System', () => {
       expect(stats.invalidEntities).toBe(1);
     });
 
-    it('should filter valid and invalid entities', async () => {
+    test('should filter valid and invalid entities', async () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;
@@ -351,7 +351,7 @@ describe('Schema System', () => {
       expect(invalidEntities[0].entityId).toBe('user3');
     });
 
-    it('should apply schema to lossless views', async () => {
+    test('should apply schema to lossless views', async () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;
@@ -370,7 +370,7 @@ describe('Schema System', () => {
       expect(validatedView!.metadata?.appliedAt).toBeDefined();
     });
 
-    it('should provide schema introspection', () => {
+    test('should provide schema introspection', () => {
       const userSchema = CommonSchemas.User();
       schemaRegistry.register(CommonSchemas.UserSummary());
       
@@ -386,7 +386,7 @@ describe('Schema System', () => {
   });
 
   describe('Common Schemas', () => {
-    it('should provide working User schema', () => {
+    test('should provide working User schema', () => {
       const userSchema = CommonSchemas.User();
       expect(userSchema.id).toBe('user');
       expect(userSchema.name).toBe('User');
@@ -395,7 +395,7 @@ describe('Schema System', () => {
       expect(userSchema.requiredProperties).toContain('name');
     });
 
-    it('should provide working Document schema', () => {
+    test('should provide working Document schema', () => {
       const docSchema = CommonSchemas.Document();
       expect(docSchema.id).toBe('document');
       expect(docSchema.properties.title).toBeDefined();
@@ -404,7 +404,7 @@ describe('Schema System', () => {
       expect(docSchema.requiredProperties).toContain('author');
     });
 
-    it('should work together in a registry', () => {
+    test('should work together in a registry', () => {
       schemaRegistry.register(CommonSchemas.User());
       schemaRegistry.register(CommonSchemas.UserSummary());
       schemaRegistry.register(CommonSchemas.Document());

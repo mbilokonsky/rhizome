@@ -15,7 +15,7 @@ describe('Lossless View Compose/Decompose', () => {
   });
 
   describe('Bidirectional Conversion', () => {
-    it('should compose and decompose simple entity deltas correctly', () => {
+    test('should compose and decompose simple entity deltas correctly', () => {
       // Create simple entity deltas
       const nameDeltas = [
         createDelta('test-creator', 'test-host')
@@ -63,7 +63,7 @@ describe('Lossless View Compose/Decompose', () => {
       expect(upPointer?.localContext).toBe('users');
     });
 
-    it('should handle multi-pointer relationship deltas correctly', () => {
+    test('should handle multi-pointer relationship deltas correctly', () => {
       // Create a complex relationship delta
       const relationshipDelta = createDelta('test-creator', 'test-host')
         .addPointer('users', 'alice', 'relationships')
@@ -101,7 +101,7 @@ describe('Lossless View Compose/Decompose', () => {
       expect(intensityPointer?.target).toBe(8);
     });
 
-    it('should handle reference relationships correctly', () => {
+    test('should handle reference relationships correctly', () => {
       // Create entities first
       const aliceDelta = createDelta('test-creator', 'test-host')
         .addPointer('users', 'alice', 'name')
@@ -146,7 +146,7 @@ describe('Lossless View Compose/Decompose', () => {
       expect(bobPointer?.targetContext).toBe('friends');
     });
 
-    it('should preserve delta metadata correctly', () => {
+    test('should preserve delta metadata correctly', () => {
       const originalDelta = createDelta('test-creator', 'test-host')
         .addPointer('users', 'alice', 'name')
         .addPointer('name', 'Alice')
@@ -167,7 +167,7 @@ describe('Lossless View Compose/Decompose', () => {
       expect(reconstituted.timeCreated).toBe(originalDelta.timeCreated);
     });
 
-    it('should handle multiple deltas for the same property', () => {
+    test('should handle multiple deltas for the same property', () => {
       // Create multiple name changes for alice
       const nameDeltas = [
         createDelta('test-creator', 'test-host')

@@ -10,7 +10,7 @@ describe('DeltaBuilder', () => {
   const node = new RhizomeNode();
 
   describe('V1 Deltas', () => {
-    it('should create a basic V1 delta', () => {
+    test('should create a basic V1 delta', () => {
       const delta = createDelta(creator, host)
         .addPointer('name', 'Test Delta', 'title')
         .addPointer('description', 'A test delta', 'description')
@@ -28,7 +28,7 @@ describe('DeltaBuilder', () => {
       });
     });
 
-    it('should create a V1 delta with setProperty', () => {
+    test('should create a V1 delta with setProperty', () => {
       const delta = createDelta(creator, host)
         .setProperty('entity-1', 'name', 'Test Entity')
         .buildV1();
@@ -53,7 +53,7 @@ describe('DeltaBuilder', () => {
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
     });
 
-    it('should create a V1 delta with setProperty and entityLabel', () => {
+    test('should create a V1 delta with setProperty and entityLabel', () => {
       const delta = createDelta(creator, host)
         .setProperty('entity-1', 'name', 'Test Entity', 'user')
         .buildV1();
@@ -78,7 +78,7 @@ describe('DeltaBuilder', () => {
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
     });
 
-    it('should create a V1 delta with relationships', () => {
+    test('should create a V1 delta with relationships', () => {
       const delta = createDelta(creator, host)
         .relate('user-1', 'user-2', 'follows')
         .buildV1();
@@ -103,7 +103,7 @@ describe('DeltaBuilder', () => {
       });
     });
 
-    it('should create a V1 delta with relationships and properties', () => {
+    test('should create a V1 delta with relationships and properties', () => {
       const delta = createDelta(creator, host)
         .relate('user-1', 'user-2', 'follows', { version: 1})
         .buildV1();
@@ -134,7 +134,7 @@ describe('DeltaBuilder', () => {
   });
 
   describe('V2 Deltas', () => {
-    it('should create a basic V2 delta', () => {
+    test('should create a basic V2 delta', () => {
       const delta = createDelta(creator, host)
         .addPointer('name', 'Test Delta V2', 'title')
         .buildV2();
@@ -147,7 +147,7 @@ describe('DeltaBuilder', () => {
       expect(delta.pointers.name).toEqual({ 'Test Delta V2': 'title' });
     });
 
-    it('should create a V2 delta with setProperty', () => {
+    test('should create a V2 delta with setProperty', () => {
       const delta = createDelta(creator, host)
         .setProperty('entity-1', 'name', 'Test Entity')
         .buildV2();
@@ -156,7 +156,7 @@ describe('DeltaBuilder', () => {
       expect(delta.pointers).toHaveProperty('entity', { 'entity-1': 'name' });
     });
 
-    it('should create a V2 delta with relationships', () => {
+    test('should create a V2 delta with relationships', () => {
       const delta = createDelta(creator, host)
         .relate('user-1', 'user-2', 'follows')
         .buildV2();
@@ -184,7 +184,7 @@ describe('DeltaBuilder', () => {
       });
     });
 
-    it('should create a V2 delta with relationships and properties', () => {
+    test('should create a V2 delta with relationships and properties', () => {
       const delta = createDelta(creator, host)
         .relate('user-1', 'user-2', 'follows', { version: 1})
         .buildV2();
@@ -217,7 +217,7 @@ describe('DeltaBuilder', () => {
   });
 
   describe('Common functionality', () => {
-    it('should support custom IDs', () => {
+    test('should support custom IDs', () => {
       const customId = 'custom-delta-id';
       const delta = createDelta(creator, host)
         .withId(customId)
@@ -226,7 +226,7 @@ describe('DeltaBuilder', () => {
       expect(delta.id).toBe(customId);
     });
 
-    it('should support transactions', () => {
+    test('should support transactions', () => {
       const txId = 'tx-123';
       const delta = createDelta(creator, host)
         .inTransaction(txId)
@@ -240,7 +240,7 @@ describe('DeltaBuilder', () => {
       });
     });
 
-    it('should support transactions in V2', () => {
+    test('should support transactions in V2', () => {
       const txId = 'tx-123';
       const delta = createDelta(creator, host)
         .inTransaction(txId)
@@ -250,7 +250,7 @@ describe('DeltaBuilder', () => {
       expect(delta.pointers['_transaction']).toEqual({ [txId]: 'deltas' });
     });
 
-    it('should support negation', () => {
+    test('should support negation', () => {
       const negatedId = 'delta-to-negate';
       const delta = createDelta(creator, host)
         .negate(negatedId)
@@ -262,7 +262,7 @@ describe('DeltaBuilder', () => {
       expect(negationPointer?.target).toBe(negatedId);
     });
 
-    it('should support custom timestamps', () => {
+    test('should support custom timestamps', () => {
       const timestamp = Date.now();
       const delta = createDelta(creator, host)
         .withTimestamp(timestamp)

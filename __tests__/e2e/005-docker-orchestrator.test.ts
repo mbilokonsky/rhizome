@@ -4,6 +4,7 @@ import type { NodeConfig, NodeHandle, NodeStatus } from '@src/orchestration';
 import { DockerOrchestrator, createOrchestrator } from '@src/orchestration';
 import { ImageManager } from '@src/orchestration/docker-orchestrator/managers/image-manager';
 import Debug from 'debug';
+import { DOCKER_ENABLE } from '@src/config';
 const debug = Debug('rz:test:docker-orchestrator-v2');
 
 
@@ -25,7 +26,7 @@ interface ExtendedNodeStatus extends Omit<NodeStatus, 'network'> {
 // Set default timeout for all tests to 5 minutes
 jest.setTimeout(300000);
 
-describe('Docker Orchestrator', () => {
+(DOCKER_ENABLE ? describe : describe.skip)('Docker Orchestrator', () => {
   let docker: Docker;
   let orchestrator: DockerOrchestrator;
   let nodeConfig: NodeConfig;
@@ -86,7 +87,7 @@ describe('Docker Orchestrator', () => {
   /**
    * ! Note that this test fails if the build fails
    */
-  it('should start and stop a node', async () => {
+  test('should start and stop a node', async () => {
     debug('Starting test: should start and stop a node');
     
     // Create a new config with a unique ID for this test
@@ -142,7 +143,7 @@ describe('Docker Orchestrator', () => {
     }
   });
 
-  it('should enforce resource limits', async () => {
+  test('should enforce resource limits', async () => {
     debug('Starting test: should enforce resource limits');
     
     // Create a new node with a unique ID for this test
@@ -226,7 +227,7 @@ describe('Docker Orchestrator', () => {
     }
   }, 30000);
 
-  it('should expose API endpoints', async () => {
+  test('should expose API endpoints', async () => {
     // Set a longer timeout for this test (5 minutes)
     jest.setTimeout(300000);
     debug('Starting test: should expose API endpoints');

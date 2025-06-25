@@ -52,12 +52,12 @@ describe('Delta Storage', () => {
   });
 
   describe('Storage Factory', () => {
-    it('creates memory storage', () => {
+    test('creates memory storage', () => {
       const storage = StorageFactory.create({ type: 'memory' });
       expect(storage).toBeInstanceOf(MemoryDeltaStorage);
     });
 
-    it('creates LevelDB storage', () => {
+    test('creates LevelDB storage', () => {
       const storage = StorageFactory.create({ 
         type: 'leveldb', 
         path: './test-data/factory-test' 
@@ -65,7 +65,7 @@ describe('Delta Storage', () => {
       expect(storage).toBeInstanceOf(LevelDBDeltaStorage);
     });
 
-    it('throws on unknown storage type', () => {
+    test('throws on unknown storage type', () => {
       expect(() => {
         StorageFactory.create({ type: 'unknown' as 'memory' | 'leveldb' });
       }).toThrow('Unknown storage type: unknown');
@@ -73,7 +73,7 @@ describe('Delta Storage', () => {
   });
 
   function runStorageTests(getStorage: () => DeltaQueryStorage) {
-    it('stores and retrieves deltas', async () => {
+    test('stores and retrieves deltas', async () => {
       const storage = getStorage();
       
       // Store deltas
@@ -92,7 +92,7 @@ describe('Delta Storage', () => {
       expect(nonExistent).toBeNull();
     });
 
-    it('gets all deltas', async () => {
+    test('gets all deltas', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {
@@ -108,7 +108,7 @@ describe('Delta Storage', () => {
       expect(deltaIds).toContain('delta3');
     });
 
-    it('filters deltas', async () => {
+    test('filters deltas', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {
@@ -121,7 +121,7 @@ describe('Delta Storage', () => {
       expect(aliceDeltas.every(d => d.creator === 'alice')).toBe(true);
     });
 
-    it('gets deltas for entity', async () => {
+    test('gets deltas for entity', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {
@@ -138,7 +138,7 @@ describe('Delta Storage', () => {
       expect(nonExistentDeltas).toHaveLength(0);
     });
 
-    it('gets deltas by context', async () => {
+    test('gets deltas by context', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {
@@ -157,7 +157,7 @@ describe('Delta Storage', () => {
       expect(nonExistentDeltas).toHaveLength(0);
     });
 
-    it('queries deltas with complex criteria', async () => {
+    test('queries deltas with complex criteria', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {
@@ -189,7 +189,7 @@ describe('Delta Storage', () => {
       expect(aliceUser1Deltas[0].id).toBe('delta1');
     });
 
-    it('applies pagination to queries', async () => {
+    test('applies pagination to queries', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {
@@ -209,7 +209,7 @@ describe('Delta Storage', () => {
       expect(pagedDeltas).toHaveLength(1);
     });
 
-    it('counts deltas', async () => {
+    test('counts deltas', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {
@@ -226,7 +226,7 @@ describe('Delta Storage', () => {
       expect(user1Count).toBe(2);
     });
 
-    it('provides storage statistics', async () => {
+    test('provides storage statistics', async () => {
       const storage = getStorage();
       
       for (const delta of testDeltas) {

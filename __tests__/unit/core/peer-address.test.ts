@@ -1,18 +1,18 @@
 import {parseAddressList, PeerAddress} from '@src/network/peers';
 
 describe('PeerAddress', () => {
-  it('toString()', () => {
+  test('toString()', () => {
     const addr = new PeerAddress('localhost', 1000);
     expect(addr.toAddrString()).toBe("localhost:1000");
   });
 
-  it('fromString()', () => {
+  test('fromString()', () => {
     const addr = PeerAddress.fromString("localhost:1000");
     expect(addr.addr).toBe("localhost");
     expect(addr.port).toBe(1000);
   });
 
-  it('parseAddressList()', () => {
+  test('parseAddressList()', () => {
     const input = "255.255.255.255:99999, 0.0.0.0:0";
     const result = parseAddressList(input);
     expect(result).toHaveLength(2);

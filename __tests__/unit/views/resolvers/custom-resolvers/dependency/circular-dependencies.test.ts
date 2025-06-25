@@ -1,8 +1,7 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta } from '@src';
+import { RhizomeNode, Lossless } from '@src';
 import { CollapsedDelta } from '@src/views/lossless';
 import { CustomResolver, ResolverPlugin } from '@src/views/resolvers/custom-resolvers';
-import type { DependencyStates } from '@src/views/resolvers/custom-resolvers';
 
 type PropertyTypes = string | number | boolean | null;
 
@@ -18,7 +17,6 @@ describe('Circular Dependency Detection', () => {
   test('should detect circular dependencies', () => {
     // PluginA depends on PluginB
     class PluginA implements ResolverPlugin<{ value: string }, string> {
-      readonly name = 'a' as const;
       readonly dependencies = ['b'] as const;
 
       initialize() {
@@ -29,7 +27,7 @@ describe('Circular Dependency Detection', () => {
         return { value: String(newValue) };
       }
 
-      resolve(_state: { value: string }, _dependencies: { b: string }) {
+      resolve(_state: { value: string }) {
         return 'a';
       }
     }
@@ -37,18 +35,17 @@ describe('Circular Dependency Detection', () => {
 
     // PluginB depends on PluginA (circular dependency)
     class PluginB implements ResolverPlugin<{ value: string }, string> {
-      readonly name = 'b' as const;
       readonly dependencies = ['a'] as const;
 
       initialize() {
         return { value: '' };
       }
 
-      update(currentState: { value: string }, newValue: PropertyTypes, _delta: CollapsedDelta, _dependencies: { a: string }) {
+      update(_currentState: { value: string }, newValue: PropertyTypes, _delta: CollapsedDelta, _dependencies: { a: string }) {
         return { value: String(newValue) };
       }
 
-      resolve(_state: { value: string }, _dependencies: { a: string }) {
+      resolve(_state: { value: string }) {
         return 'b';
       }
     }
@@ -60,12 +57,11 @@ describe('Circular Dependency Detection', () => {
         'a': new PluginA(),
         'b': new PluginB()
       });
-    }).toThrow('Circular dependency detected: a -> b -> a');
+    }).toThrow('Circular dependency detected in plugin dependencies');
   });
 
   test('should detect longer circular dependency chains', () => {
     class PluginA implements ResolverPlugin<{ value: string }, string> {
-      readonly name = 'a' as const;
       readonly dependencies = ['c'] as const;
       initialize() { return { value: '' }; }
       update() { return { value: '' }; }
@@ -73,7 +69,6 @@ describe('Circular Dependency Detection', () => {
     }
 
     class PluginB implements ResolverPlugin<{ value: string }, string> {
-      readonly name = 'b' as const;
       readonly dependencies = ['a'] as const;
       initialize() { return { value: '' }; }
       update() { return { value: '' }; }
@@ -81,7 +76,6 @@ describe('Circular Dependency Detection', () => {
     }
 
     class PluginC implements ResolverPlugin<{ value: string }, string> {
-      readonly name = 'c' as const;
       readonly dependencies = ['b'] as const;
       initialize() { return { value: '' }; }
       update() { return { value: '' }; }
@@ -95,6 +89,6 @@ describe('Circular Dependency Detection', () => {
         'b': new PluginB(),
         'c': new PluginC()
       });
-    }).toThrow('Circular dependency detected: a -> c -> b -> a');
+    }).toThrow('Circular dependency detected in plugin dependencies');
   });
 });

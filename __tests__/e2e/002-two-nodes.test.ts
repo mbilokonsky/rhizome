@@ -1,6 +1,6 @@
 import Debug from 'debug';
 import {App} from '../../util/app';
-const debug = Debug('test:two');
+const debug = Debug('rz:test:two');
 
 describe('Run', () => {
   const apps: App[] = [];
@@ -24,7 +24,7 @@ describe('Run', () => {
     await Promise.all(apps.map((app) => app.stop()));
   });
 
-  it('can create a record on app0 and read it on app1', async () => {
+  test('can create a record on app0 and read it on app1', async () => {
     debug('apps[0].apiUrl', apps[0].apiUrl);
     debug('apps[1].apiUrl', apps[1].apiUrl);
 

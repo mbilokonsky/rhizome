@@ -6,7 +6,7 @@ import { RhizomeNode } from "../../../src/node";
 import { valueFromCollapsedDelta } from "../../../src/views/resolvers/aggregation-resolvers";
 import { lastValueFromDeltas } from "../../../src/views/resolvers/timestamp-resolvers";
 import { createDelta } from "../../../src/core/delta-builder";
-const debug = Debug('test:lossy');
+const debug = Debug('rz:test:lossy');
 
 type Role = {
   actor: PointerTarget,
@@ -69,7 +69,7 @@ describe('Lossy', () => {
       );
     });
 
-    it('example summary', () => {
+    test('example summary', () => {
       const result = lossy.resolve();
       debug('result', result);
       expect(result).toEqual({

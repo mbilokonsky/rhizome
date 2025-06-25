@@ -102,7 +102,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
   getValidatedView(entityId: DomainEntityID): SchemaAppliedView | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
     
-    const losslessView = this.rhizomeNode.lossless.view([entityId])[entityId];
+    const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
     if (!losslessView) return undefined;
 
     return this.apply(losslessView);
@@ -173,7 +173,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     for (const entityId of entityIds) {
       if (!this.rhizomeNode) continue;
       
-      const losslessView = this.rhizomeNode.lossless.view([entityId])[entityId];
+      const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
       if (!losslessView) continue;
 
       const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);
@@ -203,7 +203,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     if (!this.rhizomeNode) return [];
     
     return this.getIds().filter(entityId => {
-      const losslessView = this.rhizomeNode!.lossless.view([entityId])[entityId];
+      const losslessView = this.rhizomeNode!.lossless.compose([entityId])[entityId];
       if (!losslessView) return false;
       
       const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);
@@ -217,7 +217,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const invalid: Array<{ entityId: DomainEntityID; errors: string[] }> = [];
     
     for (const entityId of this.getIds()) {
-      const losslessView = this.rhizomeNode.lossless.view([entityId])[entityId];
+      const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
       if (!losslessView) continue;
       
       const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);

@@ -4,10 +4,15 @@ import EventEmitter from "node:events";
 import {Delta} from "../core/delta";
 import {createDelta} from "../core/delta-builder";
 import {Entity, EntityProperties} from "../core/entity";
-import { ResolvedTimestampedViewOne as ResolvedViewOne } from '../views/resolvers/timestamp-resolvers';
 import {RhizomeNode} from "../node";
 import {DomainEntityID} from "../core/types";
+import { ResolvedTimestampedViewOne } from '../views/resolvers/timestamp-resolvers';
 const debug = Debug('rz:abstract-collection');
+
+type CollectionEntity = {
+  id: DomainEntityID;
+  properties: EntityProperties;
+}
 
 export abstract class Collection<View> {
   rhizomeNode?: RhizomeNode;
@@ -21,7 +26,7 @@ export abstract class Collection<View> {
 
   abstract initializeView(): void;
 
-  abstract resolve(id: DomainEntityID): ResolvedViewOne | undefined;
+  abstract resolve(id: DomainEntityID): ResolvedTimestampedViewOne | undefined;
 
   rhizomeConnect(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
@@ -131,7 +136,7 @@ export abstract class Collection<View> {
   async put(
     entityId: DomainEntityID | undefined,
     properties: EntityProperties,
-  ): Promise<ResolvedViewOne> {
+  ): Promise<CollectionEntity> {
     if (!this.rhizomeNode) throw new Error('collection not connecte to rhizome');
 
     // For convenience, we allow setting id via properties.id

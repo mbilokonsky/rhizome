@@ -35,7 +35,7 @@ describe('Nested Object Resolution', () => {
   });
 
   describe('Basic Reference Resolution', () => {
-    it('should resolve single-level user references with UserSummary schema', async () => {
+    test('should resolve single-level user references with UserSummary schema', async () => {
       const userCollection = new TypedCollectionImpl<{
         name: string;
         email?: string;
@@ -62,7 +62,7 @@ describe('Nested Object Resolution', () => {
       node.lossless.ingestDelta(friendshipDelta);
 
       // Get Alice's lossless view
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
       
       expect(aliceView).toBeDefined();
@@ -92,7 +92,7 @@ describe('Nested Object Resolution', () => {
       }
     });
 
-    it('should handle missing references gracefully', async () => {
+    test('should handle missing references gracefully', async () => {
       const userCollection = new TypedCollectionImpl<{
         name: string;
         friends?: string[];
@@ -109,7 +109,7 @@ describe('Nested Object Resolution', () => {
         .buildV1();
       node.lossless.ingestDelta(friendshipDelta);
 
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
       
       const nestedView = schemaRegistry.applySchemaWithNesting(
@@ -129,7 +129,7 @@ describe('Nested Object Resolution', () => {
   });
 
   describe('Depth Limiting', () => {
-    it('should respect maxDepth parameter and truncate deep nesting', async () => {
+    test('should respect maxDepth parameter and truncate deep nesting', async () => {
       // Create a custom schema with deeper nesting for testing
       const deepUserSchema = SchemaBuilder
         .create('deep-user')
@@ -167,7 +167,7 @@ describe('Nested Object Resolution', () => {
         .buildV1();
       node.lossless.ingestDelta(mentorshipDelta2);
 
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       // Test with maxDepth = 1 (should only resolve Alice and Bob)
@@ -217,7 +217,7 @@ describe('Nested Object Resolution', () => {
   });
 
   describe('Circular Reference Prevention', () => {
-    it('should detect and prevent circular references', async () => {
+    test('should detect and prevent circular references', async () => {
       const userCollection = new TypedCollectionImpl<{
         name: string;
         friends?: string[];
@@ -242,7 +242,7 @@ describe('Nested Object Resolution', () => {
         .buildV1();
       node.lossless.ingestDelta(friendship2);
 
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       // Should handle circular reference without infinite recursion
@@ -260,7 +260,7 @@ describe('Nested Object Resolution', () => {
       expect(nestedView.metadata?.truncated).toBeDefined();
     });
 
-    it('should handle self-references correctly', async () => {
+    test('should handle self-references correctly', async () => {
       const userCollection = new TypedCollectionImpl<{
         name: string;
         friends?: string[];
@@ -277,7 +277,7 @@ describe('Nested Object Resolution', () => {
         .buildV1();
       node.lossless.ingestDelta(selfFriendship);
 
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedView = schemaRegistry.applySchemaWithNesting(
@@ -293,7 +293,7 @@ describe('Nested Object Resolution', () => {
   });
 
   describe('Array References', () => {
-    it('should resolve arrays of references correctly', async () => {
+    test('should resolve arrays of references correctly', async () => {
       const userCollection = new TypedCollectionImpl<{
         name: string;
         friends?: string[];
@@ -319,7 +319,7 @@ describe('Nested Object Resolution', () => {
         .buildV1();
       node.lossless.ingestDelta(friendship2);
 
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedView = schemaRegistry.applySchemaWithNesting(
@@ -348,7 +348,7 @@ describe('Nested Object Resolution', () => {
   });
 
   describe('Summary Schema Pattern', () => {
-    it('should use Summary schema to break infinite recursion', async () => {
+    test('should use Summary schema to break infinite recursion', async () => {
       // The User schema references user-summary for friends
       // This tests the pattern mentioned in the spec
       const userCollection = new TypedCollectionImpl<{
@@ -375,7 +375,7 @@ describe('Nested Object Resolution', () => {
         .buildV1();
       node.lossless.ingestDelta(friendship);
 
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedView = schemaRegistry.applySchemaWithNesting(

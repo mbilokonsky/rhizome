@@ -24,7 +24,7 @@ describe('Run (Orchestrated)', () => {
     }
   });
 
-  it('can put a new user and fetch it', async () => {
+  test('can put a new user and fetch it', async () => {
     // Create a new record
     const createResponse = await fetch(`${apiUrl}/user`, {
       method: 'PUT',

@@ -27,7 +27,7 @@ describe('Nested Object Resolution Performance', () => {
   });
 
   describe('Large Network Performance', () => {
-    it('should handle large networks of interconnected users efficiently', async () => {
+    test('should handle large networks of interconnected users efficiently', async () => {
       // Create a schema for users with multiple relationship types
       const networkUserSchema = SchemaBuilder
         .create('network-user')
@@ -116,7 +116,7 @@ describe('Nested Object Resolution Performance', () => {
 
       // Test resolution performance for a user with many connections
       const testUserId = userIds[50]; // Pick a user in the middle
-      const userViews = node.lossless.view([testUserId]);
+      const userViews = node.lossless.compose([testUserId]);
       const userView = userViews[testUserId];
 
       const startResolution = performance.now();
@@ -149,7 +149,7 @@ describe('Nested Object Resolution Performance', () => {
       expect(Object.keys(nestedView.nestedObjects).length).toBeGreaterThan(0);
     });
 
-    it('should handle deep nesting chains efficiently', async () => {
+    test('should handle deep nesting chains efficiently', async () => {
       // Create a simple schema for chain testing
       const chainUserSchema = SchemaBuilder
         .create('chain-user')
@@ -205,7 +205,7 @@ describe('Nested Object Resolution Performance', () => {
 
       // Test resolution from the start of the chain
       const firstUserId = userIds[0];
-      const userViews = node.lossless.view([firstUserId]);
+      const userViews = node.lossless.compose([firstUserId]);
       const userView = userViews[firstUserId];
 
       const startResolution = performance.now();
@@ -241,7 +241,7 @@ describe('Nested Object Resolution Performance', () => {
       debug(`Actual resolved depth: ${depth}`);
     });
 
-    it('should handle circular references in large graphs without performance degradation', async () => {
+    test('should handle circular references in large graphs without performance degradation', async () => {
       const circularUserSchema = SchemaBuilder
         .create('circular-user')
         .name('Circular User')
@@ -301,7 +301,7 @@ describe('Nested Object Resolution Performance', () => {
 
       // Test resolution performance with circular references
       const testUserId = userIds[0];
-      const userViews = node.lossless.view([testUserId]);
+      const userViews = node.lossless.compose([testUserId]);
       const userView = userViews[testUserId];
 
       const startResolution = performance.now();

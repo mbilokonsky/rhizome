@@ -4,7 +4,6 @@
 // It could then be further extended with e.g. table semantics like filter, sort, join
 
 import {Collection} from '../collections/collection-abstract';
-import { ResolvedTimestampedViewOne as ResolvedViewOne } from '../views/resolvers/timestamp-resolvers';
 import {TimestampResolver} from '../views/resolvers/timestamp-resolvers';
 
 export class BasicCollection extends Collection<TimestampResolver> {
@@ -17,7 +16,7 @@ export class BasicCollection extends Collection<TimestampResolver> {
 
   resolve(
     id: string
-  ): ResolvedViewOne | undefined {
+  ) {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
     if (!this.lossy) throw new Error('lossy view not initialized');
 

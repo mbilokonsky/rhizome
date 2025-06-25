@@ -1,7 +1,7 @@
 import { DeltaV1, DeltaV2 } from './delta';
 import { randomUUID } from 'crypto';
-import Debug from 'debug';
-const debug = Debug('rz:delta-builder');
+import { PropertyTypes } from './types';
+import { PointersV2 } from './delta';
 
 /**
  * A fluent builder for creating Delta objects with proper validation and type safety.
@@ -12,7 +12,7 @@ export class DeltaBuilder {
   private timeCreated?: number;
   private host: string;
   private creator: string;
-  private pointers: Record<string, any> = {};
+  private pointers: PointersV2 = {};
 
   /**
    * Create a new DeltaBuilder instance
@@ -75,11 +75,14 @@ export class DeltaBuilder {
    * @param targetContext Optional target context for the pointer
    */
   addPointer(localContext: string, target: string | number | boolean | null, targetContext?: string): this {
-    if (targetContext && typeof target === 'string') {
-      this.pointers[localContext] = { [target]: targetContext };
-    } else {
-      this.pointers[localContext] = target;
+    const pointerTarget =  (targetContext && typeof target === 'string') 
+      ? { [target]: targetContext } : target;
+    if (this.pointers[localContext] && 
+      JSON.stringify(this.pointers[localContext]) !== JSON.stringify(pointerTarget)
+    ) {
+      throw new Error(`Pointer for ${localContext} already exists with different value`);
     }
+    this.pointers[localContext] = pointerTarget;
     return this;
   }
 
@@ -101,7 +104,7 @@ export class DeltaBuilder {
    * @param relationship The type of relationship
    * @param properties Optional properties for the relationship
    */
-  relate(sourceId: string, targetId: string, relationship: string, properties?: Record<string, any>): this {
+  relate(sourceId: string, targetId: string, relationship: string, properties?: Record<string, PropertyTypes>): this {
     const relId = randomUUID();
     this.setProperty(relId, 'source', sourceId, '_rel_source');
     this.setProperty(relId, 'target', targetId, '_rel_target');

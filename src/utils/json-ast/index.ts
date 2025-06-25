@@ -19,7 +19,7 @@ export function jsonToAst(
   // Handle max depth
   if (depth > maxDepth) {
     return { 
-      type: typeof json === 'object' && json !== null ? 'object' : typeof json as any,
+      type: typeof json === 'object' && json !== null ? 'object' : typeof json as 'string' | 'number' | 'boolean' | 'object',
       value: '[Max depth exceeded]',
       ...(includePath && currentPath ? { path: currentPath } : {})
     };
@@ -83,7 +83,7 @@ export function jsonToAst(
  */
 function createNode(
   type: JsonNode['type'],
-  value: any,
+  value: JsonValue,
   path: string = '',
   includePath: boolean = true
 ): JsonNode {
@@ -94,21 +94,3 @@ function createNode(
   return node;
 }
 
-/**
- * Example usage of the JSON to AST converter
- */
-function exampleUsage() {
-  const exampleJson = {
-    name: "John",
-    age: 30,
-    active: true,
-    tags: ["admin", "user"],
-    address: {
-      street: "123 Main St",
-      city: "Anytown"
-    }
-  };
-
-  const ast = jsonToAst(exampleJson, { includePath: true });
-  console.log(JSON.stringify(ast, null, 2));
-}

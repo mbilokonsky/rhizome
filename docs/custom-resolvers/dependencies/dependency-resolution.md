@@ -51,7 +51,6 @@ To make a dependency optional, mark it with a `?` suffix:
 
 ```typescript
 class MyPlugin implements ResolverPlugin<MyState, 'required' | 'optional?'> {
-  readonly name = 'my-plugin' as const;
   readonly dependencies = ['required', 'optional?'] as const;
   
   // ...
@@ -64,7 +63,6 @@ For plugins that need to determine dependencies at runtime, you can implement a 
 
 ```typescript
 class DynamicDepsPlugin implements ResolverPlugin<DynamicState> {
-  readonly name = 'dynamic' as const;
   
   getDependencies(config: any): string[] {
     // Determine dependencies based on config

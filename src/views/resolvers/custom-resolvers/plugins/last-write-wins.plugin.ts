@@ -12,8 +12,7 @@ type LastWriteWinsState = {
  * 
  * Keeps the most recent value based on the delta's timestamp
  */
-export class LastWriteWinsPlugin implements ResolverPlugin<LastWriteWinsState> {
-  readonly name = 'last-write-wins';
+export class LastWriteWinsPlugin implements ResolverPlugin<LastWriteWinsState, never> {
   readonly dependencies = [] as const;
 
   initialize(): LastWriteWinsState {
@@ -24,7 +23,6 @@ export class LastWriteWinsPlugin implements ResolverPlugin<LastWriteWinsState> {
     currentState: LastWriteWinsState,
     newValue: PropertyTypes,
     delta: CollapsedDelta,
-    _dependencies: Record<string, never> = {}
   ): LastWriteWinsState {
     if (delta.timeCreated > currentState.timestamp) {
       return {
@@ -37,7 +35,6 @@ export class LastWriteWinsPlugin implements ResolverPlugin<LastWriteWinsState> {
 
   resolve(
     state: LastWriteWinsState,
-    _dependencies: Record<string, never> = {}
   ): PropertyTypes {
     return state.value || '';
   }

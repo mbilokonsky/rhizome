@@ -6,7 +6,7 @@ import {createDelta} from '@src/core/delta-builder';
 describe('Lossless', () => {
   const node = new RhizomeNode();
 
-  it('creates a lossless view of keanu as neo in the matrix', () => {
+  test('creates a lossless view of keanu as neo in the matrix', () => {
     const delta = createDelta('a', 'h')
       .addPointer('actor', 'keanu', 'roles')
       .addPointer('role', 'neo', 'actor')
@@ -39,7 +39,7 @@ describe('Lossless', () => {
 
     lossless.ingestDelta(delta);
 
-    expect(lossless.view()).toMatchObject({
+    expect(lossless.compose()).toMatchObject({
       keanu: {
         referencedAs: ["actor"],
         propertyDeltas: {
@@ -91,7 +91,7 @@ describe('Lossless', () => {
     });
   });
 
-  it('accepts DeltaV2 instances', () => {
+  test('accepts DeltaV2 instances', () => {
     const delta = createDelta('a', 'h')
       .addPointer('actor', 'keanu', 'roles')
       .addPointer('role', 'neo', 'actor')
@@ -104,7 +104,7 @@ describe('Lossless', () => {
 
     lossless.ingestDelta(delta);
 
-    expect(lossless.view()).toMatchObject({
+    expect(lossless.compose()).toMatchObject({
       keanu: {
         referencedAs: ["actor"],
         propertyDeltas: {
@@ -175,7 +175,7 @@ describe('Lossless', () => {
           .buildV1()
       );
 
-      expect(lossless.view()).toMatchObject({
+      expect(lossless.compose()).toMatchObject({
         ace: {
           referencedAs: ["1", "14"],
           propertyDeltas: {
@@ -197,12 +197,12 @@ describe('Lossless', () => {
       });
     });
 
-    it('filter by creator and host', () => {
+    test('filter by creator and host', () => {
       const filter: DeltaFilter = ({creator, host}) => {
         return creator === 'A' && host === 'H';
       };
 
-      expect(lossless.view(undefined, filter)).toMatchObject({
+      expect(lossless.compose(undefined, filter)).toMatchObject({
         ace: {
           referencedAs: ["1"],
           propertyDeltas: {
@@ -217,7 +217,7 @@ describe('Lossless', () => {
         }
       });
 
-      expect(lossless.view(["ace"], filter)).toMatchObject({
+      expect(lossless.compose(["ace"], filter)).toMatchObject({
         ace: {
           referencedAs: ["1"],
           propertyDeltas: {
@@ -233,7 +233,7 @@ describe('Lossless', () => {
       });
     });
 
-    it('filter with transactions', () => {
+    test('filter with transactions', () => {
       const losslessT = new Lossless(node);
       const transactionId = 'tx-filter-test';
 
@@ -261,7 +261,7 @@ describe('Lossless', () => {
       );
 
       // Transaction incomplete - nothing should show
-      const incompleteView = losslessT.view(['process1']);
+      const incompleteView = losslessT.compose(['process1']);
       expect(incompleteView.process1).toBeUndefined();
 
       // A2: Second delta from creator A completes transaction
@@ -274,13 +274,13 @@ describe('Lossless', () => {
       );
 
       // All deltas visible now
-      const completeView = losslessT.view(['process1']);
+      const completeView = losslessT.compose(['process1']);
       expect(completeView.process1).toBeDefined();
       expect(completeView.process1.propertyDeltas.status).toHaveLength(3);
 
       // Filter by creator A only
       const filterA: DeltaFilter = ({creator}) => creator === 'A';
-      const filteredView = losslessT.view(['process1'], filterA);
+      const filteredView = losslessT.compose(['process1'], filterA);
       
       expect(filteredView.process1).toBeDefined();
       expect(filteredView.process1.propertyDeltas.status).toHaveLength(2);

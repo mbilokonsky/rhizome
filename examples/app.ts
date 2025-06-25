@@ -1,6 +1,6 @@
 import Debug from 'debug';
 import {BasicCollection, Entity, RhizomeNode} from '../src';
-const debug = Debug('example-app');
+const debug = Debug('rz:example-app');
 
 // As an app we want to be able to write and read data.
 // The data is whatever shape we define it to be in a given context.

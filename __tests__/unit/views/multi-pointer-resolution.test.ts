@@ -20,7 +20,7 @@ describe('Multi-Pointer Delta Resolution', () => {
   });
 
   describe('Three-Entity Relationship Deltas', () => {
-    it('should handle movie casting deltas with actor, movie, role, and scalars', async () => {
+    test('should handle movie casting deltas with actor, movie, role, and scalars', async () => {
       // Create schemas for a movie casting scenario
       const actorSchema = SchemaBuilder
         .create('actor')
@@ -86,7 +86,7 @@ describe('Multi-Pointer Delta Resolution', () => {
       node.lossless.ingestDelta(castingDelta);
 
       // Test from Keanu's perspective
-      const keanuViews = node.lossless.view(['keanu']);
+      const keanuViews = node.lossless.compose(['keanu']);
       const keanuView = keanuViews['keanu'];
 
       expect(keanuView.propertyDeltas.filmography).toBeDefined();
@@ -115,7 +115,7 @@ describe('Multi-Pointer Delta Resolution', () => {
       }
 
       // Test from Matrix's perspective
-      const matrixViews = node.lossless.view(['matrix']);
+      const matrixViews = node.lossless.compose(['matrix']);
       const matrixView = matrixViews['matrix'];
 
       const nestedMatrixView = schemaRegistry.applySchemaWithNesting(
@@ -129,7 +129,7 @@ describe('Multi-Pointer Delta Resolution', () => {
       expect(nestedMatrixView.nestedObjects.cast).toBeDefined();
     });
 
-    it('should handle deltas with mixed scalar and reference values correctly', async () => {
+    test('should handle deltas with mixed scalar and reference values correctly', async () => {
       // Create a simpler schema for testing mixed values
       const personSchema = SchemaBuilder
         .create('person')
@@ -170,7 +170,7 @@ describe('Multi-Pointer Delta Resolution', () => {
       node.lossless.ingestDelta(relationshipDelta);
 
       // Test from Alice's perspective
-      const aliceViews = node.lossless.view(['alice']);
+      const aliceViews = node.lossless.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedAliceView = schemaRegistry.applySchemaWithNesting(
@@ -198,7 +198,7 @@ describe('Multi-Pointer Delta Resolution', () => {
       }
     });
 
-    it('should correctly identify multiple entity references within a single delta', async () => {
+    test('should correctly identify multiple entity references within a single delta', async () => {
       // Test a scenario with multiple entity references that should all be resolved
       const projectSchema = SchemaBuilder
         .create('project')
@@ -245,7 +245,7 @@ describe('Multi-Pointer Delta Resolution', () => {
       node.lossless.ingestDelta(collaborationDelta);
 
       // Test from project's perspective
-      const projectViews = node.lossless.view(['website']);
+      const projectViews = node.lossless.compose(['website']);
       const projectView = projectViews['website'];
 
       const nestedProjectView = schemaRegistry.applySchemaWithNesting(

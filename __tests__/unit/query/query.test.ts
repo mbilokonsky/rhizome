@@ -111,7 +111,7 @@ describe('Query Engine', () => {
   }
 
   describe('Basic Query Operations', () => {
-    it('can query all entities of a schema type', async () => {
+    test('can query all entities of a schema type', async () => {
       // Create test users
       await createUser('user1', 'Alice', 25, 'alice@example.com');
       await createUser('user2', 'Bob', 30);
@@ -127,7 +127,7 @@ describe('Query Engine', () => {
       expect(result.entities['user3']).toBeDefined();
     });
 
-    it('can query a single entity by ID', async () => {
+    test('can query a single entity by ID', async () => {
       await createUser('user1', 'Alice', 25, 'alice@example.com');
       
       const result = await queryEngine.queryOne('user', 'user1');
@@ -139,7 +139,7 @@ describe('Query Engine', () => {
       expect(result?.propertyDeltas.email).toBeDefined();
     });
 
-    it('returns null for non-existent entity', async () => {
+    test('returns null for non-existent entity', async () => {
       const result = await queryEngine.queryOne('user', 'nonexistent');
       expect(result).toBeNull();
     });
@@ -154,7 +154,7 @@ describe('Query Engine', () => {
       await createUser('user4', 'Diana', 20);
     });
 
-    it('can filter by primitive property values', async () => {
+    test('can filter by primitive property values', async () => {
       // Find users older than 28
       const result = await queryEngine.query('user', {
         '>': [{ 'var': 'age' }, 28]
@@ -167,7 +167,7 @@ describe('Query Engine', () => {
       expect(result.entities['user4']).toBeUndefined(); // Diana, 20
     });
 
-    it('can filter by string properties', async () => {
+    test('can filter by string properties', async () => {
       // Find users with name starting with 'A' - using substring check instead of startsWith
       const result = await queryEngine.query('user', {
         'in': ['A', { 'var': 'name' }]
@@ -177,7 +177,7 @@ describe('Query Engine', () => {
       expect(result.entities['user1']).toBeDefined(); // Alice
     });
 
-    it('can filter by null/missing properties', async () => {
+    test('can filter by null/missing properties', async () => {
       // Find users without email
       const result = await queryEngine.query('user', {
         '==': [{ 'var': 'email' }, null]
@@ -187,7 +187,7 @@ describe('Query Engine', () => {
       expect(result.entities['user4']).toBeDefined(); // Diana has no email
     });
 
-    it('can use complex logic expressions', async () => {
+    test('can use complex logic expressions', async () => {
       // Find users who are (older than 30) OR (younger than 25 AND have email)
       const result = await queryEngine.query('user', {
         'or': [
@@ -216,7 +216,7 @@ describe('Query Engine', () => {
       await createBlogPost('post4', 'Popular Post', 'charlie', true, 1000);
     });
 
-    it('can filter published posts', async () => {
+    test('can filter published posts', async () => {
       const result = await queryEngine.query('blog-post', {
         '==': [{ 'var': 'published' }, true]
       });
@@ -228,7 +228,7 @@ describe('Query Engine', () => {
       expect(result.entities['post3']).toBeUndefined(); // Draft
     });
 
-    it('can filter by author', async () => {
+    test('can filter by author', async () => {
       const result = await queryEngine.query('blog-post', {
         '==': [{ 'var': 'author' }, 'alice']
       });
@@ -238,7 +238,7 @@ describe('Query Engine', () => {
       expect(result.entities['post3']).toBeDefined();
     });
 
-    it('can filter by view count ranges', async () => {
+    test('can filter by view count ranges', async () => {
       // Posts with more than 100 views
       const result = await queryEngine.query('blog-post', {
         '>': [{ 'var': 'views' }, 100]
@@ -257,7 +257,7 @@ describe('Query Engine', () => {
       }
     });
 
-    it('can limit query results', async () => {
+    test('can limit query results', async () => {
       const result = await queryEngine.query('user', undefined, { maxResults: 5 });
 
       expect(result.totalFound).toBe(10);
@@ -265,7 +265,7 @@ describe('Query Engine', () => {
       expect(Object.keys(result.entities)).toHaveLength(5);
     });
 
-    it('respects delta filters', async () => {
+    test('respects delta filters', async () => {
       const result = await queryEngine.query('user', undefined, {
         deltaFilter: (delta) => delta.creator === 'test'
       });
@@ -276,7 +276,7 @@ describe('Query Engine', () => {
   });
 
   describe('Statistics', () => {
-    it('provides query engine statistics', async () => {
+    test('provides query engine statistics', async () => {
       await createUser('user1', 'Alice', 25);
       await createBlogPost('post1', 'Test Post', 'alice', true, 50);
 
@@ -290,13 +290,13 @@ describe('Query Engine', () => {
   });
 
   describe('Error Handling', () => {
-    it('handles invalid schema IDs gracefully', async () => {
+    test('handles invalid schema IDs gracefully', async () => {
       const result = await queryEngine.query('nonexistent-schema');
       expect(result.totalFound).toBe(0);
       expect(Object.keys(result.entities)).toHaveLength(0);
     });
 
-    it('rejects invalid JSON Logic operators', async () => {
+    test('rejects invalid JSON Logic operators', async () => {
       await createUser('user1', 'Alice', 25);
       
       // Should throw an error for invalid operator
@@ -307,7 +307,7 @@ describe('Query Engine', () => {
       ).rejects.toThrow('Invalid query operator: invalid-operator');
     });
 
-    it('handles valid JSON Logic expressions with runtime errors', async () => {
+    test('handles valid JSON Logic expressions with runtime errors', async () => {
       await createUser('user1', 'Alice', 25);
       
       // This is a valid operator but will cause a runtime error due to type mismatch

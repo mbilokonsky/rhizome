@@ -37,7 +37,7 @@ interface ResolverPlugin<T = unknown, D extends string = never> {
     currentState: T,
     newValue: PropertyTypes,
     delta: CollapsedDelta,
-    dependencies: DependencyStates<D>
+    dependencies: DependencyStates
   ): T;
 
   /**
@@ -48,7 +48,7 @@ interface ResolverPlugin<T = unknown, D extends string = never> {
    */
   resolve(
     state: T,
-    dependencies: DependencyStates<D>
+    dependencies: DependencyStates
   ): PropertyTypes | undefined;
 }
 ```
@@ -76,7 +76,7 @@ Processes a new value and updates the plugin's state.
 - `currentState: T` - Current plugin state
 - `newValue: PropertyTypes` - New value to process
 - `delta: CollapsedDelta` - Delta information
-- `dependencies: DependencyStates<D>` - Resolved states of all declared dependencies
+- `dependencies: DependencyStates` - Resolved states of all declared dependencies
 
 **Returns:** `T` - Updated plugin state
 
@@ -86,7 +86,7 @@ Resolves the final value from the current state.
 
 **Parameters:**
 - `state: T` - Current plugin state
-- `dependencies: DependencyStates<D>` - Resolved states of all declared dependencies
+- `dependencies: DependencyStates` - Resolved states of all declared dependencies
 
 **Returns:** `PropertyTypes | undefined` - Resolved value or undefined if no value should be set
 
@@ -94,7 +94,6 @@ Resolves the final value from the current state.
 
 ```typescript
 class CounterPlugin implements ResolverPlugin<CounterState> {
-  readonly name = 'counter' as const;
   
   initialize(): CounterState {
     return { count: 0 };
@@ -128,14 +127,13 @@ class CounterPlugin implements ResolverPlugin<CounterState> {
 
 ```typescript
 class PriceCalculator implements ResolverPlugin<PriceState, 'basePrice' | 'taxRate'> {
-  readonly name = 'price-calculator' as const;
   readonly dependencies = ['basePrice', 'taxRate'] as const;
   
   update(
     _state: PriceState,
     _newValue: unknown,
     _delta: CollapsedDelta,
-    deps: DependencyStates<'basePrice' | 'taxRate'>,
+    deps: DependencyStates,
   ): PriceState {
     const basePrice = deps.basePrice as number;
     const taxRate = deps.taxRate as number;
@@ -150,7 +148,6 @@ class PriceCalculator implements ResolverPlugin<PriceState, 'basePrice' | 'taxRa
 
 ```typescript
 class OptionalDepPlugin implements ResolverPlugin<State, 'required' | 'optional?'> {
-  readonly name = 'optional-dep' as const;
   readonly dependencies = ['required', 'optional?'] as const;
   
   update(

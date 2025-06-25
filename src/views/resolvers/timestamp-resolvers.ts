@@ -4,13 +4,11 @@ import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany } from "../../core/types";
 import { valueFromCollapsedDelta } from "./aggregation-resolvers";
 
-// Moved here from last-write-wins.ts before removing that file
 export type TimestampedProperty = {
   value: PropertyTypes,
   timeUpdated: Timestamp
 };
 
-// Moved here from last-write-wins.ts before removing that file
 export type TimestampedProperties = {
   [key: PropertyID]: TimestampedProperty
 };
@@ -81,12 +79,6 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
     private tieBreakingStrategy: TieBreakingStrategy = 'delta-id'
   ) {
     super(lossless);
-  }
-
-  initializer(view: LosslessViewOne): Accumulator {
-    return {
-      [view.id]: { id: view.id, properties: {} }
-    };
   }
 
   reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {

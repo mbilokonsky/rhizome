@@ -1,4 +1,3 @@
-import { EntityProperties } from "../../core/entity";
 import { Lossless, LosslessViewOne } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
@@ -27,15 +26,7 @@ export type AggregatedViewOne = {
 
 export type AggregatedViewMany = ViewMany<AggregatedViewOne>;
 
-type ResolvedAggregatedViewOne = {
-  id: DomainEntityID;
-  properties: EntityProperties;
-};
-
-type ResolvedAggregatedViewMany = ViewMany<ResolvedAggregatedViewOne>;
-
 type Accumulator = AggregatedViewMany;
-type Result = ResolvedAggregatedViewMany;
 
 // Extract a particular value from a delta's pointers
 export function valueFromCollapsedDelta(
@@ -51,37 +42,12 @@ export function valueFromCollapsedDelta(
   }
 }
 
-function aggregateValues(values: number[], type: AggregationType): number {
-  if (values.length === 0) return 0;
-
-  switch (type) {
-    case 'min':
-      return Math.min(...values);
-    case 'max':
-      return Math.max(...values);
-    case 'sum':
-      return values.reduce((sum, val) => sum + val, 0);
-    case 'average':
-      return values.reduce((sum, val) => sum + val, 0) / values.length;
-    case 'count':
-      return values.length;
-    default:
-      throw new Error(`Unknown aggregation type: ${type}`);
-  }
-}
-
-export class AggregationResolver extends Lossy<Accumulator, Result> {
+export class AggregationResolver extends Lossy<Accumulator> {
   constructor(
     lossless: Lossless,
     private config: AggregationConfig
   ) {
     super(lossless);
-  }
-
-  initializer(view: LosslessViewOne): Accumulator {
-    return {
-      [view.id]: { id: view.id, properties: {} }
-    };
   }
 
   reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
@@ -115,28 +81,6 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
 
     return acc;
   }
-
-  resolver(cur: Accumulator): Result {
-    const res: Result = {};
-
-    for (const [id, entity] of Object.entries(cur)) {
-      const entityResult: ResolvedAggregatedViewOne = { id, properties: {} };
-
-      for (const [propertyId, aggregatedProp] of Object.entries(entity.properties)) {
-        const result = aggregateValues(aggregatedProp.values, aggregatedProp.type);
-        entityResult.properties[propertyId] = result;
-      }
-
-      // Only include entities that have at least one aggregated property
-      if (Object.keys(entityResult.properties).length > 0) {
-        res[id] = entityResult;
-      }
-    }
-
-    return res;
-  }
-
-
 }
 
 // Convenience classes for common aggregation types

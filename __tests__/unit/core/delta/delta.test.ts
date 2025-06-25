@@ -2,7 +2,7 @@ import { createDelta } from '@src/core/delta-builder';
 import {DeltaV1, DeltaV2} from "../../../../src";
 
 describe("Delta", () => {
-  it("can convert DeltaV1 to DeltaV2", () => {
+  test("can convert DeltaV1 to DeltaV2", () => {
     const deltaV1 = createDelta('a', 'h')
       .addPointer('color', 'red')
       .addPointer('furniture', 'chair-1', 'color')
@@ -19,7 +19,7 @@ describe("Delta", () => {
     });
   });
 
-  it("can convert DeltaV2 to DeltaV1", () => {
+  test("can convert DeltaV2 to DeltaV1", () => {
     const deltaV2 = createDelta('a', 'h')
       .addPointer('color', 'red')
       .addPointer('furniture', 'chair-1', 'color')

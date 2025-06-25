@@ -1,65 +1,57 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta } from '@src';
-import { CustomResolver, FirstWriteWinsPlugin } from '@src/views/resolvers/custom-resolvers';
+import { describe, test, expect } from '@jest/globals';
+import { FirstWriteWinsPlugin } from '@src/views/resolvers/custom-resolvers';
+import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver-test-helper';
 
 describe('FirstWriteWinsPlugin', () => {
-  let node: RhizomeNode;
-  let lossless: Lossless;
-
-  beforeEach(() => {
-    node = new RhizomeNode();
-    lossless = new Lossless(node);
+  test('should resolve to earliest value by timestamp', async () => {
+    // Arrange
+    const entityId = 'entity1';
+    
+    // Act & Assert
+    const result = await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        name: new FirstWriteWinsPlugin()
+      },
+      deltas: [
+        // Later delta (should be ignored by FirstWriteWins)
+        createTestDelta('user1', 'host1')
+          .withTimestamp(2000)
+          .setProperty(entityId, 'name', 'second', 'collection')
+          .buildV1(),
+        // Earlier delta (should win with FirstWriteWins)
+        createTestDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty(entityId, 'name', 'first', 'collection')
+          .buildV1()
+      ],
+    });
+    expect(result).toBeDefined();
+    expect(result.properties.name).toBe('first');
   });
 
-  test('should resolve to earliest value by timestamp', () => {
-    // Later delta (should be ignored by FirstWriteWins)
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(2000)
-        .setProperty('entity1', 'name', 'second', 'collection')
-        .buildV1()
-    );
-
-    // Earlier delta (should win with FirstWriteWins)
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('entity1', 'name', 'first', 'collection')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      name: new FirstWriteWinsPlugin()
+  test('should handle concurrent updates with same timestamp', async () => {
+    // Arrange
+    const entityId = 'entity1';
+    
+    // Act & Assert
+    const result = await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        status: new FirstWriteWinsPlugin()
+      },
+      deltas: [
+        createTestDelta('user1', 'host1')
+          .withTimestamp(1000)
+          .setProperty(entityId, 'status', 'active', 'collection')
+          .buildV1(),
+        createTestDelta('user2', 'host2')
+          .withTimestamp(1000)
+          .setProperty(entityId, 'status', 'inactive', 'collection')
+          .buildV1()
+      ],
     });
-
-    const result = resolver.resolve();
     expect(result).toBeDefined();
-    expect(result!['entity1'].properties.name).toBe('first');
-  });
-
-  test('should handle concurrent updates with same timestamp', () => {
-    // Two deltas with same timestamp
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('entity1', 'status', 'active', 'collection')
-        .buildV1()
-    );
-
-    lossless.ingestDelta(
-      createDelta('user2', 'host2')
-        .withTimestamp(1000)
-        .setProperty('entity1', 'status', 'inactive', 'collection')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      status: new FirstWriteWinsPlugin()
-    });
-
-    const result = resolver.resolve();
-    expect(result).toBeDefined();
-    // Should pick one of the values (behavior may depend on implementation details)
-    expect(['active', 'inactive']).toContain(result!['entity1'].properties.status);
+    expect(result.properties.status).toBe('active');
   });
 });

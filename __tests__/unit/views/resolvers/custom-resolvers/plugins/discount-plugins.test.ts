@@ -1,143 +1,173 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta } from '../../../../../../../src';
-import { CustomResolver } from '../../../../../../../src/views/resolvers/custom-resolvers';
-
-class DiscountPlugin {
+import { describe, test, expect } from '@jest/globals';
+import { ResolverPlugin, DependencyStates } from '@src/views/resolvers/custom-resolvers';
+import { PropertyTypes } from '@src/core/types';
+import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver-test-helper';
+import Debug from 'debug';
+const debug = Debug('rz:test:discount-plugins');
+// Mock plugins for testing
+class DiscountPlugin implements ResolverPlugin<number, never> {
   readonly name = 'discount' as const;
+  readonly dependencies = [] as const;
   
   initialize() {
-    return { value: 0 };
+    return 0;
   }
   
-  update(_currentState: {value: number}, newValue: unknown, _delta: any) {
+  update(
+    _currentState: number,
+    newValue: PropertyTypes,
+  ) {
     const numValue = typeof newValue === 'number' ? newValue : 0;
-    return { value: Math.min(100, Math.max(0, numValue)) }; // Clamp between 0-100
+    const clampedValue = Math.min(100, Math.max(0, numValue)); // Clamp between 0-100
+    debug(`DiscountPlugin: updated discount to ${clampedValue}`);
+    return clampedValue;
   }
   
-  resolve(state: {value: number}) {
-    return state.value;
+  resolve( state: number ): number {
+    return state;
   }
 }
 
-class DiscountedPricePlugin {
-  readonly name = 'discounted-price' as const;
+class DiscountedPricePlugin implements ResolverPlugin<number | null, 'discount'> {
+  readonly name = 'price' as const;
   readonly dependencies = ['discount'] as const;
   
   initialize() {
-    return { price: 0 };
+    return null;
   }
   
-  update(_currentState: {price: number}, newValue: unknown, _delta: any, _dependencies: {discount: number}) {
+  update(
+    _currentState: number | null,
+    newValue: PropertyTypes,
+  ) {
     const numValue = typeof newValue === 'number' ? newValue : 0;
-    return { price: numValue };
+    debug(`DiscountedPricePlugin: updated price to ${numValue}`);
+    return numValue;
   }
   
-  resolve(state: {price: number}, dependencies: {discount: number}) {
-    const discountMultiplier = (100 - dependencies.discount) / 100;
-    return state.price * discountMultiplier;
+  resolve(
+    state: number | null,
+    dependencies: DependencyStates
+  ): number | null {
+    if (state === null) {
+      return null;
+    }
+    // Ensure discount is a number and default to 0 if undefined
+    const discount = typeof dependencies.discount === 'number' ? dependencies.discount : 0;
+    const discountMultiplier = (100 - discount) / 100;
+    return state * discountMultiplier;
   }
 }
 
 describe('Discount and DiscountedPrice Plugins', () => {
-  let node: RhizomeNode;
-  let lossless: Lossless;
-
-  beforeEach(() => {
-    node = new RhizomeNode();
-    lossless = new Lossless(node);
-  });
-
-  test('should apply discount to price', () => {
-    // Set base price
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('product1', 'price', 100, 'products')
-        .buildV1()
-    );
-
-    // Set discount (20%)
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('product1', 'discount', 20, 'products')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      price: new DiscountedPricePlugin(),
-      discount: new DiscountPlugin()
+  test('should apply discount to price', async () => {
+    // Arrange
+    const entityId = 'product1';
+    
+    // Act
+    const result = await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        price: new DiscountedPricePlugin(),
+        discount: new DiscountPlugin()
+      },
+      deltas: [
+        // Set base price
+        createTestDelta()
+          .withTimestamp(1000)
+          .setProperty(entityId, 'price', 100, 'product')
+          .buildV1(),
+        // Set discount (20%)
+        createTestDelta()
+          .withTimestamp(2000)
+          .setProperty(entityId, 'discount', 20, 'product')
+          .buildV1()
+      ],
     });
 
-    const result = resolver.resolve();
+    // Assert
     expect(result).toBeDefined();
-    expect(result!['product1'].properties.price).toBe(80); // 100 * 0.8 = 80
+    expect(result?.properties?.price).toBe(80); // 100 * 0.8 = 80
   });
 
-  test('should handle zero discount', () => {
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('product2', 'price', 50, 'products')
-        .buildV1()
-    );
-
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('product2', 'discount', 0, 'products')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      price: new DiscountedPricePlugin(),
-      discount: new DiscountPlugin()
+  test('should handle zero discount', async () => {
+    // Arrange
+    const entityId = 'product1';
+    
+    // Act
+    const result = await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        price: new DiscountedPricePlugin(),
+        discount: new DiscountPlugin()
+      },
+      deltas: [
+        // Set base price
+        createTestDelta()
+          .withTimestamp(1000)
+          .setProperty(entityId, 'price', 100, 'products')
+          .buildV1(),
+        // Set discount to 0
+        createTestDelta()
+          .withTimestamp(2000)
+          .setProperty(entityId, 'discount', 0, 'products')
+          .buildV1()
+      ],
     });
 
-    const result = resolver.resolve();
-    expect(result!['product2'].properties.price).toBe(50); // No discount applied
+    // Assert
+    expect(result).toBeDefined();
+    expect(result?.properties?.price).toBe(100); // 100 * 1.0 = 100
   });
 
-  test('should handle 100% discount', () => {
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('product3', 'price', 75, 'products')
-        .buildV1()
-    );
-
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('product3', 'discount', 100, 'products')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      price: new DiscountedPricePlugin(),
-      discount: new DiscountPlugin()
+  test('should handle 100% discount', async () => {
+    // Arrange
+    const entityId = 'product1';
+    
+    // Act
+    const result = await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        price: new DiscountedPricePlugin(),
+        discount: new DiscountPlugin()
+      },
+      deltas: [
+        // Set base price
+        createTestDelta()
+          .withTimestamp(1000)
+          .setProperty(entityId, 'price', 100, 'products')
+          .buildV1(),
+        // Set discount to 100%
+        createTestDelta()
+          .withTimestamp(2000)
+          .setProperty(entityId, 'discount', 100, 'products')
+          .buildV1()
+      ],
     });
-
-    const result = resolver.resolve();
-    expect(result!['product3'].properties.price).toBe(0); // 100% discount = free
+    // Assert
+    expect(result).toBeDefined();
+    expect(result?.properties.price).toBe(0); // 100 * 0.0 = 0
   });
 
-  test('should handle missing discount', () => {
-    // Only set price, no discount
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('product4', 'price', 200, 'products')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      price: new DiscountedPricePlugin(),
-      discount: new DiscountPlugin()
-    });
-
-    const result = resolver.resolve();
-    // Should treat missing discount as 0%
-    expect(result!['product4'].properties.price).toBe(200);
+  test('should handle missing discount plugin', async () => {
+    // Arrange
+    const entityId = 'product1';
+    
+    // Act
+    await expect(
+      testResolverWithPlugins({
+      entityId,
+      plugins: {
+        price: new DiscountedPricePlugin()
+        // No discount plugin provided
+      },
+      deltas: [
+        // Set base price
+        createTestDelta()
+          .withTimestamp(1000)
+          .setProperty(entityId, 'price', 100, 'products')
+          .buildV1()
+      ]
+    })).rejects.toThrowError('Dependency discount not found for plugin price');
   });
 });

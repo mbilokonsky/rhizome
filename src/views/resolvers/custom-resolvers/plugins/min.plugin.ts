@@ -1,6 +1,6 @@
-import { PropertyTypes } from "../../../../core/types";
+import { PropertyTypes, PropertyID } from "../../../../core/types";
 import { CollapsedDelta } from "../../../lossless";
-import { ResolverPlugin } from "../plugin";
+import { ResolverPlugin, DependencyStates } from "../plugin";
 
 type MinPluginState = {
   min?: number;
@@ -11,23 +11,29 @@ type MinPluginState = {
  * 
  * Tracks the minimum numeric value
  */
-export class MinPlugin implements ResolverPlugin<MinPluginState> {
-  readonly name = 'min';
-  readonly dependencies = [] as const;
+export class MinPlugin<Target extends PropertyID> implements ResolverPlugin<MinPluginState, Target> {
+  name = 'min';
+  readonly dependencies: Target[] = [];
 
-  initialize(): MinPluginState {
-    return { min: undefined };
+  constructor(private readonly target?: Target) {
+    if (target) {
+      this.dependencies = [target];
+    }
+  }
+
+  initialize(dependencies: DependencyStates): MinPluginState {
+    return { min: this.target ? dependencies[this.target] as number : undefined };
   }
 
   update(
     currentState: MinPluginState, 
-    newValue: PropertyTypes, 
-    _delta: CollapsedDelta,
-    _dependencies: Record<string, never> = {}
+    newValue?: PropertyTypes, 
+    _delta?: CollapsedDelta,
+    dependencies?: DependencyStates
   ): MinPluginState {
-    const numValue = typeof newValue === 'number' ? newValue : parseFloat(String(newValue));
+    const numValue = (this.target ? dependencies?.[this.target] : newValue) as number;
     
-    if (!isNaN(numValue) && (currentState.min === undefined || numValue < currentState.min)) {
+    if (currentState.min === undefined || numValue < currentState.min) {
       return { min: numValue };
     }
     return currentState;
@@ -35,7 +41,6 @@ export class MinPlugin implements ResolverPlugin<MinPluginState> {
 
   resolve(
     state: MinPluginState,
-    _dependencies: Record<string, never> = {}
   ): PropertyTypes | undefined {
     return state.min;
   }

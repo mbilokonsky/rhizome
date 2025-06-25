@@ -5,7 +5,7 @@ import type { NodeConfig, NodeHandle } from '@src/orchestration';
 // Increase test timeout to 30 seconds
 jest.setTimeout(30000);
 
-const debug = Debug('test:two-orchestrated');
+const debug = Debug('rz:test:two-orchestrated');
 
 describe('Run (Two Nodes Orchestrated)', () => {
   const orchestrator = createOrchestrator('in-memory');
@@ -46,7 +46,7 @@ describe('Run (Two Nodes Orchestrated)', () => {
     await Promise.all(nodes.map(node => node && orchestrator.stopNode(node)));
   });
 
-  it('can create a record on node0 and read it from node1', async () => {
+  test('can create a record on node0 and read it from node1', async () => {
     const [node0, node1] = nodes;
     const node0Url = node0.getApiUrl();
     const node1Url = node1.getApiUrl();

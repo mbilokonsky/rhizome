@@ -179,18 +179,6 @@ export class Lossless {
     return transactionId;
   }
 
-  viewSpecific(entityId: DomainEntityID, deltaIds: DeltaID[], deltaFilter?: DeltaFilter): LosslessViewOne | undefined {
-    const combinedFilter = (delta: Delta) => {
-      if (!deltaIds.includes(delta.id)) {
-        return false;
-      }
-      if (!deltaFilter) return true;
-      return deltaFilter(delta);
-    };
-    const res = this.compose([entityId], (delta) => combinedFilter(delta));
-    return res[entityId];
-  }
-
   decompose(view: LosslessViewOne): Delta[] {
     const allDeltas: Delta[] = [];
     const seenDeltaIds = new Set<DeltaID>();
@@ -236,11 +224,6 @@ export class Lossless {
     return allDeltas;
   }
 
-  // Backward compatibility alias
-  view(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
-    return this.compose(entityIds, deltaFilter);
-  }
-
   compose(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
     const view: LosslessViewMany = {};
     entityIds = entityIds ?? Array.from(this.domainEntities.keys());
@@ -258,6 +241,7 @@ export class Lossless {
       let hasVisibleDeltas = false;
 
       // First, collect all deltas for this entity to properly apply negations
+      // TODO: This is very inefficient. We need a better algorithm for applying negations.
       const allEntityDeltas: Delta[] = [];
       for (const deltas of ent.properties.values()) {
         allEntityDeltas.push(...Array.from(deltas));
@@ -288,7 +272,11 @@ export class Lossless {
 
           const pointers: CollapsedPointer[] = [];
 
-          for (const {localContext, target} of delta.pointers) {
+          for (const {localContext, target, targetContext} of delta.pointers) {
+            if (targetContext) {
+              // Only store primitive pointers in the collapsed delta
+              continue;
+            }
             pointers.push({[localContext]: target});
             if (target === ent.id) {
               referencedAs.add(localContext);

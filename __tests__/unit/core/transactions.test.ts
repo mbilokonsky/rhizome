@@ -13,7 +13,7 @@ describe('Transactions', () => {
   });
 
   describe('Transaction-based filtering', () => {
-    it('should exclude deltas from incomplete transactions', () => {
+    test('should exclude deltas from incomplete transactions', () => {
       const transactionId = 'tx-123';
       
       // Create a delta that declares a transaction with size 3
@@ -39,7 +39,7 @@ describe('Transactions', () => {
       lossless.ingestDelta(delta2);
 
       // View should be empty because transaction is incomplete (2/3 deltas)
-      const view = lossless.view(['user123']);
+      const view = lossless.compose(['user123']);
       expect(view.user123).toBeUndefined();
 
       // Add the third delta to complete the transaction
@@ -51,14 +51,14 @@ describe('Transactions', () => {
       lossless.ingestDelta(delta3);
 
       // Now the view should include all deltas from the completed transaction
-      const completeView = lossless.view(['user123']);
+      const completeView = lossless.compose(['user123']);
       expect(completeView.user123).toBeDefined();
       expect(completeView.user123.propertyDeltas.name).toHaveLength(1);
       expect(completeView.user123.propertyDeltas.age).toHaveLength(1);
       expect(completeView.user123.propertyDeltas.email).toHaveLength(1);
     });
 
-    it('should handle multiple transactions independently', () => {
+    test('should handle multiple transactions independently', () => {
       const tx1 = 'tx-001';
       const tx2 = 'tx-002';
 
@@ -87,7 +87,7 @@ describe('Transactions', () => {
       );
 
       // Neither transaction is complete
-      let view = lossless.view(['order1', 'order2']);
+      let view = lossless.compose(['order1', 'order2']);
       expect(view.order1).toBeUndefined();
       expect(view.order2).toBeUndefined();
 
@@ -99,7 +99,7 @@ describe('Transactions', () => {
       );
 
       // tx1 is complete, tx2 is not
-      view = lossless.view(['order1', 'order2']);
+      view = lossless.compose(['order1', 'order2']);
       expect(view.order1).toBeDefined();
       expect(view.order1.propertyDeltas.status).toHaveLength(1);
       expect(view.order1.propertyDeltas.total).toHaveLength(1);
@@ -113,14 +113,14 @@ describe('Transactions', () => {
       );
 
       // Both transactions complete
-      view = lossless.view(['order1', 'order2']);
+      view = lossless.compose(['order1', 'order2']);
       expect(view.order1).toBeDefined();
       expect(view.order2).toBeDefined();
       expect(view.order2.propertyDeltas.status).toHaveLength(1);
       expect(view.order2.propertyDeltas.tracking).toHaveLength(1);
     });
 
-    it('should work with transaction-aware delta filters', () => {
+    test('should work with transaction-aware delta filters', () => {
       const transactionId = 'tx-filter-test';
 
       // Create transaction with 2 deltas
@@ -147,7 +147,7 @@ describe('Transactions', () => {
 
       // With incomplete transaction, nothing should show
       // But once complete, the filter should still apply
-      const view = lossless.view(['doc1'], userFilter);
+      const view = lossless.compose(['doc1'], userFilter);
       
       // Even though transaction is complete, only delta from user1 should appear
       expect(view.doc1).toBeDefined();
@@ -155,7 +155,7 @@ describe('Transactions', () => {
       expect(view.doc1.propertyDeltas.author).toBeUndefined();
     });
 
-    it('should handle transaction with deltas affecting multiple entities', () => {
+    test('should handle transaction with deltas affecting multiple entities', () => {
       const transactionId = 'tx-multi-entity';
 
       // Transaction that updates multiple entities atomically
@@ -182,7 +182,7 @@ describe('Transactions', () => {
       );
 
       // Transaction incomplete - no entities should show updates
-      let view = lossless.view(['account1', 'account2']);
+      let view = lossless.compose(['account1', 'account2']);
       expect(view.account1).toBeUndefined();
       expect(view.account2).toBeUndefined();
 
@@ -197,7 +197,7 @@ describe('Transactions', () => {
       );
 
       // All entities should now be visible
-      view = lossless.view(['account1', 'account2', 'transfer123']);
+      view = lossless.compose(['account1', 'account2', 'transfer123']);
       expect(view.account1).toBeDefined();
       expect(view.account1.propertyDeltas.balance).toHaveLength(1);
       expect(view.account2).toBeDefined();
@@ -206,7 +206,7 @@ describe('Transactions', () => {
       expect(view.transfer123.propertyDeltas.details).toHaveLength(1);
     });
 
-    it('should emit events only when transactions complete', async () => {
+    test('should emit events only when transactions complete', async () => {
       const transactionId = 'tx-events';
       const updateEvents: Array<{ entityId: string, deltaIds: string[] }> = [];
 
@@ -252,7 +252,7 @@ describe('Transactions', () => {
       expect(entity1Update!.deltaIds).toContain(delta2.id);
     });
 
-    it('should support waiting for transaction completion', async () => {
+    test('should support waiting for transaction completion', async () => {
       const transactionId = 'tx-wait';
 
       // Create transaction
@@ -289,12 +289,12 @@ describe('Transactions', () => {
       expect(isResolved).toBe(true);
 
       // View should show completed transaction
-      const view = lossless.view(['job1']);
+      const view = lossless.compose(['job1']);
       expect(view.job1).toBeDefined();
       expect(view.job1.propertyDeltas.status).toHaveLength(2);
     });
 
-    it('should handle non-transactional deltas normally', () => {
+    test('should handle non-transactional deltas normally', () => {
       // Regular delta without transaction
       const regularDelta = createDelta('user1', 'host1')
         .addPointer('name', 'user456', 'name')
@@ -309,7 +309,7 @@ describe('Transactions', () => {
       lossless.ingestDelta(regularDelta);
 
       // Should immediately appear in view
-      const view = lossless.view(['user456']);
+      const view = lossless.compose(['user456']);
       expect(view.user456).toBeDefined();
       expect(view.user456.propertyDeltas.name).toHaveLength(1);
 
@@ -319,7 +319,7 @@ describe('Transactions', () => {
   });
 
   describe('Transaction edge cases', () => {
-    it('should handle transaction size updates', () => {
+    test('should handle transaction size updates', () => {
       const transactionId = 'tx-resize';
 
       // Initially declare transaction with size 2
@@ -345,11 +345,11 @@ describe('Transactions', () => {
       expect(lossless.transactions.isComplete(transactionId)).toBe(true);
       
       // View should show the cart
-      const view = lossless.view(['cart1']);
+      const view = lossless.compose(['cart1']);
       expect(view.cart1).toBeDefined();
     });
 
-    it('should handle missing transaction size gracefully', () => {
+    test('should handle missing transaction size gracefully', () => {
       const transactionId = 'tx-no-size';
 
       // Add delta with transaction reference but no size declaration
@@ -363,7 +363,7 @@ describe('Transactions', () => {
       expect(lossless.transactions.isComplete(transactionId)).toBe(false);
 
       // Delta should not appear in view
-      const view = lossless.view(['entity1']);
+      const view = lossless.compose(['entity1']);
       expect(view.entity1).toBeUndefined();
 
       // Declare size after the fact
@@ -376,7 +376,7 @@ describe('Transactions', () => {
       expect(lossless.transactions.isComplete(transactionId)).toBe(true);
 
       // And delta should appear in view
-      const viewAfter = lossless.view(['entity1']);
+      const viewAfter = lossless.compose(['entity1']);
       expect(viewAfter.entity1).toBeDefined();
     });
   });

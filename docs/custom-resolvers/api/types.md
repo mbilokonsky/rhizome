@@ -27,10 +27,10 @@ type PropertyTypes =
 
 All possible property value types that can be handled by the resolver.
 
-### `DependencyStates<D>`
+### `DependencyStates`
 
 ```typescript
-type DependencyStates<D extends string> = {
+type DependencyStates = {
   [K in D]: unknown;
 };
 ```
@@ -63,12 +63,12 @@ interface ResolverPlugin<T = unknown, D extends string = never> {
     currentState: T,
     newValue: PropertyTypes,
     delta: CollapsedDelta,
-    dependencies: DependencyStates<D>
+    dependencies: DependencyStates
   ): T;
   
   resolve(
     state: T,
-    dependencies: DependencyStates<D>
+    dependencies: DependencyStates
   ): PropertyTypes | undefined;
 }
 ```
@@ -88,7 +88,7 @@ interface EntityResult {
 }
 ```
 
-Represents the resolved properties for a single entity.
+A basic map of some results. May represent entites, entity properties, or arbitrary synthetic attributes.
 
 ### `CustomResolverResult`
 
@@ -118,7 +118,6 @@ Configuration object mapping property IDs to their resolver plugins.
 
 ```typescript
 class LastWriteWinsPlugin implements ResolverPlugin<LastWriteWinsState> {
-  readonly name = 'last-write-wins';
   // ...
 }
 
@@ -132,7 +131,6 @@ interface LastWriteWinsState {
 
 ```typescript
 class FirstWriteWinsPlugin implements ResolverPlugin<FirstWriteWinsState> {
-  readonly name = 'first-write-wins';
   // ...
 }
 
@@ -151,7 +149,6 @@ interface ConcatenationOptions {
 }
 
 class ConcatenationPlugin implements ResolverPlugin<ConcatenationState> {
-  readonly name = 'concatenation';
   
   constructor(private options: ConcatenationOptions = {}) {
     this.options = {
@@ -177,7 +174,6 @@ interface MajorityVoteOptions {
 }
 
 class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState> {
-  readonly name = 'majority-vote';
   
   constructor(private options: MajorityVoteOptions = {}) {
     this.options = {
@@ -227,7 +223,6 @@ type CounterDeps = 'incrementBy' | 'resetThreshold';
 
 // Implement plugin with type safety
 class CounterPlugin implements ResolverPlugin<CounterState, CounterDeps> {
-  readonly name = 'counter' as const;
   readonly dependencies = ['incrementBy', 'resetThreshold'] as const;
   
   initialize(): CounterState {
@@ -238,7 +233,7 @@ class CounterPlugin implements ResolverPlugin<CounterState, CounterDeps> {
     state: CounterState,
     _newValue: unknown,
     _delta: CollapsedDelta,
-    deps: DependencyStates<CounterDeps>
+    deps: DependencyStates
   ): CounterState {
     const increment = deps.incrementBy as number;
     const threshold = deps.resetThreshold as number;

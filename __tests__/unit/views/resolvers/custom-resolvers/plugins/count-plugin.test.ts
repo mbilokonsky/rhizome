@@ -1,98 +1,109 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta } from '@src';
-import { CustomResolver } from '@src/views/resolvers/custom-resolvers';
+import { describe, test, expect } from '@jest/globals';
+import { ResolverPlugin, DependencyStates } from '@src/views/resolvers/custom-resolvers';
+import { PropertyTypes } from '@src/core/types';
+import type { CollapsedDelta } from '@src/views/lossless';
+import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver-test-helper';
 
-class CountPlugin {
-  readonly name = 'count' as const;
+class CountPlugin implements ResolverPlugin<{ count: number }, never> {
+  readonly dependencies = [] as const;
   
   initialize() {
     return { count: 0 };
   }
   
-  update(currentState: {count: number}, _newValue: unknown, _delta: any) {
+  update(
+    currentState: { count: number },
+    _newValue: PropertyTypes,
+    _delta: CollapsedDelta,
+    _dependencies: DependencyStates
+  ) {
     return { count: currentState.count + 1 };
   }
   
-  resolve(state: {count: number}) {
+  resolve(
+    state: { count: number },
+    _dependencies: DependencyStates
+  ): number {
     return state.count;
   }
 }
 
 describe('CountPlugin', () => {
-  let node: RhizomeNode;
-  let lossless: Lossless;
-
-  beforeEach(() => {
-    node = new RhizomeNode();
-    lossless = new Lossless(node);
+  test('should count the number of updates', async () => {
+    // Arrange & Act
+    const entityId = 'counter1';
+    
+    await testResolverWithPlugins({
+      entityId,
+      plugins: {
+        count: new CountPlugin()
+      },
+      deltas: [
+        createTestDelta()
+          .withTimestamp(1000)
+          .setProperty(entityId, 'count', 'value1', 'test')
+          .buildV1(),
+        createTestDelta()
+          .withTimestamp(2000)
+          .setProperty(entityId, 'count', 'value2', 'test')
+          .buildV1(),
+        createTestDelta()
+          .withTimestamp(3000)
+          .setProperty(entityId, 'count', 'value3', 'test')
+          .buildV1()
+      ],
+      expectedResult: (result) => {
+        // Assert
+        expect(result).toBeDefined();
+        expect(result.properties.count).toBe(3);
+      }
+    });
   });
 
-  test('should count the number of updates', () => {
-    // First update
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
+  test('should handle multiple entities independently', async () => {
+    // Arrange
+    const counter1Deltas = [
+      createTestDelta()
         .withTimestamp(1000)
         .setProperty('counter1', 'count', 'value1', 'test')
-        .buildV1()
-    );
-
-    // Second update
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
+        .buildV1(),
+      createTestDelta()
         .withTimestamp(2000)
         .setProperty('counter1', 'count', 'value2', 'test')
         .buildV1()
-    );
+    ];
 
-    // Third update
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(3000)
-        .setProperty('counter1', 'count', 'value3', 'test')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      count: new CountPlugin()
-    });
-
-    const result = resolver.resolve();
-    expect(result).toBeDefined();
-    expect(result!['counter1'].properties.count).toBe(3);
-  });
-
-  test('should handle multiple entities independently', () => {
-    // Update counter1
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('counter1', 'count', 'value1', 'test')
-        .buildV1()
-    );
-
-    // Update counter2
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
+    const counter2Deltas = [
+      createTestDelta()
         .withTimestamp(1000)
         .setProperty('counter2', 'count', 'value1', 'test')
         .buildV1()
-    );
+    ];
 
-    // Update counter1 again
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(2000)
-        .setProperty('counter1', 'count', 'value2', 'test')
-        .buildV1()
-    );
-
-    const resolver = new CustomResolver(lossless, {
-      count: new CountPlugin()
+    // Act & Assert - Test counter1
+    await testResolverWithPlugins({
+      entityId: 'counter1',
+      plugins: {
+        count: new CountPlugin()
+      },
+      deltas: counter1Deltas,
+      expectedResult: (result) => {
+        expect(result).toBeDefined();
+        expect(result.properties.count).toBe(2);
+      }
     });
 
-    const result = resolver.resolve();
-    expect(result).toBeDefined();
-    expect(result!['counter1'].properties.count).toBe(2);
-    expect(result!['counter2'].properties.count).toBe(1);
+    // Act & Assert - Test counter2
+    await testResolverWithPlugins({
+      entityId: 'counter2',
+      plugins: {
+        count: new CountPlugin()
+      },
+      deltas: counter2Deltas,
+      expectedResult: (result) => {
+        expect(result).toBeDefined();
+        expect(result.properties.count).toBe(1);
+      }
+    });
   });
 });

@@ -18,7 +18,7 @@ describe('Run', () => {
     await app.stop();
   });
 
-  it('can put a new user and fetch it', async () => {
+  test('can put a new user and fetch it', async () => {
     // Create a new record
     {
       const res = await fetch(`${app.apiUrl}/user`, {

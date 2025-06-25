@@ -16,7 +16,7 @@ describe('Negation System', () => {
   });
 
   describe('Negation Helper', () => {
-    it('should create negation deltas correctly', () => {
+    test('should create negation deltas correctly', () => {
       const originalDelta = createDelta('user1', 'host1')
         .setProperty('entity1', 'name', 'Alice')
         .buildV1();
@@ -35,7 +35,7 @@ describe('Negation System', () => {
       expect(NegationHelper.isNegationDelta(negationDelta)).toBe(true);
     });
 
-    it('should identify negation deltas', () => {
+    test('should identify negation deltas', () => {
       const regularDelta = createDelta('user1', 'host1')
         .setProperty('entity1', 'name', 'Entity 1')
         .buildV1();
@@ -48,7 +48,7 @@ describe('Negation System', () => {
       expect(NegationHelper.isNegationDelta(negationDelta)).toBe(true);
     });
 
-    it('should extract negated delta ID', () => {
+    test('should extract negated delta ID', () => {
       const targetDeltaId = 'target-delta-123';
       const negationDelta = createDelta('moderator', 'host1')
         .negate(targetDeltaId)
@@ -64,7 +64,7 @@ describe('Negation System', () => {
       expect(NegationHelper.getNegatedDeltaId(regularDelta)).toBeNull();
     });
 
-    it('should find negations for specific deltas', () => {
+    test('should find negations for specific deltas', () => {
       const delta1 = createDelta('user1', 'host1')
         .setProperty('entity1', 'name', 'Entity 1')
         .buildV1();
@@ -89,7 +89,7 @@ describe('Negation System', () => {
       expect(negationsForDelta2[0].id).toBe(negation3.id);
     });
 
-    it('should check if deltas are negated', () => {
+    test('should check if deltas are negated', () => {
       const delta1 = createDelta('user1', 'host1')
         .setProperty('entity1', 'name', 'Entity 1')
         .buildV1();
@@ -105,7 +105,7 @@ describe('Negation System', () => {
       expect(NegationHelper.isDeltaNegated(delta2.id, allDeltas)).toBe(false);
     });
 
-    it('should filter out negated deltas', () => {
+    test('should filter out negated deltas', () => {
       const delta1 = createDelta('user1', 'host1')
         .setProperty('entity1', 'name', 'Entity 1')
         .buildV1();
@@ -129,7 +129,7 @@ describe('Negation System', () => {
       expect(filtered[0].id).toBe(delta3.id);
     });
 
-    it('should provide negation statistics', () => {
+    test('should provide negation statistics', () => {
       const delta1 = createDelta('user1', 'host1')
         .setProperty('entity1', 'name', 'Entity 1')
         .buildV1();
@@ -151,7 +151,7 @@ describe('Negation System', () => {
       expect(stats.negationMap.get(delta1.id)).toContain(negation1.id);
     });
 
-    it('should apply negations chronologically', () => {
+    test('should apply negations chronologically', () => {
       const baseTime = Date.now();
 
       // Create deltas with specific timestamps
@@ -180,7 +180,7 @@ describe('Negation System', () => {
   });
 
   describe('Lossless View Integration', () => {
-    it('should filter negated deltas in lossless views', () => {
+    test('should filter negated deltas in lossless views', () => {
       // Create original delta
       const originalDelta = createDelta('user1', 'host1')
         .setProperty('user123', 'name', 'Alice')
@@ -203,7 +203,7 @@ describe('Negation System', () => {
       lossless.ingestDelta(nonNegatedDelta);
 
       // Get view - should only show non-negated delta
-      const view = lossless.view(['user123']);
+      const view = lossless.compose(['user123']);
       
       expect(view.user123).toBeDefined();
       
@@ -212,7 +212,7 @@ describe('Negation System', () => {
       expect(view.user123.propertyDeltas.name).toBeUndefined();
     });
 
-    it('should handle multiple negations of the same delta', () => {
+    test('should handle multiple negations of the same delta', () => {
       const originalDelta = createDelta('user1', 'host1')
         .setProperty('post1', 'content', 'Original content')
         .buildV1();
@@ -224,13 +224,13 @@ describe('Negation System', () => {
       lossless.ingestDelta(negation1);
       lossless.ingestDelta(negation2);
 
-      const view = lossless.view(['post1']);
+      const view = lossless.compose(['post1']);
       
       // Original delta should be negated (not visible)
       expect(view.post1).toBeUndefined();
     });
 
-    it('should provide negation statistics for entities', () => {
+    test('should provide negation statistics for entities', () => {
       const delta1 = createDelta('user1', 'host1')
         .setProperty('article1', 'title', 'Original Title')
         .buildV1();
@@ -255,7 +255,7 @@ describe('Negation System', () => {
       expect(stats.negationsByProperty.content.negated).toBe(0);
     });
 
-    it('should retrieve negation deltas for entities', () => {
+    test('should retrieve negation deltas for entities', () => {
       const originalDelta = createDelta('user1', 'host1')
         .setProperty('task1', 'status', 'pending')
         .buildV1();
@@ -271,7 +271,7 @@ describe('Negation System', () => {
       expect(negations[0].creator).toBe('admin');
     });
 
-    it('should handle negation in transactions', () => {
+    test('should handle negation in transactions', () => {
       const transactionId = 'tx-negation';
 
       // Create transaction declaration
@@ -298,11 +298,11 @@ describe('Negation System', () => {
       lossless.ingestDelta(negationDelta);
 
       // Transaction should complete, but original delta should be negated
-      const view = lossless.view(['post1']);
+      const view = lossless.compose(['post1']);
       expect(view.post1).toBeUndefined(); // No visible deltas
     });
 
-    it('should handle chronological negation scenarios', () => {
+    test('should handle chronological negation scenarios', () => {
       const baseTime = Date.now();
 
       // User posts content
@@ -325,7 +325,7 @@ describe('Negation System', () => {
       lossless.ingestDelta(negationDelta);
       lossless.ingestDelta(editDelta);
 
-      const view = lossless.view(['post1']);
+      const view = lossless.compose(['post1']);
       
       // Should show edited content (edit happened after negation)
       expect(view.post1).toBeDefined();
@@ -338,7 +338,7 @@ describe('Negation System', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle negation of non-existent deltas', () => {
+    test('should handle negation of non-existent deltas', () => {
       const negationDelta = createDelta('moderator', 'host1').negate('non-existent-delta-id').buildV1();
 
       lossless.ingestDelta(negationDelta);
@@ -348,7 +348,7 @@ describe('Negation System', () => {
       expect(stats.negationDeltas).toBe(0); // No negations for this entity
     });
 
-    it('should handle self-referential entities in negations', () => {
+    test('should handle self-referential entities in negations', () => {
       // Create a delta that references itself
       const selfRefDelta = createDelta('user1', 'host1')
         .setProperty('node1', 'parent', 'node1')
@@ -360,11 +360,11 @@ describe('Negation System', () => {
       lossless.ingestDelta(selfRefDelta);
       lossless.ingestDelta(negationDelta);
 
-      const view = lossless.view(['node1']);
+      const view = lossless.compose(['node1']);
       expect(view.node1).toBeUndefined(); // Should be negated
     });
 
-    it('should handle multiple direct negations of the same delta', () => {
+    test('should handle multiple direct negations of the same delta', () => {
       const testNode = new RhizomeNode();
       const testLossless = new Lossless(testNode);
       
@@ -383,7 +383,7 @@ describe('Negation System', () => {
       testLossless.ingestDelta(negation2);
 
       // Get the view after processing all deltas
-      const view = testLossless.view(['entity2']);
+      const view = testLossless.compose(['entity2']);
       
       // The original delta should be negated (not in view) because it has two direct negations
       expect(view.entity2).toBeUndefined();
@@ -395,7 +395,7 @@ describe('Negation System', () => {
       expect(stats.effectiveDeltas).toBe(0);
     });
 
-    it('should handle complex negation chains', () => {
+    test('should handle complex negation chains', () => {
       const testNode = new RhizomeNode();
       const testLossless = new Lossless(testNode);
       
@@ -421,7 +421,7 @@ describe('Negation System', () => {
       testLossless.ingestDelta(deltaD);
 
       // Get the view after processing all deltas
-      const view = testLossless.view(['entity3']);
+      const view = testLossless.compose(['entity3']);
       
       // The original delta should be negated because:
       // - B negates A
@@ -468,7 +468,7 @@ describe('Negation System', () => {
       expect(stats.effectiveDeltas).toBe(0);
     });
 
-    it('should handle multiple independent negations', () => {
+    test('should handle multiple independent negations', () => {
       const testNode = new RhizomeNode();
       const testLossless = new Lossless(testNode);
       
@@ -492,7 +492,7 @@ describe('Negation System', () => {
       testLossless.ingestDelta(negation2);
 
       // Get the view after processing all deltas
-      const view = testLossless.view(['entity4']);
+      const view = testLossless.compose(['entity4']);
       
       // Both deltas should be negated
       expect(view.entity4).toBeUndefined();

@@ -1,6 +1,8 @@
 import { PropertyTypes } from "../../../../core/types";
 import { CollapsedDelta } from "../../../../views/lossless";
 import { ResolverPlugin } from "../plugin";
+import Debug from 'debug';
+const debug = Debug('rz:concatenation-plugin');
 
 type ConcatenationState = {
   values: Array<{ value: string; timestamp: number }>;
@@ -11,8 +13,7 @@ type ConcatenationState = {
  * 
  * Concatenates all string values with a separator
  */
-export class ConcatenationPlugin implements ResolverPlugin<ConcatenationState> {
-  readonly name = 'concatenation';
+export class ConcatenationPlugin implements ResolverPlugin<ConcatenationState, never> {
   readonly dependencies = [] as const;
 
   constructor(private separator: string = ' ') {}
@@ -23,24 +24,25 @@ export class ConcatenationPlugin implements ResolverPlugin<ConcatenationState> {
 
   update(
     currentState: ConcatenationState, 
-    newValue: PropertyTypes, 
+    newValue: PropertyTypes | null, 
     delta: CollapsedDelta,
-    _dependencies: Record<string, never> = {}
   ): ConcatenationState {
-    if (typeof newValue === 'string') {
-      return {
-        values: [
-          ...currentState.values,
-          { value: newValue, timestamp: delta.timeCreated }
-        ]
-      };
+    debug(`Update, newValue: ${newValue}`);
+    // Skip null, undefined, or non-string values
+    if (newValue === null || newValue === undefined || typeof newValue !== 'string') {
+      return currentState;
     }
-    return currentState;
+    
+    return {
+      values: [
+        ...currentState.values,
+        { value: newValue, timestamp: delta.timeCreated }
+      ]
+    };
   }
 
   resolve(
     state: ConcatenationState,
-    _dependencies: Record<string, never> = {}
   ): PropertyTypes {
     // Sort by timestamp to ensure consistent ordering
     const sortedValues = [...state.values].sort((a, b) => a.timestamp - b.timestamp);
