@@ -18,7 +18,7 @@ describe('Edge Cases', () => {
 
   test('should handle null values', () => {
     // Create a type-safe plugin that handles null/undefined values
-    class NullSafeLastWriteWinsPlugin implements ResolverPlugin<{ value: PropertyTypes | null, timestamp: number }, never> {
+    class NullSafeLastWriteWinsPlugin extends ResolverPlugin<{ value: PropertyTypes | null, timestamp: number }, never> {
       readonly dependencies = [] as const;
       
       initialize() {
@@ -64,7 +64,7 @@ describe('Edge Cases', () => {
 
   test('should handle concurrent updates with same timestamp', () => {
     // Custom plugin that handles concurrent updates with the same timestamp
-    class ConcurrentUpdatePlugin implements ResolverPlugin<{ value: PropertyTypes, timestamp: number }, never> {
+    class ConcurrentUpdatePlugin extends ResolverPlugin<{ value: PropertyTypes, timestamp: number }, never> {
       readonly dependencies = [] as const;
       
       initialize() {
@@ -125,7 +125,7 @@ describe('Edge Cases', () => {
 
   test('should handle very large numbers of updates', () => {
     // Plugin that handles large numbers of updates efficiently
-    class CounterPlugin implements ResolverPlugin<{ count: number }, never> {
+    class CounterPlugin extends ResolverPlugin<{ count: number }, never> {
       readonly dependencies = [] as const;
       
       initialize() {
@@ -173,7 +173,7 @@ describe('Edge Cases', () => {
   test('should handle missing properties gracefully', () => {
     // No deltas added - should handle empty state
     // Plugin that handles missing properties gracefully
-    class MissingPropertyPlugin implements ResolverPlugin<{ initialized: boolean }, never> {
+    class MissingPropertyPlugin extends ResolverPlugin<{ initialized: boolean }, never> {
       readonly dependencies = [] as const;
       
       initialize() {

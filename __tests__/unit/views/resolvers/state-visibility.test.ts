@@ -18,7 +18,7 @@ describe('State Visibility', () => {
   });
 
   // A test plugin that records which states it sees
-  class StateSpyPlugin implements ResolverPlugin<{ values: string[] }, 'dependsOn'> {
+  class StateSpyPlugin extends ResolverPlugin<{ values: string[] }, 'dependsOn'> {
     readonly dependencies = [] as const;
     seenStates: Record<string, unknown>[] = [];
 
@@ -51,7 +51,7 @@ describe('State Visibility', () => {
   }
 
   // A simple plugin that depends on another property
-  class DependentPlugin implements ResolverPlugin<{ value: string }, 'dependsOn'> {
+  class DependentPlugin extends ResolverPlugin<{ value: string }, 'dependsOn'> {
     readonly dependencies = ['dependsOn'] as const;
     seenStates: Record<string, unknown>[] = [];
 
@@ -189,7 +189,7 @@ describe('State Visibility', () => {
   });
 
   test('should throw error for unknown dependencies', () => {
-    class PluginWithBadDeps implements ResolverPlugin<{ value: string }, 'nonexistent'> {
+    class PluginWithBadDeps extends ResolverPlugin<{ value: string }, 'nonexistent'> {
       readonly dependencies = ['nonexistent'] as const;
       
       initialize() {

@@ -37,7 +37,7 @@ type DependencyStates = {
 Dependencies are declared as a readonly array of string literals:
 
 ```typescript
-class MyPlugin implements ResolverPlugin<MyState, 'dep1' | 'dep2'> {
+class MyPlugin extends ResolverPlugin<MyState, 'dep1' | 'dep2'> {
   readonly dependencies = ['dep1', 'dep2'] as const;
   
   // ... implementation
@@ -101,7 +101,7 @@ if (typeof deps.price === 'number') {
 ### Optional Dependencies
 
 ```typescript
-class MyPlugin implements ResolverPlugin<MyState, 'required' | 'optional?'> {
+class MyPlugin extends ResolverPlugin<MyState, 'required' | 'optional?'> {
   readonly dependencies = ['required', 'optional?'] as const;
   
   update(_state: MyState, _value: unknown, _delta: CollapsedDelta, deps: any) {
@@ -118,7 +118,7 @@ class MyPlugin implements ResolverPlugin<MyState, 'required' | 'optional?'> {
 ```typescript
 type PriceDependencies = 'price1' | 'price2' | 'price3';
 
-class PriceAggregator implements ResolverPlugin<PriceState, PriceDependencies> {
+class PriceAggregator extends ResolverPlugin<PriceState, PriceDependencies> {
   readonly dependencies: readonly PriceDependencies[] = ['price1', 'price2', 'price3'] as const;
   
   update(_state: PriceState, _value: unknown, _delta: CollapsedDelta, deps: any) {

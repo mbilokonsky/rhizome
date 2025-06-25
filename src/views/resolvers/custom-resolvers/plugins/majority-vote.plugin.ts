@@ -10,7 +10,7 @@ type MajorityVoteState = {
  * 
  * Returns the value that appears most frequently
  */
-export class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState, never> {
+export class MajorityVotePlugin extends ResolverPlugin<MajorityVoteState, never> {
   readonly dependencies = [] as const;
 
   initialize(): MajorityVoteState {
@@ -21,6 +21,7 @@ export class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState, nev
     currentState: MajorityVoteState, 
     newValue: PropertyTypes, 
   ): MajorityVoteState {
+    if (newValue === undefined) return currentState;
     const currentCount = currentState.votes.get(newValue) || 0;
     // Create a new Map to ensure immutability
     const newVotes = new Map(currentState.votes);

@@ -117,7 +117,7 @@ Configuration object mapping property IDs to their resolver plugins.
 ### `LastWriteWinsPlugin`
 
 ```typescript
-class LastWriteWinsPlugin implements ResolverPlugin<LastWriteWinsState> {
+class LastWriteWinsPlugin extends ResolverPlugin<LastWriteWinsState> {
   // ...
 }
 
@@ -130,7 +130,7 @@ interface LastWriteWinsState {
 ### `FirstWriteWinsPlugin`
 
 ```typescript
-class FirstWriteWinsPlugin implements ResolverPlugin<FirstWriteWinsState> {
+class FirstWriteWinsPlugin extends ResolverPlugin<FirstWriteWinsState> {
   // ...
 }
 
@@ -148,7 +148,7 @@ interface ConcatenationOptions {
   sort?: boolean;
 }
 
-class ConcatenationPlugin implements ResolverPlugin<ConcatenationState> {
+class ConcatenationPlugin extends ResolverPlugin<ConcatenationState> {
   
   constructor(private options: ConcatenationOptions = {}) {
     this.options = {
@@ -173,7 +173,7 @@ interface MajorityVoteOptions {
   minVotes?: number;
 }
 
-class MajorityVotePlugin implements ResolverPlugin<MajorityVoteState> {
+class MajorityVotePlugin extends ResolverPlugin<MajorityVoteState> {
   
   constructor(private options: MajorityVoteOptions = {}) {
     this.options = {
@@ -222,7 +222,7 @@ interface CounterState {
 type CounterDeps = 'incrementBy' | 'resetThreshold';
 
 // Implement plugin with type safety
-class CounterPlugin implements ResolverPlugin<CounterState, CounterDeps> {
+class CounterPlugin extends ResolverPlugin<CounterState, CounterDeps> {
   readonly dependencies = ['incrementBy', 'resetThreshold'] as const;
   
   initialize(): CounterState {

@@ -93,7 +93,7 @@ Resolves the final value from the current state.
 ## Example Implementation
 
 ```typescript
-class CounterPlugin implements ResolverPlugin<CounterState> {
+class CounterPlugin extends ResolverPlugin<CounterState> {
   
   initialize(): CounterState {
     return { count: 0 };
@@ -126,7 +126,7 @@ class CounterPlugin implements ResolverPlugin<CounterState> {
 ### Accessing Dependencies
 
 ```typescript
-class PriceCalculator implements ResolverPlugin<PriceState, 'basePrice' | 'taxRate'> {
+class PriceCalculator extends ResolverPlugin<PriceState, 'basePrice' | 'taxRate'> {
   readonly dependencies = ['basePrice', 'taxRate'] as const;
   
   update(
@@ -147,7 +147,7 @@ class PriceCalculator implements ResolverPlugin<PriceState, 'basePrice' | 'taxRa
 ### Optional Dependencies
 
 ```typescript
-class OptionalDepPlugin implements ResolverPlugin<State, 'required' | 'optional?'> {
+class OptionalDepPlugin extends ResolverPlugin<State, 'required' | 'optional?'> {
   readonly dependencies = ['required', 'optional?'] as const;
   
   update(

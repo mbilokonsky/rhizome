@@ -50,7 +50,7 @@ const resolver = new CustomResolver(view, {
 To make a dependency optional, mark it with a `?` suffix:
 
 ```typescript
-class MyPlugin implements ResolverPlugin<MyState, 'required' | 'optional?'> {
+class MyPlugin extends ResolverPlugin<MyState, 'required' | 'optional?'> {
   readonly dependencies = ['required', 'optional?'] as const;
   
   // ...
@@ -62,7 +62,7 @@ class MyPlugin implements ResolverPlugin<MyState, 'required' | 'optional?'> {
 For plugins that need to determine dependencies at runtime, you can implement a custom resolver:
 
 ```typescript
-class DynamicDepsPlugin implements ResolverPlugin<DynamicState> {
+class DynamicDepsPlugin extends ResolverPlugin<DynamicState> {
   
   getDependencies(config: any): string[] {
     // Determine dependencies based on config

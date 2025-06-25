@@ -8,7 +8,7 @@ import { ResolverPlugin } from '@src/views/resolvers/custom-resolvers/plugin';
 // const debug = Debug('rz:test:resolver');
 
 // Mock plugins for testing
-class TestPlugin implements ResolverPlugin<unknown, string> {
+class TestPlugin extends ResolverPlugin<unknown, string> {
   name: string;
   dependencies: readonly string[];
   

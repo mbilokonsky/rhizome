@@ -164,7 +164,7 @@ const resolver = new CustomResolver(view, {
   taxRate: new LastWriteWinsPlugin(),
   
   // Complex plugin with multiple dependencies
-  subtotal: new class implements ResolverPlugin<SubtotalState, 'unitPrice' | 'quantity'> {
+  subtotal: new class extends ResolverPlugin<SubtotalState, 'unitPrice' | 'quantity'> {
     readonly dependencies = ['unitPrice', 'quantity'] as const;
     
     initialize() { return { value: 0 }; }

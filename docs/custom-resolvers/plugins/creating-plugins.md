@@ -11,7 +11,7 @@ A minimal plugin must implement the `ResolverPlugin` interface:
 ```typescript
 import { ResolverPlugin } from '../resolver';
 
-class MyPlugin implements ResolverPlugin<MyState> {
+class MyPlugin extends ResolverPlugin<MyState> {
   
   initialize(): MyState {
     // Return initial state
@@ -40,7 +40,7 @@ class MyPlugin implements ResolverPlugin<MyState> {
 To depend on other properties, specify the dependency types:
 
 ```typescript
-class DiscountedPricePlugin implements ResolverPlugin<DiscountState, 'basePrice' | 'discount'> {
+class DiscountedPricePlugin extends ResolverPlugin<DiscountState, 'basePrice' | 'discount'> {
   readonly dependencies = ['basePrice', 'discount'] as const;
   
   initialize(): DiscountState {

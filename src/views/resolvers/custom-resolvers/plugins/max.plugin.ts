@@ -11,11 +11,12 @@ type MaxPluginState = {
  * 
  * Tracks the maximum numeric value
  */
-export class MaxPlugin<Target extends PropertyID> implements ResolverPlugin<MaxPluginState, Target> {
+export class MaxPlugin<Target extends PropertyID> extends ResolverPlugin<MaxPluginState, Target> {
   name = 'max';
   readonly dependencies: Target[] = [];
 
   constructor(private readonly target?: Target) {
+    super();
     if (target) {
       this.dependencies = [target];
     }
@@ -29,11 +30,8 @@ export class MaxPlugin<Target extends PropertyID> implements ResolverPlugin<MaxP
     currentState: MaxPluginState, 
     newValue?: PropertyTypes,
     _delta?: CollapsedDelta,
-    dependencies?: DependencyStates
   ): MaxPluginState {
-    // const numValue = typeof newValue === 'number' ? newValue : parseFloat(String(newValue));
-    const numValue = (this.target ? dependencies?.[this.target] : newValue) as number;
-    
+    const numValue = newValue as number;
     if (currentState.max === undefined || numValue > currentState.max) {
       return { max: numValue };
     }

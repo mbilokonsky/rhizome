@@ -11,10 +11,11 @@ import {
 } from '@src/views/resolvers/custom-resolvers';
 
 // A simple plugin that depends on other plugins
-class AveragePlugin<Targets extends PropertyID> implements ResolverPlugin<{ initialized: boolean }, Targets> {
+class AveragePlugin<Targets extends PropertyID> extends ResolverPlugin<{ initialized: boolean }, Targets> {
   readonly dependencies: Targets[] = [];
   
   constructor(...targets: Targets[]) {
+    super();
     if (targets.length !== 2) {
       throw new Error('This AveragePlugin requires exactly two targets');
     }
@@ -96,8 +97,8 @@ describe('Multiple Plugins Integration', () => {
     lossless.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
-        .setProperty('entity1', 'name', 'Test Entity', 'test')
-        .setProperty('entity1', 'tags', 'tag1', 'test')
+        .setProperty('entity1', 'name', 'Test Entity', 'test-name')
+        .setProperty('entity1', 'tags', 'tag1', 'test-tags')
         .buildV1()
     );
 

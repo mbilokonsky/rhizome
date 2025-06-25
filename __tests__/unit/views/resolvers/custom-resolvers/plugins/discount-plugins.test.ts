@@ -5,7 +5,7 @@ import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver
 import Debug from 'debug';
 const debug = Debug('rz:test:discount-plugins');
 // Mock plugins for testing
-class DiscountPlugin implements ResolverPlugin<number, never> {
+class DiscountPlugin extends ResolverPlugin<number, never> {
   readonly name = 'discount' as const;
   readonly dependencies = [] as const;
   
@@ -28,7 +28,7 @@ class DiscountPlugin implements ResolverPlugin<number, never> {
   }
 }
 
-class DiscountedPricePlugin implements ResolverPlugin<number | null, 'discount'> {
+class DiscountedPricePlugin extends ResolverPlugin<number | null, 'discount'> {
   readonly name = 'price' as const;
   readonly dependencies = ['discount'] as const;
   

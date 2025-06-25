@@ -291,7 +291,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
 
       // Update the plugin state with the new delta
       const dependencies = this.getDependencyStates(entityState, plugin);
-      entityState[pluginKey] = plugin.update(pluginState, propertyValue, updateDelta, dependencies);
+      entityState[pluginKey] = plugin.applyUpdate(pluginState, propertyValue, updateDelta, dependencies);
       debugState(`Updated entity state for ${entityId}:`, JSON.stringify(entityState[pluginKey]));
     }
     

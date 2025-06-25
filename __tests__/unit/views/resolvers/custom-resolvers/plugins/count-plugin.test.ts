@@ -4,7 +4,7 @@ import { PropertyTypes } from '@src/core/types';
 import type { CollapsedDelta } from '@src/views/lossless';
 import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver-test-helper';
 
-class CountPlugin implements ResolverPlugin<{ count: number }, never> {
+class CountPlugin extends ResolverPlugin<{ count: number }, never> {
   readonly dependencies = [] as const;
   
   initialize() {

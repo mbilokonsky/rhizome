@@ -8,7 +8,7 @@ import {
 import { PropertyTypes } from '@src/core/types';
 
 // A simple plugin for testing lifecycle methods
-class LifecycleTestPlugin implements ResolverPlugin<LifecycleTestState> {
+class LifecycleTestPlugin extends ResolverPlugin<LifecycleTestState> {
   readonly dependencies = [] as const;
   
   private initialState: LifecycleTestState = {

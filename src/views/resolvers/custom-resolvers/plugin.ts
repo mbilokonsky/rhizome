@@ -29,6 +29,40 @@ export abstract class ResolverPlugin<
   dependencies?: readonly D[];
 
   /**
+   * Convenience wrapper to avoid calling update() when there is no new value
+   * @param currentState The current state of the plugin
+   * @param newValue The new value to apply
+   * @param delta The delta that triggered the update
+   * @param dependencies The dependencies of the plugin
+   * @returns The updated state
+   */
+  applyUpdate(
+    currentState: T,
+    newValue?: PropertyTypes,
+    delta?: CollapsedDelta,
+    dependencies?: DependencyStates
+  ): T {
+    if (newValue === undefined) {
+      switch(this.dependencies?.length) {
+        case 0: {
+          // No dependencies, no new value -- nothing to do.
+          return currentState;
+        }
+        case 1: {
+          // Only one dependency, use it as the new value.
+          newValue = dependencies![this.dependencies[0]] as PropertyTypes;
+          break;
+        }
+        default: {
+          // Pass dependencies as is, and leave newValue undefined.
+          break;
+        }
+      }
+    }
+    return this.update(currentState, newValue, delta, dependencies);
+  };
+
+  /**
    * Initialize the state for a property
    */
   abstract initialize(
@@ -38,7 +72,7 @@ export abstract class ResolverPlugin<
   /**
    * Process a new value for the property
    */
-  abstract update(
+  protected abstract update(
     currentState: T,
     newValue?: PropertyTypes,
     delta?: CollapsedDelta,
