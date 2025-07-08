@@ -3,8 +3,6 @@ import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
 import { valueFromDelta } from "../lossless";
 import { EntityRecord, EntityRecordMany } from "@src/core/entity";
-import Debug from 'debug';
-const debug = Debug('rz:test:performance');
 
 export type AggregationType = 'min' | 'max' | 'sum' | 'average' | 'count';
 

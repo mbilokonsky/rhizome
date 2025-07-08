@@ -1,4 +1,7 @@
 import { jsonToAst } from '../src/utils/json-ast/index';
+import { JsonNode } from '../src/utils/json-ast/types';
+import Debug from 'debug';
+const debug = Debug('rz:json-ast');
 
 // Example JSON data
 const exampleJson = {
@@ -34,7 +37,7 @@ debug("Original JSON:", JSON.stringify(exampleJson, null, 2));
 debug("\nAST:", JSON.stringify(ast, null, 2));
 
 // Example of traversing the AST
-function traverse(node: any, indent = 0) {
+function traverse(node: JsonNode, indent = 0) {
   const padding = '  '.repeat(indent);
   const type = node.type.toUpperCase();
   const value = node.value !== undefined ? `: ${JSON.stringify(node.value)}` : '';
@@ -43,7 +46,7 @@ function traverse(node: any, indent = 0) {
   debug(`${padding}${type}${value}${path}`);
   
   if (node.children) {
-    node.children.forEach((child: any) => traverse(child, indent + 2));
+    node.children.forEach((child: JsonNode) => traverse(child, indent + 2));
   }
 }
 
