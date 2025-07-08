@@ -37,7 +37,7 @@ export interface NodeConfig {
   };
   
   /** Additional configuration options */
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface NodeStatus {

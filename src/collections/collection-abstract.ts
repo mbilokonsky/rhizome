@@ -4,10 +4,15 @@ import EventEmitter from "node:events";
 import {Delta} from "../core/delta";
 import {createDelta} from "../core/delta-builder";
 import {Entity, EntityProperties} from "../core/entity";
-import {ResolvedViewOne} from '../views/resolvers/last-write-wins';
 import {RhizomeNode} from "../node";
 import {DomainEntityID} from "../core/types";
+import { ResolvedTimestampedViewOne } from '../views/resolvers/timestamp-resolvers';
 const debug = Debug('rz:abstract-collection');
+
+type CollectionEntity = {
+  id: DomainEntityID;
+  properties: EntityProperties;
+}
 
 export abstract class Collection<View> {
   rhizomeNode?: RhizomeNode;
@@ -21,7 +26,7 @@ export abstract class Collection<View> {
 
   abstract initializeView(): void;
 
-  abstract resolve(id: DomainEntityID): ResolvedViewOne | undefined;
+  abstract resolve(id: DomainEntityID): ResolvedTimestampedViewOne | undefined;
 
   rhizomeConnect(rhizomeNode: RhizomeNode) {
     this.rhizomeNode = rhizomeNode;
@@ -86,8 +91,7 @@ export abstract class Collection<View> {
     if (deltas.length > 1) {
       // We can generate a separate delta describing this transaction
       transactionDelta = createDelta(creator, host)
-        .addPointer('_transaction', transactionId, 'size')
-        .addPointer('size', deltas.length)
+        .declareTransaction(transactionId, deltas.length)
         .buildV1();
 
       // Also need to annotate the deltas with the transactionId
@@ -118,20 +122,25 @@ export abstract class Collection<View> {
   }
 
   getIds(): string[] {
-    if (!this.rhizomeNode) return [];
-    const set = this.rhizomeNode.lossless.referencedAs.get(this.name);
-    if (!set) return [];
-    return Array.from(set.values());
+    if (!this.rhizomeNode) {
+      debug(`No rhizome node connected`)
+      return [];
+    }
+    debug(`Getting ids for collection ${this.name}`)
+    const ids = new Set<string>();
+    for (const [entityId, names] of this.rhizomeNode.lossless.referencedAs.entries()) {
+      if (names.has(this.name)) {
+        ids.add(entityId);
+      }
+    }
+    debug(`Found ${ids.size} ids for collection ${this.name}`);
+    return Array.from(ids.values());
   }
 
-  // THIS PUT SHOULD CORRESOND TO A PARTICULAR MATERIALIZED VIEW...
-  // How can we encode that?
-  // Well, we have a way to do that, we just need the same particular inputs.
-  // We take a resolver as an optional argument.
   async put(
     entityId: DomainEntityID | undefined,
     properties: EntityProperties,
-  ): Promise<ResolvedViewOne> {
+  ): Promise<CollectionEntity> {
     if (!this.rhizomeNode) throw new Error('collection not connecte to rhizome');
 
     // For convenience, we allow setting id via properties.id

@@ -1,8 +1,8 @@
-import { EntityProperties } from "../../core/entity";
 import { Lossless, LosslessViewOne } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
-import { valueFromCollapsedDelta } from "./last-write-wins";
+import { valueFromDelta } from "../lossless";
+import { EntityRecord, EntityRecordMany } from "@src/core/entity";
 
 export type AggregationType = 'min' | 'max' | 'sum' | 'average' | 'count';
 
@@ -27,15 +27,8 @@ export type AggregatedViewOne = {
 
 export type AggregatedViewMany = ViewMany<AggregatedViewOne>;
 
-type ResolvedAggregatedViewOne = {
-  id: DomainEntityID;
-  properties: EntityProperties;
-};
-
-type ResolvedAggregatedViewMany = ViewMany<ResolvedAggregatedViewOne>;
-
 type Accumulator = AggregatedViewMany;
-type Result = ResolvedAggregatedViewMany;
+type Result = EntityRecordMany;
 
 function aggregateValues(values: number[], type: AggregationType): number {
   if (values.length === 0) return 0;
@@ -50,6 +43,8 @@ function aggregateValues(values: number[], type: AggregationType): number {
     case 'average':
       return values.reduce((sum, val) => sum + val, 0) / values.length;
     case 'count':
+      // For count, we want to count all values, including duplicates
+      // So we use the length of the values array directly
       return values.length;
     default:
       throw new Error(`Unknown aggregation type: ${type}`);
@@ -62,12 +57,6 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
     private config: AggregationConfig
   ) {
     super(lossless);
-  }
-
-  initializer(view: LosslessViewOne): Accumulator {
-    return {
-      [view.id]: { id: view.id, properties: {} }
-    };
   }
 
   reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
@@ -87,16 +76,13 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
       }
 
       // Extract numeric values from all deltas for this property
-      const newValues: number[] = [];
-      for (const delta of deltas || []) {
-        const value = valueFromCollapsedDelta(propertyId, delta);
+      for (const delta of deltas) {
+        const value = valueFromDelta(propertyId, delta);
+
         if (typeof value === 'number') {
-          newValues.push(value);
+          acc[cur.id].properties[propertyId].values.push(value);
         }
       }
-
-      // Update the values array (avoiding duplicates by clearing and rebuilding)
-      acc[cur.id].properties[propertyId].values = newValues;
     }
 
     return acc;
@@ -106,7 +92,7 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
     const res: Result = {};
 
     for (const [id, entity] of Object.entries(cur)) {
-      const entityResult: ResolvedAggregatedViewOne = { id, properties: {} };
+      const entityResult: EntityRecord = { id, properties: {} };
 
       for (const [propertyId, aggregatedProp] of Object.entries(entity.properties)) {
         const result = aggregateValues(aggregatedProp.values, aggregatedProp.type);
@@ -121,8 +107,6 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
 
     return res;
   }
-
-
 }
 
 // Convenience classes for common aggregation types

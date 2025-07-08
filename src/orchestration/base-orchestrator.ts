@@ -28,7 +28,7 @@ export abstract class BaseOrchestrator implements NodeOrchestrator {
    * Default implementation does nothing - should be overridden by subclasses
    * that support direct node connections
    */
-  async connectNodes(node1: NodeHandle, node2: NodeHandle): Promise<void> {
+  async connectNodes(_node1: NodeHandle, _node2: NodeHandle): Promise<void> {
     // Default implementation does nothing
     console.warn('connectNodes not implemented for this orchestrator');
   }
@@ -38,7 +38,7 @@ export abstract class BaseOrchestrator implements NodeOrchestrator {
    * Default implementation does nothing - should be overridden by subclasses
    * that support network partitioning
    */
-  async partitionNetwork(partitions: { groups: string[][] }): Promise<void> {
+  async partitionNetwork(_partitions: { groups: string[][] }): Promise<void> {
     // Default implementation does nothing
     console.warn('partitionNetwork not implemented for this orchestrator');
   }
@@ -49,8 +49,8 @@ export abstract class BaseOrchestrator implements NodeOrchestrator {
    * that support resource management
    */
   async setResourceLimits(
-    handle: NodeHandle,
-    limits: Partial<NodeConfig['resources']>
+    _handle: NodeHandle,
+    _limits: Partial<NodeConfig['resources']>
   ): Promise<void> {
     // Default implementation does nothing
     console.warn('setResourceLimits not implemented for this orchestrator');

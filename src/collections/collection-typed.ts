@@ -1,6 +1,7 @@
 import Debug from 'debug';
 import { Collection } from '../collections/collection-abstract';
-import { LastWriteWins, ResolvedViewOne } from '../views/resolvers/last-write-wins';
+import { ResolvedTimestampedViewOne as ResolvedViewOne } from '../views/resolvers/timestamp-resolvers';
+import { TimestampResolver } from '../views/resolvers/timestamp-resolvers'
 import { 
   ObjectSchema, 
   SchemaValidationResult, 
@@ -10,8 +11,9 @@ import {
 } from '../schema/schema';
 import { DefaultSchemaRegistry } from '../schema/schema-registry';
 import { LosslessViewOne } from '../views/lossless';
-import { DomainEntityID, PropertyTypes } from '../core/types';
+import { DomainEntityID } from '../core/types';
 import { EntityProperties } from '../core/entity';
+import { createDelta } from '@src/core';
 
 const debug = Debug('rz:typed-collection');
 
@@ -23,7 +25,7 @@ export class SchemaValidationError extends Error {
 }
 
 export class TypedCollectionImpl<T extends Record<string, unknown>> 
-  extends Collection<LastWriteWins> 
+  extends Collection<TimestampResolver> 
   implements TypedCollection<T> {
   
   schema: ObjectSchema;
@@ -56,7 +58,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
 
   initializeView(): void {
     if (!this.rhizomeNode) throw new Error('not connected to rhizome');
-    this.lossy = new LastWriteWins(this.rhizomeNode.lossless);
+    this.lossy = new TimestampResolver(this.rhizomeNode.lossless);
   }
 
   resolve(id: string): ResolvedViewOne | undefined {
@@ -73,20 +75,14 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const mockLosslessView: LosslessViewOne = {
       id: 'validation-mock',
       referencedAs: [],
-      propertyDeltas: {}
+      propertyDeltas: {},
     };
 
-    // Create mock deltas for each property
     for (const [key, value] of Object.entries(entity)) {
-      if (value !== undefined) {
-        mockLosslessView.propertyDeltas[key] = [{
-          id: 'mock-delta',
-          timeCreated: Date.now(),
-          host: 'validation',
-          creator: 'validation',
-          pointers: [{ [key]: value as PropertyTypes }]
-        }];
-      }
+      mockLosslessView.propertyDeltas[key] = [createDelta('validation', 'validation')
+        .addPointer(key, value as string)
+        .buildV1(),
+      ];
     }
 
     return this.schemaRegistry.validate('validation-mock', this.schema.id, mockLosslessView);
@@ -101,7 +97,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
   getValidatedView(entityId: DomainEntityID): SchemaAppliedView | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
     
-    const losslessView = this.rhizomeNode.lossless.view([entityId])[entityId];
+    const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
     if (!losslessView) return undefined;
 
     return this.apply(losslessView);
@@ -129,9 +125,11 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     entityId: DomainEntityID | undefined,
     properties: EntityProperties,
   ): Promise<ResolvedViewOne> {
-    // Validate against schema if strict validation is enabled
+    // Validate against schema
+    const validationResult = this.validate(properties as T);
+
+    // If strict validation is enabled, throw on validation failure
     if (this.applicationOptions.strictValidation) {
-      const validationResult = this.validate(properties as T);
       if (!validationResult.valid) {
         throw new SchemaValidationError(
           `Schema validation failed: ${validationResult.errors.map(e => e.message).join(', ')}`,
@@ -144,7 +142,6 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const result = await super.put(entityId, properties);
 
     // Log validation warnings if any
-    const validationResult = this.validate(properties as T);
     if (validationResult.warnings.length > 0) {
       debug(`Validation warnings for entity ${entityId}:`, validationResult.warnings);
     }
@@ -172,7 +169,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     for (const entityId of entityIds) {
       if (!this.rhizomeNode) continue;
       
-      const losslessView = this.rhizomeNode.lossless.view([entityId])[entityId];
+      const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
       if (!losslessView) continue;
 
       const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);
@@ -199,13 +196,21 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
 
   // Filter entities by schema validation status
   getValidEntities(): DomainEntityID[] {
-    if (!this.rhizomeNode) return [];
-    
+    if (!this.rhizomeNode) {
+      debug(`No rhizome node connected`)
+      return [];
+    }
+    const losslessView = this.rhizomeNode.lossless.compose(this.getIds());
+    if (!losslessView) {
+      debug(`No lossless view found`)
+      return [];
+    }
+    debug(`getValidEntities, losslessView: ${JSON.stringify(losslessView, null, 2)}`)
+    debug(`Validating ${this.getIds().length} entities`)
     return this.getIds().filter(entityId => {
-      const losslessView = this.rhizomeNode!.lossless.view([entityId])[entityId];
-      if (!losslessView) return false;
-      
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);
+      debug(`Validating entity ${entityId}`)
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView[entityId]);
+      debug(`Validation result for entity ${entityId}: ${JSON.stringify(validationResult)}`)
       return validationResult.valid;
     });
   }
@@ -216,7 +221,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const invalid: Array<{ entityId: DomainEntityID; errors: string[] }> = [];
     
     for (const entityId of this.getIds()) {
-      const losslessView = this.rhizomeNode.lossless.view([entityId])[entityId];
+      const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
       if (!losslessView) continue;
       
       const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);

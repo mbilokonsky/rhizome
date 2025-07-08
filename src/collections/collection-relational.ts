@@ -1,7 +1,8 @@
 import {Collection} from "./collection-abstract";
-import {LastWriteWins, ResolvedViewOne} from "../views/resolvers/last-write-wins";
+import { ResolvedTimestampedViewOne as ResolvedViewOne } from "../views/resolvers/timestamp-resolvers";
+import {TimestampResolver} from "../views/resolvers/timestamp-resolvers";
 
-class RelationalView extends LastWriteWins {
+class RelationalView extends TimestampResolver {
 }
 
 export class RelationalCollection extends Collection<RelationalView> {

@@ -3,19 +3,28 @@
 // into various possible "lossy" views that combine or exclude some information.
 
 import Debug from 'debug';
-import {DeltaFilter, DeltaID} from "../core/delta";
+import {Delta, DeltaFilter, DeltaID} from "../core/delta";
 import {Lossless, LosslessViewOne} from "./lossless";
-import {DomainEntityID} from "../core/types";
+import {DomainEntityID, PropertyID, PropertyTypes, ViewMany} from "../core/types";
 const debug = Debug('rz:lossy');
 
-// We support incremental updates of lossy models.
-export abstract class Lossy<Accumulator, Result> {
-  deltaFilter?: DeltaFilter;
-  accumulator?: Accumulator;
+type PropertyMap = Record<PropertyID, PropertyTypes>;
 
-  abstract initializer(v: LosslessViewOne): Accumulator;
+export type LossyViewOne<T = PropertyMap> = {
+  id: DomainEntityID;
+  properties: T;
+};
+
+export type LossyViewMany<T = PropertyMap> = ViewMany<LossyViewOne<T>>;
+
+// We support incremental updates of lossy models.
+export abstract class Lossy<Accumulator, Result = Accumulator> {
+  deltaFilter?: DeltaFilter;
+  private accumulator?: Accumulator;
+
+  initializer?(): Accumulator;
   abstract reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator;
-  abstract resolver(cur: Accumulator): Result;
+  resolver?(acc: Accumulator, entityIds: DomainEntityID[]): Result;
 
   constructor(
     readonly lossless: Lossless,
@@ -26,50 +35,44 @@ export abstract class Lossy<Accumulator, Result> {
 
       this.ingestUpdate(id, deltaIds);
     });
+    debug(`Lossy view initialized: ${this.constructor.name}`);
   }
 
-  ingestUpdate(id: DomainEntityID, deltaIds: DeltaID[]) {
-    const losslessPartial = this.lossless.viewSpecific(id, deltaIds, this.deltaFilter);
+  ingestUpdate(entityId: DomainEntityID, deltaIds: DeltaID[]) {
+    const combinedFilter = (delta: Delta) => {
+      if (!deltaIds.includes(delta.id)) {
+        return false;
+      }
+      if (!this.deltaFilter) return true;
+      return this.deltaFilter(delta);
+    };
+    const losslessPartial = this.lossless.compose([entityId], combinedFilter);
 
-    if (!losslessPartial) return;
+    if (!losslessPartial) {
+      // This should not happen; this should only be called after the lossless view has been updated
+      console.error(`Lossless view for entity ${entityId} not found`);
+      return;
+    }
 
-    const latest = this.accumulator || this.initializer(losslessPartial);
-    this.accumulator = this.reducer(latest, losslessPartial);
+    const latest = this.accumulator || this.initializer?.() || {} as Accumulator;
+    this.accumulator = this.reducer(latest, losslessPartial[entityId]);
   }
 
-  // Using the lossless view of some given domain entities,
-  // apply a filter to the deltas composing that lossless view,
-  // and then apply a supplied resolver function which receives
-  // the filtered lossless view as input.
   // Resolve the current state of the view
   resolve(entityIds?: DomainEntityID[]): Result | undefined {
+    if (!this.accumulator) {
+      this.accumulator =this.initializer?.() || {} as Accumulator;
+    }
+
     if (!entityIds) {
       entityIds = Array.from(this.lossless.domainEntities.keys());
     }
 
-    // If we don't have an accumulator, build it from the lossless view
-    if (!this.accumulator) {
-      this.accumulator = {} as Accumulator;
-      
-      // Use the general view method to get the full view
-      const fullView = this.lossless.view(entityIds, this.deltaFilter);
-      
-      // Build the accumulator by reducing each entity's view
-      for (const entityId of entityIds) {
-        const losslessViewOne = fullView[entityId];
-        if (losslessViewOne) {
-          if (!this.accumulator) {
-            this.accumulator = this.initializer(losslessViewOne);
-          } else {
-            this.accumulator = this.reducer(this.accumulator, losslessViewOne);
-          }
-        }
-      }
+    if (!this.resolver) {
+      throw new Error(`Resolver not implemented for ${this.constructor.name}`)
     }
 
-    if (!this.accumulator) return undefined;
-
-    return this.resolver(this.accumulator);
+    return this.resolver(this.accumulator, entityIds);
   }
 }
 

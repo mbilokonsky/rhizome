@@ -198,9 +198,6 @@ export class SchemaBuilder {
   }
 }
 
-// Common schema patterns have been moved to __tests__/test-utils/schemas.ts
-// since they are only used for testing purposes.
-
 /**
  * Context for tracking resolution state during nested object resolution
  * Prevents circular references and manages depth tracking

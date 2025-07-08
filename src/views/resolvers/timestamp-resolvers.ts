@@ -1,8 +1,19 @@
 import { EntityProperties } from "../../core/entity";
-import { Lossless, LosslessViewOne } from "../lossless";
+import { Lossless, CollapsedDelta, valueFromDelta, LosslessViewOne } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany } from "../../core/types";
-import { valueFromCollapsedDelta } from "./last-write-wins";
+import Debug from 'debug';
+
+const debug = Debug('rz:views:resolvers:timestamp-resolvers');
+
+export type TimestampedProperty = {
+  value: PropertyTypes,
+  timeUpdated: Timestamp
+};
+
+export type TimestampedProperties = {
+  [key: PropertyID]: TimestampedProperty
+};
 
 export type TieBreakingStrategy = 'creator-id' | 'delta-id' | 'host-id' | 'lexicographic';
 
@@ -72,12 +83,6 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
     super(lossless);
   }
 
-  initializer(view: LosslessViewOne): Accumulator {
-    return {
-      [view.id]: { id: view.id, properties: {} }
-    };
-  }
-
   reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
     if (!acc[cur.id]) {
       acc[cur.id] = { id: cur.id, properties: {} };
@@ -86,8 +91,10 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
     for (const [key, deltas] of Object.entries(cur.propertyDeltas)) {
       let bestProperty: TimestampedPropertyWithTieBreaking | undefined;
 
-      for (const delta of deltas || []) {
-        const value = valueFromCollapsedDelta(key, delta);
+      for (const delta of deltas) {
+        const value = valueFromDelta(key, delta);
+        debug(`delta: ${JSON.stringify(delta)}`);
+        debug(`valueFromDelta(${key}) = ${value}`);
         if (value === undefined) continue;
 
         const property: TimestampedPropertyWithTieBreaking = {
@@ -152,4 +159,32 @@ export class LexicographicTimestampResolver extends TimestampResolver {
   constructor(lossless: Lossless) {
     super(lossless, 'lexicographic');
   }
+}
+
+// Resolve a value for an entity by last write wins
+export function latestFromCollapsedDeltas(
+  key: string,
+  deltas?: CollapsedDelta[]
+): {
+  delta?: CollapsedDelta,
+  value?: PropertyTypes,
+  timeUpdated?: number
+} | undefined {
+  const res: {
+    delta?: CollapsedDelta,
+    value?: PropertyTypes,
+    timeUpdated?: number
+  } = {};
+  res.timeUpdated = 0;
+
+  for (const delta of deltas || []) {
+    const value = valueFromDelta(key, delta);
+    if (value === undefined) continue;
+    if (res.timeUpdated && delta.timeCreated < res.timeUpdated) continue;
+    res.delta = delta;
+    res.value = value;
+    res.timeUpdated = delta.timeCreated;
+  }
+
+  return res;
 }

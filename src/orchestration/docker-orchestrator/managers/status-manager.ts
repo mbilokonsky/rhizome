@@ -1,4 +1,4 @@
-import Docker, { Container } from 'dockerode';
+import { Container } from 'dockerode';
 import { IStatusManager } from './interfaces';
 import { NodeHandle, NodeStatus } from '../../types';
 import Debug from 'debug';

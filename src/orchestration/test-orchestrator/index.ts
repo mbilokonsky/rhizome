@@ -169,13 +169,11 @@ export class TestOrchestrator extends BaseOrchestrator {
 
     // In a real implementation, we would connect the nodes here
     // For testing, we'll just log the connection attempt
-    console.log(`Connecting nodes ${node1.id} and ${node2.id}`);
   }
 
   async partitionNetwork(partitions: NetworkPartition): Promise<void> {
     // In a real implementation, we would create network partitions
     // For testing, we'll just log the partition attempt
-    console.log('Creating network partitions:', partitions);
   }
 
   async setResourceLimits(
@@ -183,7 +181,6 @@ export class TestOrchestrator extends BaseOrchestrator {
     limits: Partial<NodeConfig['resources']>
   ): Promise<void> {
     // In-memory nodes don't have real resource limits
-    console.log(`Setting resource limits for ${handle.id}:`, limits);
   }
 
   /**

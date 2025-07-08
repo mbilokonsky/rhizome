@@ -2,9 +2,9 @@ import jsonLogic from 'json-logic-js';
 const { apply, is_logic } = jsonLogic;
 import Debug from 'debug';
 import { SchemaRegistry, SchemaID, ObjectSchema } from '../schema/schema';
-import { Lossless, LosslessViewOne, LosslessViewMany, CollapsedDelta } from '../views/lossless';
+import { Lossless, LosslessViewMany, LosslessViewOne, valueFromDelta } from '../views/lossless';
 import { DomainEntityID } from '../core/types';
-import { DeltaFilter } from '../core/delta';
+import { Delta, DeltaFilter } from '../core/delta';
 
 const debug = Debug('rz:query');
 
@@ -269,7 +269,7 @@ export class QueryEngine {
         case 'primitive': {
           // Use last-write-wins for primitives
           const deltasSorted = deltas.sort((a, b) => b.timeCreated - a.timeCreated);
-          for (let delta of deltasSorted) {
+          for (const delta of deltasSorted) {
             const primitiveValue = this.extractPrimitiveValue(delta, propertyId);
             if (primitiveValue !== null) {
               obj[propertyId] = primitiveValue;
@@ -290,7 +290,7 @@ export class QueryEngine {
         case 'reference': {
           // For references, include the target IDs
           const refValues = deltas
-            .map(delta => this.extractReferenceValue(delta, propertyId))
+            .map(delta => this.extractPrimitiveValue(delta, propertyId))
             .filter(value => value !== null);
           obj[propertyId] = refValues;
           break;
@@ -308,28 +308,8 @@ export class QueryEngine {
   /**
    * Extract primitive value from a delta for a given property
    */
-  private extractPrimitiveValue(delta: CollapsedDelta, propertyId: string): unknown {
-    // Look for the value in collapsed pointers
-    // CollapsedPointer is {[key: PropertyID]: PropertyTypes}
-    for (const pointer of delta.pointers) {
-      if (pointer[propertyId] !== undefined) {
-        return pointer[propertyId];
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Extract reference value (target ID) from a delta for a given property
-   */
-  private extractReferenceValue(delta: CollapsedDelta, _propertyId: string): string | null {
-    // For references, we want the value pointer that contains the reference ID
-    for (const pointer of delta.pointers) {
-      if (pointer.value !== undefined && typeof pointer.value === 'string') {
-        return pointer.value;
-      }
-    }
-    return null;
+  private extractPrimitiveValue(delta: Delta, propertyId: string): unknown {
+    return valueFromDelta(propertyId, delta);
   }
 
   /**
