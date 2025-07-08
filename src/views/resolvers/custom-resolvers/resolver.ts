@@ -1,9 +1,10 @@
-import { CollapsedDelta, Lossless, LosslessViewOne } from "../../lossless";
+import { Lossless, LosslessViewOne } from "../../lossless";
 import { Lossy } from '../../lossy';
 import { DomainEntityID, PropertyID, PropertyTypes } from "../../../core/types";
 import { ResolverPlugin, DependencyStates } from "./plugin";
 import { EntityRecord } from "@src/core/entity";
 import Debug from 'debug';
+import { Delta } from "@src/core";
 
 const debug = Debug('rz:custom-resolver');
 const debugState = Debug('rz:custom-resolver:state');
@@ -29,7 +30,7 @@ type Result = Record<DomainEntityID, EntityRecord>;
  * @template D - The type of the plugin's dependencies (defaults to PropertyID)
  */
 type PluginMap = {
-  [P in PropertyID]: ResolverPlugin<unknown, PropertyID>;
+  [P in PropertyID]: ResolverPlugin<unknown>;
 };
 
 /**
@@ -85,7 +86,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     this.dependencyGraph.forEach((deps, plugin) => {
       graphLog[plugin] = Array.from(deps);
     });
-    debug(`Dependency graph: ${JSON.stringify(graphLog, null, 2)}`);
+    debug(`Dependency graph: ${JSON.stringify(graphLog)}`);
   }
     
 
@@ -99,25 +100,15 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     // Initialize the graph with all plugins
     Object.keys(this.config).forEach(pluginKey => {
       this.dependencyGraph.set(pluginKey, new Set());
-      debug(`Added plugin node: ${pluginKey}`);
     });
 
-    debug('Processing plugin dependencies...');
     // Add edges based on dependencies
     Object.entries(this.config).forEach(([pluginKey, plugin]) => {
-      const pluginId = plugin.name || pluginKey;
       const deps = plugin.dependencies || [];
-      
-      if (deps.length === 0) {
-        debug(`Plugin ${pluginId} has no dependencies`);
-      } else {
-        debug(`Plugin ${pluginId} depends on: ${deps.join(', ')}`);
-      }
 
       deps.forEach((depId: string) => {
         // This dependency may have an alias in our current config
         const depKey = this.pluginKeyFromBasename(depId);
-        debug(`Processing dependency ${depKey} for plugin ${pluginKey}`);
         
         if (!this.config[depKey]) {
           // TODO: This could still be a property, not a plugin
@@ -136,7 +127,6 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     });
     
     debug('Dependency graph construction complete');
-    debug(`Config: ${JSON.stringify(this.config, null, 2)}`);
     this.logGraph();
   }
 
@@ -211,19 +201,26 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     for (const depKey of this.executionOrder) {
       if (depKey === pluginKey) continue;
       const depPlugin = this.config[depKey];
-      if (depPlugin) {
-        if (!entityPluginStates[depKey]) {
-          dependencyStates[depKey] = depPlugin.initialize(dependencyStates);
-          entityPluginStates[depKey] = dependencyStates[depKey];
-        }
-        dependencyStates[depKey] = depPlugin.resolve(entityPluginStates[depKey], dependencyStates);
+      if (!depPlugin) continue;
+      if (!entityPluginStates[depKey]) {
+        dependencyStates[depKey] = depPlugin.initialize(dependencyStates);
+        entityPluginStates[depKey] = dependencyStates[depKey];
       }
+      dependencyStates[depKey] = depPlugin.resolve(entityPluginStates[depKey], dependencyStates);
+      
     }
+
+    // We should only include the dependencies for this plugin
+    Object.keys(dependencyStates).forEach(key => {
+      if (!plugin.dependencies?.includes(key)) {
+        delete dependencyStates[key];
+      }
+    });
 
     return dependencyStates;
   }
 
-  private initializePlugins(acc: Accumulator, entityId: DomainEntityID) {
+  private getEntityState(acc: Accumulator, entityId: DomainEntityID) {
     if (!acc[entityId]) {
       acc[entityId] = {};
     }
@@ -241,7 +238,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
       entityState[pluginKey] = entityState[pluginKey] ?? plugin.initialize(dependencies);
     }
 
-    return { entityState };
+    return entityState;
   }
   
   /**
@@ -251,46 +248,68 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     debug(`Processing deltas for entity: ${entityId}`);
     debug('Property deltas:', JSON.stringify(propertyDeltas));
 
-    const { entityState } = this.initializePlugins(acc, entityId);
+    const entityState = this.getEntityState(acc, entityId);
+
+    type PropertyRecord = {
+      delta: Delta;
+      value: PropertyTypes;
+    }
+
+    // First pass through deltas to see if there are any duplicate property values
+    const deltaPropertyRecords : Record<PropertyID, PropertyRecord> = {};
+    for (const [propertyId, deltas] of Object.entries(propertyDeltas)) {
+      for (const delta of deltas) {
+        // Iterate through the pointers; throw an error if a duplicate key is found
+        for (const pointer of delta.pointers.filter(p => p.localContext === propertyId)) {
+          const deltaPropertyValue = deltaPropertyRecords[propertyId];
+          if (deltaPropertyValue) {
+            // It's possible that there are multiple deltas in this set with the same property ID.
+            // That can only happen if they are part of a transaction. Otherwise this function is
+            // only called once per delta, per entity affected.
+            // TODO: More flexible/robust error handling protocols?
+            // Some views might be more tolerant of errors than others.
+            debug(`propertyDeltas: ${JSON.stringify(propertyDeltas, null, 2)}`);
+            throw new Error(`Delta ${delta.id}: '${propertyId}' already has value '${deltaPropertyValue}'`);
+          }
+          deltaPropertyRecords[propertyId] = {
+            delta,
+            value: pointer.target
+          };
+        }
+      }
+    }
+
+    debug('Delta property records:', JSON.stringify(deltaPropertyRecords));
 
     // Now let's go through each plugin in order. 
     for (const pluginId of this.executionOrder) {
       const pluginKey = this.pluginKeyFromBasename(pluginId);
       const plugin = this.config[pluginKey];
       if (!plugin) throw new Error(`Plugin for property ${pluginId} not found`);
-
-      debug(`Processing plugin: ${pluginId} (key: ${pluginKey})`);
-
       const pluginState = entityState[pluginKey];
 
-      const deltaPropertyValues : Record<PropertyID, PropertyTypes> = {};
+      debug(`Processing plugin: ${pluginId} (key: ${pluginKey})`);
+      
+      // If there's an updated entity property matching the plugin key, 
+      // pass it to plugin.applyUpdate as the new property value.
       let propertyValue : PropertyTypes | undefined;
-      let updateDelta : CollapsedDelta | undefined;
-      for (const [propertyId, deltas] of Object.entries(propertyDeltas)) {
-        for (const delta of deltas) {
-          // Iterate through the pointers; throw an error if a duplicate key is found
-          for (const pointer of delta.pointers) {
-            if (deltaPropertyValues[propertyId]) {
-              // It's possible that there are multiple deltas in this set with the same property ID.
-              // That can only happen if they are part of a transaction. Otherwise this function is
-              // only called once per delta, per entity affected.
-              // TODO: More flexible/robust error handling protocols?
-              // Some views might be more tolerant of errors than others.
-              throw new Error(`Duplicate property ID ${propertyId} found in delta ${delta.id}`);
-            }
-            deltaPropertyValues[propertyId] = pointer[propertyId];
-            // If there's an updated entity property matching the plugin key, 
-            // pass it to the plugin update as the new property value.
-            if (propertyId === pluginKey) {
-              propertyValue = pointer[propertyId];
-              updateDelta = delta;
-            }
+      let updateDelta : Delta | undefined;
+      for (const [propertyId, record] of Object.entries(deltaPropertyRecords)) {
+        if (propertyId === pluginKey) {
+          if (propertyValue !== undefined) {
+            throw new Error(`Delta ${record.delta.id}: '${propertyId}' already has value '${propertyValue}'`);
           }
+          debug(`Found delta for plugin ${pluginKey}: ${JSON.stringify(record)}`);
+          propertyValue = record.value;
+          updateDelta = record.delta;
         }
       }
 
       // Update the plugin state with the new delta
+      debug(`Getting dependency states for plugin ${pluginKey}`)
+      // TODO: There is some redundancy in calling the dependency resolvers. They can be cached/memoized.
       const dependencies = this.getDependencyStates(entityState, pluginKey);
+      debug(`Updating plugin ${pluginKey} with value ${JSON.stringify(propertyValue)}, dependencies: ${JSON.stringify(dependencies)}`)
       entityState[pluginKey] = plugin.applyUpdate(pluginState, propertyValue, updateDelta, dependencies);
       debugState(`Updated state for entity ${entityId} plugin ${pluginKey}:`, 
         JSON.stringify(entityState[pluginKey]));
@@ -306,7 +325,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
     for (const entityId in acc) {
       if (!entityIds.includes(entityId)) continue;
 
-      this.initializePlugins(acc, entityId);
+      this.getEntityState(acc, entityId);
     
       result[entityId] = {
         id: entityId,
@@ -324,10 +343,12 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
         debug(`State for ${pluginKey}:`, JSON.stringify(state));
 
         const resolvedValue = plugin.resolve(state, dependencies);
-        if (resolvedValue === undefined) throw new Error(`Resolved value for property ${pluginKey} is undefined`)
+        //if (resolvedValue === undefined) throw new Error(`Resolved value for property ${pluginKey} is undefined`)
         
-        debug(`Resolved value for ${pluginKey}:`, resolvedValue);
-        result[entityId].properties[pluginKey] = resolvedValue;
+        if (resolvedValue !== undefined) {
+          debug(`Resolved value for ${pluginKey}:`, resolvedValue);
+          result[entityId].properties[pluginKey] = resolvedValue;
+        }
       }
     }
 

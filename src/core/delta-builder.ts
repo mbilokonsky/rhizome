@@ -2,6 +2,7 @@ import { DeltaV1, DeltaV2 } from './delta';
 import { randomUUID } from 'crypto';
 import { PropertyTypes } from './types';
 import { PointersV2 } from './delta';
+import { DeltaNetworkImageV1, DeltaNetworkImageV2 } from './delta';
 import Debug from 'debug';
 
 const debug = Debug('rz:delta-builder');
@@ -16,6 +17,7 @@ export class DeltaBuilder {
   private host: string;
   private creator: string;
   private pointers: PointersV2 = {};
+  private references: Record<string, string | null> = {};
 
   /**
    * Create a new DeltaBuilder instance
@@ -96,7 +98,7 @@ export class DeltaBuilder {
    * ! Note that the way we are doing this is awkward/problematic for deltas that set multiple properties.
    * ! entityLabel and property each need to be unique within a given delta
    */
-  setProperty(entityId: string, property: string, value: string | number | boolean | null, entityLabel = "entity"): this {
+  setProperty(entityId: string, property: string, value: PropertyTypes, entityLabel = "entity"): this {
     this.addPointer(entityLabel, entityId, property)
     this.addPointer(property, value);
     return this;
@@ -121,6 +123,37 @@ export class DeltaBuilder {
     }
     
     return this;
+  }
+
+  reference(entityId: string, entityLabel: string): this {
+    if (this.references[entityLabel]) {
+      debug(`Reference for '${entityLabel}' already exists with different value: ${this.references[entityLabel]} !== ${entityId}`);
+      throw new Error(`Reference for ${entityLabel} already exists with different value`);
+    }
+    this.references[entityLabel] = entityId;
+    return this;
+  }
+
+  static fromNetworkImage(delta: DeltaNetworkImageV1 | DeltaNetworkImageV2): DeltaBuilder {
+    const builder = new DeltaBuilder(delta.creator, delta.host)
+      .withId(delta.id)
+      .withTimestamp(delta.timeCreated);
+    if (Array.isArray(delta.pointers)) {
+      for (const pointer of delta.pointers) {
+        builder.addPointer(pointer.localContext, pointer.target, pointer.targetContext);
+      }
+    } else {
+      for (const [localContext, target] of Object.entries(delta.pointers)) {
+        if (typeof target === 'object') {
+          const [[targetContext, targetValue]] = Object.entries(target!);
+          builder.addPointer(localContext, targetValue, targetContext);
+        } else {
+          builder.addPointer(localContext, target as PropertyTypes);
+        }
+      }
+    }
+    
+    return builder;
   }
 
   /**

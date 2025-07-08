@@ -40,7 +40,7 @@ class MyPlugin extends ResolverPlugin<MyState> {
 To depend on other properties, specify the dependency types:
 
 ```typescript
-class DiscountedPricePlugin extends ResolverPlugin<DiscountState, 'basePrice' | 'discount'> {
+class DiscountedPricePlugin extends ResolverPlugin<DiscountState> {
   readonly dependencies = ['basePrice', 'discount'] as const;
   
   initialize(): DiscountState {

@@ -1,7 +1,10 @@
 import { EntityProperties } from "../../core/entity";
-import { Lossless, LosslessViewOne, CollapsedDelta, valueFromCollapsedDelta } from "../lossless";
+import { Lossless, CollapsedDelta, valueFromDelta, LosslessViewOne } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany } from "../../core/types";
+import Debug from 'debug';
+
+const debug = Debug('rz:views:resolvers:timestamp-resolvers');
 
 export type TimestampedProperty = {
   value: PropertyTypes,
@@ -88,8 +91,10 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
     for (const [key, deltas] of Object.entries(cur.propertyDeltas)) {
       let bestProperty: TimestampedPropertyWithTieBreaking | undefined;
 
-      for (const delta of deltas || []) {
-        const value = valueFromCollapsedDelta(key, delta);
+      for (const delta of deltas) {
+        const value = valueFromDelta(key, delta);
+        debug(`delta: ${JSON.stringify(delta)}`);
+        debug(`valueFromDelta(${key}) = ${value}`);
         if (value === undefined) continue;
 
         const property: TimestampedPropertyWithTieBreaking = {
@@ -162,18 +167,18 @@ export function latestFromCollapsedDeltas(
   deltas?: CollapsedDelta[]
 ): {
   delta?: CollapsedDelta,
-  value?: string | number,
+  value?: PropertyTypes,
   timeUpdated?: number
 } | undefined {
   const res: {
     delta?: CollapsedDelta,
-    value?: string | number,
+    value?: PropertyTypes,
     timeUpdated?: number
   } = {};
   res.timeUpdated = 0;
 
   for (const delta of deltas || []) {
-    const value = valueFromCollapsedDelta(key, delta);
+    const value = valueFromDelta(key, delta);
     if (value === undefined) continue;
     if (res.timeUpdated && delta.timeCreated < res.timeUpdated) continue;
     res.delta = delta;

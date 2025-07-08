@@ -47,7 +47,6 @@ export abstract class Lossy<Accumulator, Result = Accumulator> {
       return this.deltaFilter(delta);
     };
     const losslessPartial = this.lossless.compose([entityId], combinedFilter);
-    debug(`Lossless partial for entity ${entityId}:`, JSON.stringify(losslessPartial));
 
     if (!losslessPartial) {
       // This should not happen; this should only be called after the lossless view has been updated

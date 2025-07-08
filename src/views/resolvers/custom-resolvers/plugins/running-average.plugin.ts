@@ -12,7 +12,7 @@ type RunningAverageState = {
  * 
  * Tracks the running average of numeric values
  */
-export class RunningAveragePlugin extends ResolverPlugin<RunningAverageState, never> {
+export class RunningAveragePlugin extends ResolverPlugin<RunningAverageState> {
   readonly dependencies = [] as const;
 
   initialize(): RunningAverageState {

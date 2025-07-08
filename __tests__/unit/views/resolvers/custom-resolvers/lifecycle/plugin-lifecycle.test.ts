@@ -6,6 +6,9 @@ import {
   DependencyStates 
 } from '@src/views/resolvers/custom-resolvers';
 import { PropertyTypes } from '@src/core/types';
+import Debug from 'debug';
+
+const debug = Debug('rz:plugin-lifecycle');
 
 // A simple plugin for testing lifecycle methods
 class LifecycleTestPlugin extends ResolverPlugin<LifecycleTestState> {
@@ -56,22 +59,23 @@ describe('Plugin Lifecycle', () => {
   });
 
   test('should call initialize, update, and resolve in order', () => {
-    // Add some data
-    lossless.ingestDelta(
-      createDelta('user1', 'host1')
-        .withTimestamp(1000)
-        .setProperty('test1', 'test', 'value1', 'test')
-        .buildV1()
-    );
-
     const resolver = new CustomResolver(lossless, {
       test: new LifecycleTestPlugin()
     });
 
-    const results = resolver.resolve() || [];
-    expect(Array.isArray(results)).toBe(true);
+    // Add some data
+    lossless.ingestDelta(
+      createDelta('user1', 'host1')
+        .withTimestamp(1000)
+        .setProperty('test1', 'test', 'value1')
+        .buildV1()
+    );
+
+    const results = resolver.resolve();
+    expect(results).toBeDefined();
+    debug(`Results: ${JSON.stringify(results, null, 2)}`)
     
-    const entity = results.find(r => r.id === 'test1');
+    const entity = results!['test1']
     expect(entity).toBeDefined();
     
     // Verify all lifecycle methods were called in the correct order
@@ -88,11 +92,15 @@ describe('Plugin Lifecycle', () => {
   });
 
   test('should handle multiple updates correctly', () => {
+    const resolver = new CustomResolver(lossless, {
+      test: new LifecycleTestPlugin()
+    });
+
     // First update
     lossless.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
-        .setProperty('test2', 'test', 'value1', 'test')
+        .setProperty('test2', 'test', 'value1')
         .buildV1()
     );
 
@@ -100,18 +108,14 @@ describe('Plugin Lifecycle', () => {
     lossless.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(2000)
-        .setProperty('test2', 'test', 'value2', 'test')
+        .setProperty('test2', 'test', 'value2')
         .buildV1()
     );
 
-    const resolver = new CustomResolver(lossless, {
-      test: new LifecycleTestPlugin()
-    });
-
-    const results = resolver.resolve() || [];
-    expect(Array.isArray(results)).toBe(true);
+    const results = resolver.resolve();
+    expect(results).toBeDefined();
     
-    const entity = results.find(r => r.id === 'test2');
+    const entity = results!['test2'];
     expect(entity).toBeDefined();
     
     // Verify state after multiple updates
@@ -133,7 +137,7 @@ describe('Plugin Lifecycle', () => {
     });
 
     const results = resolver.resolve();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results).toHaveLength(0);
+    expect(results).toBeDefined();
+    expect(results).toMatchObject({});
   });
 });

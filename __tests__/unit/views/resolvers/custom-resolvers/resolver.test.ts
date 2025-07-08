@@ -8,11 +8,12 @@ import { ResolverPlugin } from '@src/views/resolvers/custom-resolvers/plugin';
 // const debug = Debug('rz:test:resolver');
 
 // Mock plugins for testing
-class TestPlugin extends ResolverPlugin<unknown, string> {
+class TestPlugin extends ResolverPlugin<unknown> {
   name: string;
   dependencies: readonly string[];
   
   constructor(name: string, dependencies: string[] = []) {
+    super();
     this.name = name;
     this.dependencies = dependencies;
   }
@@ -70,11 +71,11 @@ describe('CustomResolver', () => {
       const graph = resolver.dependencyGraph;
       
       // Assert
-      expect(graph.get('a')).toBeDefined();
-      expect(graph.get('b')).toBeDefined();
+      expect(graph.get('plugin:a')).toBeDefined();
+      expect(graph.get('plugin:b')).toBeDefined();
       
       // Both 'plugin:b' and 'another:b' should be in the graph as 'b'
-      expect(Array.from(graph.get('a') || [])).toContain('b');
+      expect(Array.from(graph.get('plugin:a') || [])).toContain('plugin:b');
     });
 
     test('should throw error for missing dependency', () => {

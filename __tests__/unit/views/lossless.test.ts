@@ -47,11 +47,11 @@ describe('Lossless', () => {
             creator: "a",
             host: "h",
             pointers: [
-              {actor: "keanu"},
-              {role: "neo"},
-              {film: "the_matrix"},
-              {base_salary: 1000000},
-              {salary_currency: "usd"},
+              {localContext: "actor", target: "keanu", targetContext: "roles"},
+              {localContext: "role", target: "neo", targetContext: "actor"},
+              {localContext: "film", target: "the_matrix", targetContext: "cast"},
+              {localContext: "base_salary", target: 1000000},
+              {localContext: "salary_currency", target: "usd"},
             ],
           }],
         },
@@ -63,11 +63,11 @@ describe('Lossless', () => {
             creator: "a",
             host: "h",
             pointers: [
-              {actor: "keanu"},
-              {role: "neo"},
-              {film: "the_matrix"},
-              {base_salary: 1000000},
-              {salary_currency: "usd"},
+              {localContext: "actor", target: "keanu", targetContext: "roles"},
+              {localContext: "role", target: "neo", targetContext: "actor"},
+              {localContext: "film", target: "the_matrix", targetContext: "cast"},
+              {localContext: "base_salary", target: 1000000},
+              {localContext: "salary_currency", target: "usd"},
             ],
           }],
         },
@@ -79,11 +79,11 @@ describe('Lossless', () => {
             creator: "a",
             host: "h",
             pointers: [
-              {actor: "keanu"},
-              {role: "neo"},
-              {film: "the_matrix"},
-              {base_salary: 1000000},
-              {salary_currency: "usd"},
+              {localContext: "actor", target: "keanu", targetContext: "roles"},
+              {localContext: "role", target: "neo", targetContext: "actor"},
+              {localContext: "film", target: "the_matrix", targetContext: "cast"},
+              {localContext: "base_salary", target: 1000000},
+              {localContext: "salary_currency", target: "usd"},
             ],
           }],
         },
@@ -112,11 +112,11 @@ describe('Lossless', () => {
             creator: "a",
             host: "h",
             pointers: [
-              {actor: "keanu"},
-              {role: "neo"},
-              {film: "the_matrix"},
-              {base_salary: 1000000},
-              {salary_currency: "usd"},
+              {localContext: "actor", target: "keanu", targetContext: "roles"},
+              {localContext: "role", target: "neo", targetContext: "actor"},
+              {localContext: "film", target: "the_matrix", targetContext: "cast"},
+              {localContext: "base_salary", target: 1000000},
+              {localContext: "salary_currency", target: "usd"},
             ],
           }],
         },
@@ -128,11 +128,11 @@ describe('Lossless', () => {
             creator: "a",
             host: "h",
             pointers: [
-              {actor: "keanu"},
-              {role: "neo"},
-              {film: "the_matrix"},
-              {base_salary: 1000000},
-              {salary_currency: "usd"},
+              {localContext: "actor", target: "keanu", targetContext: "roles"},
+              {localContext: "role", target: "neo", targetContext: "actor"},
+              {localContext: "film", target: "the_matrix", targetContext: "cast"},
+              {localContext: "base_salary", target: 1000000},
+              {localContext: "salary_currency", target: "usd"},
             ],
           }],
         },
@@ -144,11 +144,11 @@ describe('Lossless', () => {
             creator: "a",
             host: "h",
             pointers: [
-              {actor: "keanu"},
-              {role: "neo"},
-              {film: "the_matrix"},
-              {base_salary: 1000000},
-              {salary_currency: "usd"},
+              {localContext: "actor", target: "keanu", targetContext: "roles"},
+              {localContext: "role", target: "neo", targetContext: "actor"},
+              {localContext: "film", target: "the_matrix", targetContext: "cast"},
+              {localContext: "base_salary", target: 1000000},
+              {localContext: "salary_currency", target: "usd"},
             ],
           }],
         },
@@ -163,7 +163,7 @@ describe('Lossless', () => {
       // First delta
       lossless.ingestDelta(
         createDelta('A', 'H')
-          .addPointer('1', 'ace', 'value')
+          .setProperty('ace', 'value', '1', 'ace')
           .buildV1()
       );
 
@@ -171,25 +171,28 @@ describe('Lossless', () => {
       lossless.ingestDelta(
         createDelta('B', 'H')
           // 10 11j 12q 13k 14a
-          .addPointer('14', 'ace', 'value')
+          // .addPointer('14', 'ace', 'value')
+          .setProperty('ace', 'value', '14', 'ace')
           .buildV1()
       );
 
       expect(lossless.compose()).toMatchObject({
         ace: {
-          referencedAs: ["1", "14"],
+          referencedAs: ["ace"],
           propertyDeltas: {
             value: [{
               creator: 'A',
               host: 'H',
               pointers: [
-                {"1": "ace"},
+                {localContext: "ace", target: "ace", targetContext: "value"},
+                {localContext: "value", target: "1"},
               ]
             }, {
               creator: 'B',
               host: 'H',
               pointers: [
-                {"14": "ace"},
+                {localContext: "ace", target: "ace", targetContext: "value"},
+                {localContext: "value", target: "14"},
               ]
             }],
           }
@@ -204,13 +207,14 @@ describe('Lossless', () => {
 
       expect(lossless.compose(undefined, filter)).toMatchObject({
         ace: {
-          referencedAs: ["1"],
+          referencedAs: ["ace"],
           propertyDeltas: {
             value: [{
               creator: 'A',
               host: 'H',
               pointers: [
-                {"1": "ace"},
+                {localContext: "ace", target: "ace", targetContext: "value"},
+                {localContext: "value", target: "1"},
               ]
             }]
           }
@@ -219,13 +223,14 @@ describe('Lossless', () => {
 
       expect(lossless.compose(["ace"], filter)).toMatchObject({
         ace: {
-          referencedAs: ["1"],
+          referencedAs: ["ace"],
           propertyDeltas: {
             value: [{
               creator: 'A',
               host: 'H',
               pointers: [
-                {"1": "ace"},
+                {localContext: "ace", target: "ace", targetContext: "value"},
+                {localContext: "value", target: "1"},
               ]
             }]
           }

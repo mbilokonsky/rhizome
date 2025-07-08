@@ -4,7 +4,7 @@ import { PropertyTypes } from '@src/core/types';
 import type { CollapsedDelta } from '@src/views/lossless';
 import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver-test-helper';
 
-class CountPlugin extends ResolverPlugin<{ count: number }, never> {
+class CountPlugin extends ResolverPlugin<{ count: number }> {
   readonly dependencies = [] as const;
   
   initialize() {
@@ -33,7 +33,7 @@ describe('CountPlugin', () => {
     // Arrange & Act
     const entityId = 'counter1';
     
-    await testResolverWithPlugins({
+    const result = await testResolverWithPlugins({
       entityId,
       plugins: {
         count: new CountPlugin()
@@ -51,13 +51,11 @@ describe('CountPlugin', () => {
           .withTimestamp(3000)
           .setProperty(entityId, 'count', 'value3', 'test')
           .buildV1()
-      ],
-      expectedResult: (result) => {
-        // Assert
-        expect(result).toBeDefined();
-        expect(result.properties.count).toBe(3);
-      }
-    });
+      ]});
+    
+    // Assert
+    expect(result).toBeDefined();
+    expect(result.properties.count).toBe(3);
   });
 
   test('should handle multiple entities independently', async () => {
@@ -81,29 +79,33 @@ describe('CountPlugin', () => {
     ];
 
     // Act & Assert - Test counter1
-    await testResolverWithPlugins({
-      entityId: 'counter1',
-      plugins: {
-        count: new CountPlugin()
-      },
-      deltas: counter1Deltas,
-      expectedResult: (result) => {
-        expect(result).toBeDefined();
-        expect(result.properties.count).toBe(2);
-      }
-    });
+    {
+      const result = await testResolverWithPlugins({
+        entityId: 'counter1',
+        plugins: {
+          count: new CountPlugin()
+        },
+        deltas: counter1Deltas
+      });
+      
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.properties.count).toBe(2);
+    }
 
     // Act & Assert - Test counter2
-    await testResolverWithPlugins({
-      entityId: 'counter2',
-      plugins: {
-        count: new CountPlugin()
-      },
-      deltas: counter2Deltas,
-      expectedResult: (result) => {
-        expect(result).toBeDefined();
-        expect(result.properties.count).toBe(1);
-      }
-    });
+    {
+      const result = await testResolverWithPlugins({
+        entityId: 'counter2',
+        plugins: {
+          count: new CountPlugin()
+        },
+        deltas: counter2Deltas
+      });
+      
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.properties.count).toBe(1);
+    }
   });
 });

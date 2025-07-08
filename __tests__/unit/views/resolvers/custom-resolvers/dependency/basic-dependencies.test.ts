@@ -16,7 +16,7 @@ describe('Basic Dependency Resolution', () => {
 
   test('should resolve dependencies in correct order', () => {
     // Define a simple plugin that depends on another
-    class FirstPlugin extends ResolverPlugin<{ value: string }, string> {
+    class FirstPlugin extends ResolverPlugin<{ value: string }> {
       readonly dependencies = [] as const;
 
       initialize() {
@@ -34,7 +34,7 @@ describe('Basic Dependency Resolution', () => {
     }
 
 
-    class SecondPlugin extends ResolverPlugin<{ value: string }, string> {
+    class SecondPlugin extends ResolverPlugin<{ value: string }> {
       readonly dependencies = ['first'] as const;
 
       initialize() {

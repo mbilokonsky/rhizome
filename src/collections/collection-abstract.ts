@@ -91,8 +91,7 @@ export abstract class Collection<View> {
     if (deltas.length > 1) {
       // We can generate a separate delta describing this transaction
       transactionDelta = createDelta(creator, host)
-        .addPointer('_transaction', transactionId, 'size')
-        .addPointer('size', deltas.length)
+        .declareTransaction(transactionId, deltas.length)
         .buildV1();
 
       // Also need to annotate the deltas with the transactionId
@@ -123,16 +122,21 @@ export abstract class Collection<View> {
   }
 
   getIds(): string[] {
-    if (!this.rhizomeNode) return [];
-    const set = this.rhizomeNode.lossless.referencedAs.get(this.name);
-    if (!set) return [];
-    return Array.from(set.values());
+    if (!this.rhizomeNode) {
+      debug(`No rhizome node connected`)
+      return [];
+    }
+    debug(`Getting ids for collection ${this.name}`)
+    const ids = new Set<string>();
+    for (const [entityId, names] of this.rhizomeNode.lossless.referencedAs.entries()) {
+      if (names.has(this.name)) {
+        ids.add(entityId);
+      }
+    }
+    debug(`Found ${ids.size} ids for collection ${this.name}`);
+    return Array.from(ids.values());
   }
 
-  // THIS PUT SHOULD CORRESOND TO A PARTICULAR MATERIALIZED VIEW...
-  // How can we encode that?
-  // Well, we have a way to do that, we just need the same particular inputs.
-  // We take a resolver as an optional argument.
   async put(
     entityId: DomainEntityID | undefined,
     properties: EntityProperties,

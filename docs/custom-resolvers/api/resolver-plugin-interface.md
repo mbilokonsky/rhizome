@@ -7,7 +7,7 @@ The `ResolverPlugin` interface defines the contract that all resolver plugins mu
 ## Interface Definition
 
 ```typescript
-interface ResolverPlugin<T = unknown, D extends string = never> {
+interface ResolverPlugin<T = unknown> {
   /**
    * Unique identifier for the plugin
    */
@@ -126,7 +126,7 @@ class CounterPlugin extends ResolverPlugin<CounterState> {
 ### Accessing Dependencies
 
 ```typescript
-class PriceCalculator extends ResolverPlugin<PriceState, 'basePrice' | 'taxRate'> {
+class PriceCalculator extends ResolverPlugin<PriceState> {
   readonly dependencies = ['basePrice', 'taxRate'] as const;
   
   update(
@@ -147,7 +147,7 @@ class PriceCalculator extends ResolverPlugin<PriceState, 'basePrice' | 'taxRate'
 ### Optional Dependencies
 
 ```typescript
-class OptionalDepPlugin extends ResolverPlugin<State, 'required' | 'optional?'> {
+class OptionalDepPlugin extends ResolverPlugin<State> {
   readonly dependencies = ['required', 'optional?'] as const;
   
   update(

@@ -14,9 +14,10 @@ import {
   SchemaApplicationOptions,
   ResolutionContext
 } from '../schema/schema';
-import { LosslessViewOne, Lossless } from '../views/lossless';
+import { Lossless, LosslessViewOne } from '../views/lossless';
 import { DomainEntityID, PropertyID, PropertyTypes } from '../core/types';
 import { CollapsedDelta } from '../views/lossless';
+import { Delta } from '@src/core';
 
 const debug = Debug('rz:schema-registry');
 
@@ -146,11 +147,13 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
 
       // Validate each delta for this property
       for (const delta of deltas) {
+        debug(`Validating delta ${delta.id} on property ${propertyId}`);
         const validationResult = this.validateDeltaAgainstPropertySchema(
           delta, 
           propertySchema, 
           propertyId
         );
+        debug(`Validation result for delta ${delta.id}: ${JSON.stringify(validationResult)}`)
         errors.push(...validationResult.errors);
         warnings.push(...validationResult.warnings);
       }
@@ -176,7 +179,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
   }
 
   private validateDeltaAgainstPropertySchema(
-    delta: CollapsedDelta,
+    delta: Delta,
     schema: PropertySchema,
     propertyId: PropertyID
   ): SchemaValidationResult {
@@ -184,7 +187,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
     const warnings: SchemaValidationError[] = [];
 
     // Extract the value from the delta
-    const valuePointer = delta.pointers.find(p => p[propertyId] !== undefined);
+    const valuePointer = delta.pointers.find(p => p.localContext === propertyId);
     if (!valuePointer) {
       errors.push({
         property: propertyId,
@@ -193,7 +196,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
       return { valid: false, errors, warnings };
     }
 
-    const value = valuePointer[propertyId];
+    const value = valuePointer.target;
 
     switch (schema.type) {
       case 'primitive':
@@ -444,7 +447,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
   }
 
   private resolveReferenceProperty(
-    deltas: CollapsedDelta[],
+    deltas: Delta[],
     referenceSchema: ReferenceSchema,
     losslessView: Lossless,
     context: ResolutionContext,
@@ -508,7 +511,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
   }
 
   private createCompositeObjectFromDelta(
-    delta: CollapsedDelta,
+    delta: Delta,
     parentEntityId: string,
     targetSchema: SchemaID,
     losslessView: Lossless,
@@ -520,29 +523,27 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
     let entityReferenceCount = 0;
     let scalarCount = 0;
     
-    for (const pointer of delta.pointers) {
-      for (const [localContext, target] of Object.entries(pointer)) {
-        // Skip the pointer that references the parent entity (the "up" pointer)
-        if (typeof target === 'string' && target === parentEntityId) {
-          continue;
-        }
+    for (const {localContext, target} of delta.pointers) {
+      // Skip the pointer that references the parent entity (the "up" pointer)
+      if (typeof target === 'string' && target === parentEntityId) {
+        continue;
+      }
         
-        if (!pointersByContext[localContext]) {
-          pointersByContext[localContext] = [];
-        }
-        pointersByContext[localContext].push(target);
+      if (!pointersByContext[localContext]) {
+        pointersByContext[localContext] = [];
+      }
+      pointersByContext[localContext].push(target);
         
-        // Count entity references vs scalars
-        if (typeof target === 'string') {
-          const referencedViews = losslessView.compose([target]);
-          if (referencedViews[target]) {
-            entityReferenceCount++;
-          } else {
-            scalarCount++;
-          }
+      // Count entity references vs scalars
+      if (typeof target === 'string') {
+        const referencedViews = losslessView.compose([target]);
+        if (referencedViews[target]) {
+          entityReferenceCount++;
         } else {
           scalarCount++;
         }
+      } else {
+        scalarCount++;
       }
     }
     

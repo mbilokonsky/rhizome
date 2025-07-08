@@ -21,7 +21,7 @@ The Custom Resolver system provides a powerful dependency management system that
 ## Example
 
 ```typescript
-class TotalPricePlugin extends ResolverPlugin<TotalState, 'price' | 'tax'> {
+class TotalPricePlugin extends ResolverPlugin<TotalState> {
   readonly dependencies = ['price', 'tax'] as const;
   
   initialize(): TotalState {

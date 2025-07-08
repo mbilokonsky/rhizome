@@ -16,7 +16,7 @@ describe('Circular Dependency Detection', () => {
 
   test('should detect circular dependencies', () => {
     // PluginA depends on PluginB
-    class PluginA extends ResolverPlugin<{ value: string }, string> {
+    class PluginA extends ResolverPlugin<{ value: string }> {
       readonly dependencies = ['b'] as const;
 
       initialize() {
@@ -34,7 +34,7 @@ describe('Circular Dependency Detection', () => {
 
 
     // PluginB depends on PluginA (circular dependency)
-    class PluginB extends ResolverPlugin<{ value: string }, string> {
+    class PluginB extends ResolverPlugin<{ value: string }> {
       readonly dependencies = ['a'] as const;
 
       initialize() {
@@ -61,21 +61,21 @@ describe('Circular Dependency Detection', () => {
   });
 
   test('should detect longer circular dependency chains', () => {
-    class PluginA extends ResolverPlugin<{ value: string }, string> {
+    class PluginA extends ResolverPlugin<{ value: string }> {
       readonly dependencies = ['c'] as const;
       initialize() { return { value: '' }; }
       update() { return { value: '' }; }
       resolve() { return 'a'; }
     }
 
-    class PluginB extends ResolverPlugin<{ value: string }, string> {
+    class PluginB extends ResolverPlugin<{ value: string }> {
       readonly dependencies = ['a'] as const;
       initialize() { return { value: '' }; }
       update() { return { value: '' }; }
       resolve() { return 'b'; }
     }
 
-    class PluginC extends ResolverPlugin<{ value: string }, string> {
+    class PluginC extends ResolverPlugin<{ value: string }> {
       readonly dependencies = ['b'] as const;
       initialize() { return { value: '' }; }
       update() { return { value: '' }; }

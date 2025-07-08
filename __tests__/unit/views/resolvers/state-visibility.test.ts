@@ -18,7 +18,7 @@ describe('State Visibility', () => {
   });
 
   // A test plugin that records which states it sees
-  class StateSpyPlugin extends ResolverPlugin<{ values: string[] }, 'dependsOn'> {
+  class StateSpyPlugin extends ResolverPlugin<{ values: string[] }> {
     readonly dependencies = [] as const;
     seenStates: Record<string, unknown>[] = [];
 
@@ -51,7 +51,7 @@ describe('State Visibility', () => {
   }
 
   // A simple plugin that depends on another property
-  class DependentPlugin extends ResolverPlugin<{ value: string }, 'dependsOn'> {
+  class DependentPlugin extends ResolverPlugin<{ value: string }> {
     readonly dependencies = ['dependsOn'] as const;
     seenStates: Record<string, unknown>[] = [];
 
@@ -94,8 +94,8 @@ describe('State Visibility', () => {
     lossless.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
-        .setProperty('entity1', 'prop1', 'value1', 'prop1')
-        .setProperty('entity1', 'prop2', 'value2', 'prop2')
+        .setProperty('entity1', 'prop1', 'value1', 'entity-prop1')
+        .setProperty('entity1', 'prop2', 'value2', 'entity-prop2')
         .buildV1()
     );
 
@@ -189,7 +189,7 @@ describe('State Visibility', () => {
   });
 
   test('should throw error for unknown dependencies', () => {
-    class PluginWithBadDeps extends ResolverPlugin<{ value: string }, 'nonexistent'> {
+    class PluginWithBadDeps extends ResolverPlugin<{ value: string }> {
       readonly dependencies = ['nonexistent'] as const;
       
       initialize() {
@@ -217,6 +217,6 @@ describe('State Visibility', () => {
       new CustomResolver(lossless, {
         bad: new PluginWithBadDeps()
       });
-    }).toThrow("Plugin 'bad' depends on unknown property: nonexistent");
+    }).toThrow("Dependency nonexistent not found for plugin bad");
   });
 });

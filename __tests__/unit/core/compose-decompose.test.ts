@@ -45,7 +45,7 @@ describe('Lossless View Compose/Decompose', () => {
 
       expect(decomposed).toHaveLength(2);
       
-      // Check that original deltas are preserved
+      // Check that original delta ids are preserved
       const originalIds = nameDeltas.map(d => d.id).sort();
       const decomposedIds = decomposed.map(d => d.id).sort();
       expect(decomposedIds).toEqual(originalIds);

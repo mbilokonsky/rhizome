@@ -9,9 +9,11 @@ import {
   MinPlugin,
   ResolverPlugin
 } from '@src/views/resolvers/custom-resolvers';
+import Debug from 'debug';
+const debug = Debug('rz:test:lossless');
 
 // A simple plugin that depends on other plugins
-class AveragePlugin<Targets extends PropertyID> extends ResolverPlugin<{ initialized: boolean }, Targets> {
+class AveragePlugin<Targets extends PropertyID> extends ResolverPlugin<{ initialized: boolean }> {
   readonly dependencies: Targets[] = [];
   
   constructor(...targets: Targets[]) {
@@ -90,9 +92,10 @@ describe('Multiple Plugins Integration', () => {
     const resolver = new CustomResolver(lossless, {
       name: new LastWriteWinsPlugin(),
       tags: new ConcatenationPlugin(),
-      score: new MaxPlugin('score')
+      score: new MaxPlugin()
     });
 
+    debug(`Creating and ingesting first delta`);
     // Add data for entity1
     lossless.ingestDelta(
       createDelta('user1', 'host1')
@@ -102,6 +105,7 @@ describe('Multiple Plugins Integration', () => {
         .buildV1()
     );
 
+    debug(`Creating and ingesting second delta`);
     // Add more tags to entity1
     lossless.ingestDelta(
       createDelta('user1', 'host1')
@@ -110,6 +114,7 @@ describe('Multiple Plugins Integration', () => {
         .buildV1()
     );
 
+    debug(`Creating and ingesting third delta`);
     // Add data for entity2
     lossless.ingestDelta(
       createDelta('user1', 'host1')
@@ -118,6 +123,7 @@ describe('Multiple Plugins Integration', () => {
         .buildV1()
     );
 
+    debug(`Creating and ingesting fourth delta`);
     // Update score for entity2
     lossless.ingestDelta(
       createDelta('user1', 'host1')
@@ -132,7 +138,7 @@ describe('Multiple Plugins Integration', () => {
     const entity1 = results!['entity1'];
     expect(entity1).toBeDefined();
     expect(entity1?.properties.name).toBe('Test Entity');
-    expect(entity1?.properties.tags).toEqual(['tag1', 'tag2']);
+    expect(entity1?.properties.tags).toBe('tag1 tag2');
     
     const entity2 = results!['entity2'];
     expect(entity2).toBeDefined();

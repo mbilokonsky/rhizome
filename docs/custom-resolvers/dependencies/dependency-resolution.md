@@ -50,7 +50,7 @@ const resolver = new CustomResolver(view, {
 To make a dependency optional, mark it with a `?` suffix:
 
 ```typescript
-class MyPlugin extends ResolverPlugin<MyState, 'required' | 'optional?'> {
+class MyPlugin extends ResolverPlugin<MyState> {
   readonly dependencies = ['required', 'optional?'] as const;
   
   // ...

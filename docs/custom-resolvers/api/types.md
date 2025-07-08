@@ -51,10 +51,10 @@ Represents a collapsed delta with metadata about the change.
 
 ## Plugin Types
 
-### `ResolverPlugin<T, D>`
+### `ResolverPlugin<T>`
 
 ```typescript
-interface ResolverPlugin<T = unknown, D extends string = never> {
+interface ResolverPlugin<T = unknown> {
   readonly name: string;
   readonly dependencies?: readonly D[];
   
@@ -106,7 +106,7 @@ Maps entity IDs to their resolved properties.
 
 ```typescript
 interface ResolverConfig {
-  [propertyId: string]: ResolverPlugin<any, string>;
+  [propertyId: string]: ResolverPlugin<any>;
 }
 ```
 
@@ -197,7 +197,7 @@ Extracts the dependency keys from a plugin type.
 
 ```typescript
 type DependencyKeys<T> = 
-  T extends ResolverPlugin<any, infer D> ? D : never;
+  T extends ResolverPlugin<any> ? D : never;
 ```
 
 ### `PluginState<T>`
@@ -206,7 +206,7 @@ Extracts the state type from a plugin type.
 
 ```typescript
 type PluginState<T> = 
-  T extends ResolverPlugin<infer S, any> ? S : never;
+  T extends ResolverPlugin<infer S> ? S : never;
 ```
 
 ## Example: Working with Types
@@ -222,7 +222,7 @@ interface CounterState {
 type CounterDeps = 'incrementBy' | 'resetThreshold';
 
 // Implement plugin with type safety
-class CounterPlugin extends ResolverPlugin<CounterState, CounterDeps> {
+class CounterPlugin extends ResolverPlugin<CounterState> {
   readonly dependencies = ['incrementBy', 'resetThreshold'] as const;
   
   initialize(): CounterState {

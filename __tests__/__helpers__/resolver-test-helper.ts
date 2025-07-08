@@ -4,10 +4,12 @@ import { Delta } from '@src/core/delta';
 import { createDelta } from '@src/core/delta-builder';
 import { CustomResolver } from '@src/views/resolvers/custom-resolvers';
 import { ResolverPlugin } from '@src/views/resolvers/custom-resolvers/plugin';
+import Debug from 'debug';
+const debug = Debug('rz:test:resolver-test-helper');
 
 // Define a test plugin map that enforces string dependencies
 type TestPluginMap = {
-  [key: string]: ResolverPlugin<unknown, string>;
+  [key: string]: ResolverPlugin<unknown>;
 };
 
 interface TestHelperOptions<T extends TestPluginMap> {
@@ -38,6 +40,7 @@ export async function testResolverWithPlugins<T extends TestPluginMap>(
   // Get the resolved view
   const resolvedView = view.resolve([entityId]);
   if (!resolvedView) throw new Error(`Resolved view for entity ${entityId} is undefined`);
+  debug(`Resolved view for entity ${entityId}:`, JSON.stringify(resolvedView));
   return resolvedView[entityId];
 }
 

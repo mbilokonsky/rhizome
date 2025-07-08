@@ -1,4 +1,4 @@
-import { PropertyID, PropertyTypes } from "@src/core/types";
+import { PropertyTypes } from "@src/core/types";
 import { ResolverPlugin, DependencyStates } from "../plugin";
 
 type MaxPluginState = {
@@ -10,16 +10,8 @@ type MaxPluginState = {
  * 
  * Tracks the maximum numeric value
  */
-export class MaxPlugin<Target extends PropertyID> extends ResolverPlugin<MaxPluginState, Target> {
+export class MaxPlugin extends ResolverPlugin<MaxPluginState> {
   name = 'max';
-  readonly dependencies: Target[] = [];
-
-  constructor(private readonly target?: Target) {
-    super();
-    if (target) {
-      this.dependencies = [target];
-    }
-  }
 
   initialize(dependencies: DependencyStates): MaxPluginState {
     return { max: this.target ? dependencies[this.target] as number : undefined };

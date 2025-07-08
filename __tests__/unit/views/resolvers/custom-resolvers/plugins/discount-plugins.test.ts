@@ -5,7 +5,7 @@ import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver
 import Debug from 'debug';
 const debug = Debug('rz:test:discount-plugins');
 // Mock plugins for testing
-class DiscountPlugin extends ResolverPlugin<number, never> {
+class DiscountPlugin extends ResolverPlugin<number> {
   readonly name = 'discount' as const;
   readonly dependencies = [] as const;
   
@@ -14,9 +14,12 @@ class DiscountPlugin extends ResolverPlugin<number, never> {
   }
   
   update(
-    _currentState: number,
+    currentState: number,
     newValue: PropertyTypes,
   ) {
+    if (newValue === undefined) {
+      return currentState;
+    }
     const numValue = typeof newValue === 'number' ? newValue : 0;
     const clampedValue = Math.min(100, Math.max(0, numValue)); // Clamp between 0-100
     debug(`DiscountPlugin: updated discount to ${clampedValue}`);
@@ -28,7 +31,7 @@ class DiscountPlugin extends ResolverPlugin<number, never> {
   }
 }
 
-class DiscountedPricePlugin extends ResolverPlugin<number | null, 'discount'> {
+class DiscountedPricePlugin extends ResolverPlugin<number | null> {
   readonly name = 'price' as const;
   readonly dependencies = ['discount'] as const;
   
@@ -37,9 +40,13 @@ class DiscountedPricePlugin extends ResolverPlugin<number | null, 'discount'> {
   }
   
   update(
-    _currentState: number | null,
+    currentState: number | null,
     newValue: PropertyTypes,
   ) {
+    debug(`DiscountedPricePlugin: updating price with state ${currentState} and value ${newValue}`)
+    if (newValue === undefined) {
+      return currentState;
+    }
     const numValue = typeof newValue === 'number' ? newValue : 0;
     debug(`DiscountedPricePlugin: updated price to ${numValue}`);
     return numValue;
@@ -49,13 +56,16 @@ class DiscountedPricePlugin extends ResolverPlugin<number | null, 'discount'> {
     state: number | null,
     dependencies: DependencyStates
   ): number | null {
+    debug(`DiscountedPricePlugin: resolving price with state ${state} and discount ${dependencies.discount}`);
     if (state === null) {
       return null;
     }
     // Ensure discount is a number and default to 0 if undefined
     const discount = typeof dependencies.discount === 'number' ? dependencies.discount : 0;
     const discountMultiplier = (100 - discount) / 100;
-    return state * discountMultiplier;
+    const result = state * discountMultiplier;
+    debug(`DiscountedPricePlugin: resolved price to ${result}`);
+    return result;
   }
 }
 

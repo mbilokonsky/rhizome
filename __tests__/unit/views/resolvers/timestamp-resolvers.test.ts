@@ -6,8 +6,10 @@ import {
   DeltaIdTimestampResolver,
   HostIdTimestampResolver,
   LexicographicTimestampResolver
-} from "../../../../src";
-import { createDelta } from "../../../../src/core/delta-builder";
+} from "@src";
+import { createDelta } from "@src/core/delta-builder";
+import Debug from "debug";
+const debug = Debug('rz:test:timestamp-resolvers');
 
 describe('Timestamp Resolvers', () => {
   let node: RhizomeNode;
@@ -20,6 +22,8 @@ describe('Timestamp Resolvers', () => {
 
   describe('Basic Timestamp Resolution', () => {
     test('should resolve by most recent timestamp', () => {
+      const resolver = new TimestampResolver(lossless);
+
       // Add older delta
       lossless.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
@@ -38,14 +42,16 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
+      debug(`Result: ${JSON.stringify(result, null, 2)}`)
       expect(result!['entity1'].properties.score).toBe(20); // More recent value wins
     });
 
     test('should handle multiple entities with different timestamps', () => {
+      const resolver = new TimestampResolver(lossless);
+
       // Entity1 - older value
       lossless.ingestDelta(createDelta('user1', 'host1')
         .withTimestamp(1000)
@@ -62,7 +68,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -73,6 +78,8 @@ describe('Timestamp Resolvers', () => {
 
   describe('Tie-Breaking Strategies', () => {
     test('should break ties using creator-id strategy', () => {
+      const resolver = new CreatorIdTimestampResolver(lossless);
+
       // Two deltas with same timestamp, different creators
       lossless.ingestDelta(createDelta('user_z', 'host1')
         .withId('delta1')
@@ -90,7 +97,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new CreatorIdTimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -99,6 +105,8 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using delta-id strategy', () => {
+      const resolver = new DeltaIdTimestampResolver(lossless);
+
       // Two deltas with same timestamp, different delta IDs
       lossless.ingestDelta(createDelta('user1', 'host1')
         .withId('delta_a') // Lexicographically earlier
@@ -116,7 +124,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new DeltaIdTimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -125,6 +132,8 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using host-id strategy', () => {
+      const resolver = new HostIdTimestampResolver(lossless);
+
       // Two deltas with same timestamp, different hosts
       lossless.ingestDelta(createDelta('user1', 'host_z') // Lexicographically later
         .withId('delta1')
@@ -142,7 +151,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new HostIdTimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -151,6 +159,8 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using lexicographic strategy with string values', () => {
+      const resolver = new LexicographicTimestampResolver(lossless);
+
       // Two deltas with same timestamp, different string values
       lossless.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
@@ -168,7 +178,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new LexicographicTimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -177,6 +186,8 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using lexicographic strategy with numeric values (falls back to delta ID)', () => {
+      const resolver = new LexicographicTimestampResolver(lossless);
+
       // Two deltas with same timestamp, numeric values (should fall back to delta ID comparison)
       lossless.ingestDelta(createDelta('user1', 'host1')
         .withId('delta_a') // Lexicographically earlier
@@ -194,7 +205,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new LexicographicTimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -205,6 +215,9 @@ describe('Timestamp Resolvers', () => {
 
   describe('Complex Tie-Breaking Scenarios', () => {
     test('should handle multiple properties with different tie-breaking outcomes', () => {
+      const creatorResolver = new CreatorIdTimestampResolver(lossless);
+      const deltaResolver = new DeltaIdTimestampResolver(lossless);
+      
       // Add deltas for multiple properties with same timestamp
       lossless.ingestDelta(createDelta('user_a', 'host1')
         .withId('delta_z')
@@ -222,9 +235,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const creatorResolver = new CreatorIdTimestampResolver(lossless);
-      const deltaResolver = new DeltaIdTimestampResolver(lossless);
-      
       const creatorResult = creatorResolver.resolve();
       const deltaResult = deltaResolver.resolve();
       
@@ -239,6 +249,8 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should work consistently with timestamp priority over tie-breaking', () => {
+      const resolver = new CreatorIdTimestampResolver(lossless);
+
       // Add older delta with "better" tie-breaking attributes
       lossless.ingestDelta(createDelta('user_z', 'host1')
         .withId('delta_z') // Would win in delta ID tie-breaking
@@ -257,7 +269,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new CreatorIdTimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -268,6 +279,7 @@ describe('Timestamp Resolvers', () => {
 
   describe('Edge Cases', () => {
     test('should handle single delta correctly', () => {
+      const resolver = new TimestampResolver(lossless, 'creator-id');
       lossless.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
         .withTimestamp(1000)
@@ -276,7 +288,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new TimestampResolver(lossless, 'creator-id');
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -284,6 +295,8 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should handle mixed value types correctly', () => {
+      const resolver = new TimestampResolver(lossless);
+
       lossless.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
         .withTimestamp(1000)
@@ -300,7 +313,6 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();

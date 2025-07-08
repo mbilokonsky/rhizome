@@ -254,7 +254,7 @@ export class StorageQueryEngine {
         case 'reference': {
           // For references, include the target IDs
           const refValues = propDeltas
-            .map(delta => this.extractReferenceValue(delta, propertyId))
+            .map(delta => this.extractPrimitiveValue(delta, propertyId))
             .filter(value => value !== null);
           properties[propertyId] = refValues;
           break;
@@ -276,18 +276,6 @@ export class StorageQueryEngine {
   private extractPrimitiveValue(delta: Delta, propertyId: string): unknown {
     for (const pointer of delta.pointers) {
       if (pointer.localContext === propertyId) {
-        return pointer.target;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Extract reference value from a delta for a given property
-   */
-  private extractReferenceValue(delta: Delta, propertyId: string): string | null {
-    for (const pointer of delta.pointers) {
-      if (pointer.localContext === propertyId && typeof pointer.target === 'string') {
         return pointer.target;
       }
     }

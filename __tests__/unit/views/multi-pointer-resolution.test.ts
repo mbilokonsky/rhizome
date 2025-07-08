@@ -9,6 +9,8 @@ import { createDelta } from '@src/core/delta-builder';
 import { DefaultSchemaRegistry } from '@src/schema';
 import { SchemaBuilder, PrimitiveSchemas, ReferenceSchemas, SchemaAppliedViewWithNesting } from '@src/schema';
 import { TypedCollectionImpl } from '@src/collections';
+import Debug from 'debug';
+const debug = Debug('rz:test:multi-pointer-resolution');
 
 describe('Multi-Pointer Delta Resolution', () => {
   let node: RhizomeNode;
@@ -254,6 +256,8 @@ describe('Multi-Pointer Delta Resolution', () => {
         node.lossless,
         { maxDepth: 2 }
       );
+
+      debug(`nestedProjectView:`, JSON.stringify(nestedProjectView, null, 2));
 
       expect(nestedProjectView.id).toBe('website');
       expect(nestedProjectView.nestedObjects.collaborations).toBeDefined();

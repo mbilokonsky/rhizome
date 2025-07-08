@@ -10,7 +10,7 @@ type MajorityVoteState = {
  * 
  * Returns the value that appears most frequently
  */
-export class MajorityVotePlugin extends ResolverPlugin<MajorityVoteState, never> {
+export class MajorityVotePlugin extends ResolverPlugin<MajorityVoteState> {
   readonly dependencies = [] as const;
 
   initialize(): MajorityVoteState {

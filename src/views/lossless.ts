@@ -9,7 +9,6 @@ import {Transactions} from '../features/transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "../core/types";
 import {Negation} from '../features/negation';
 import {NegationHelper} from '../features/negation';
-import { createDelta } from '../core/delta-builder';
 const debug = Debug('rz:lossless');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
@@ -19,28 +18,53 @@ export type CollapsedDelta = Omit<DeltaNetworkImageV1, 'pointers'> & {
 };
 
 // Extract a particular value from a delta's pointers
-export function valueFromCollapsedDelta(
+export function valueFromDelta(
   key: string,
-  delta: CollapsedDelta
-): string | number | undefined {
+  delta: Delta | CollapsedDelta
+): PropertyTypes | undefined {
+  let result: PropertyTypes | undefined;
   for (const pointer of delta.pointers) {
-    for (const [k, value] of Object.entries(pointer)) {
-      if (k === key && (typeof value === "string" || typeof value === "number")) {
-        return value;
+    // Should be equivalent to delta instanceof Delta
+    if (['localContext', 'target'].every(k => k in pointer)) {
+      if (pointer.localContext === key) {
+        if (result) {
+          debug(`multiple values for key ${key} in delta ${delta.id}`);
+          throw new Error(`Multiple values for key ${key} in delta ${delta.id}`);
+        }
+        result = pointer.target;
+      }
+    } else {
+      for (const [k, value] of Object.entries(pointer)) {
+        if (k === key) {
+          if (result) {
+            debug(`multiple values for key ${key} in delta ${delta.id}`);
+            throw new Error(`Multiple values for key ${key} in delta ${delta.id}`);
+          }
+          result = value;
+        }
       }
     }
   }
+  return result;
 }
 
+// TODO: Store property deltas as references to reduce memory footprint
 export type LosslessViewOne = {
   id: DomainEntityID,
-  referencedAs: string[];
+  referencedAs?: string[];
   propertyDeltas: {
+    [key: PropertyID]: Delta[]
+  }
+}
+
+export type CollapsedViewOne = Omit<LosslessViewOne, 'propertyDeltas'> & {
+  propertyCollapsedDeltas: {
     [key: PropertyID]: CollapsedDelta[]
   }
 };
 
 export type LosslessViewMany = ViewMany<LosslessViewOne>;
+export type CollapsedViewMany = ViewMany<CollapsedViewOne>;
 
 class LosslessEntityMap extends Map<DomainEntityID, LosslessEntity> {};
 
@@ -67,8 +91,9 @@ class LosslessEntity {
       }
 
       propertyDeltas.add(delta);
-      debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `entity ${this.id} added delta:`, JSON.stringify(delta));
     }
+
+    debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `entity ${this.id} added delta:`, JSON.stringify(delta));
   }
 
   toJSON() {
@@ -78,6 +103,7 @@ class LosslessEntity {
     }
     return {
       id: this.id,
+      referencedAs: Array.from(this.lossless.referencedAs.get(this.id) ?? []),
       properties
     };
   }
@@ -86,8 +112,10 @@ class LosslessEntity {
 export class Lossless {
   domainEntities = new LosslessEntityMap();
   transactions: Transactions;
-  referencedAs = new Map<string, Set<string>>();
   eventStream = new EventEmitter();
+
+  // TODO: This referencedAs map doesn't really belong at this layer of abstraction
+  referencedAs = new Map<string, Set<string>>();
   
   // Track all deltas by ID for negation processing
   private allDeltas = new Map<DeltaID, Delta>();
@@ -185,39 +213,11 @@ export class Lossless {
     const seenDeltaIds = new Set<DeltaID>();
     
     // Collect all deltas from all properties
-    for (const [propertyId, deltas] of Object.entries(view.propertyDeltas)) {
+    for (const [_propertyId, deltas] of Object.entries(view.propertyDeltas)) {
       for (const delta of deltas) {
         if (!seenDeltaIds.has(delta.id)) {
           seenDeltaIds.add(delta.id);
-          
-          // Create a new delta using DeltaBuilder
-          const builder = createDelta(delta.creator, delta.host)
-            .withId(delta.id)
-            .withTimestamp(delta.timeCreated);
-          
-          // Add all pointers from the collapsed delta
-          for (const pointer of delta.pointers) {
-            const pointerEntries = Object.entries(pointer);
-            if (pointerEntries.length === 1) {
-              const [localContext, target] = pointerEntries[0];
-              if (target === null || target === undefined) {
-                continue; // Skip null/undefined targets
-              }
-              if (typeof target === 'string' && this.domainEntities.has(target)) {
-                // This is a reference pointer to an entity
-                builder.addPointer(localContext, target, propertyId);
-              } else if (typeof target === 'string' || typeof target === 'number' || typeof target === 'boolean') {
-                // Scalar pointer with valid type
-                builder.addPointer(localContext, target);
-              } else {
-                // For other types (objects, arrays), convert to string
-                builder.addPointer(localContext, JSON.stringify(target));
-              }
-            }
-          }
-          
-          // Build the delta and add to results
-          allDeltas.push(builder.buildV1());
+          allDeltas.push(delta);
         }
       }
     }
@@ -229,14 +229,14 @@ export class Lossless {
     const view: LosslessViewMany = {};
     entityIds = entityIds ?? Array.from(this.domainEntities.keys());
 
-    for (const id of entityIds) {
-      const ent = this.domainEntities.get(id);
+    for (const entityId of entityIds) {
+      const ent = this.domainEntities.get(entityId);
       if (!ent) continue;
 
       const referencedAs = new Set<string>();
 
       const propertyDeltas: {
-        [key: PropertyID]: CollapsedDelta[]
+        [key: PropertyID]: Delta[]
       } = {};
 
       let hasVisibleDeltas = false;
@@ -255,7 +255,7 @@ export class Lossless {
       for (const [key, deltas] of ent.properties.entries()) {
         // Filter deltas for this property based on negation status
         const filteredDeltas = Array.from(deltas).filter(delta => nonNegatedDeltaIds.has(delta.id));
-        const visibleDeltas: CollapsedDelta[] = [];
+        const visibleDeltas: Delta[] = [];
 
         for (const delta of filteredDeltas) {
           if (deltaFilter && !deltaFilter(delta)) {
@@ -271,19 +271,12 @@ export class Lossless {
             }
           }
 
-          const pointers: CollapsedPointer[] = [];
-
-          for (const {localContext, target} of delta.pointers) {
-            if (target === ent.id) {
-              referencedAs.add(localContext);
-            }
-            pointers.push({[localContext]: target});
+          const ref = delta.pointers.find(p => p.target === entityId)
+          if (ref) {
+            referencedAs.add(ref.localContext);
           }
 
-          visibleDeltas.push({
-            ...delta,
-            pointers
-          });
+          visibleDeltas.push(delta);
           hasVisibleDeltas = true;
         }
 
@@ -302,10 +295,10 @@ export class Lossless {
 
       // Only include entity in view if it has visible deltas
       if (hasVisibleDeltas) {
-        view[ent.id] = {
-          id: ent.id,
+        view[entityId] = {
+          id: entityId,
           referencedAs: Array.from(referencedAs.values()),
-          propertyDeltas
+          propertyDeltas,
         };
       }
     }

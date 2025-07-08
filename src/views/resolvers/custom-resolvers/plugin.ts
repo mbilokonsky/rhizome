@@ -1,5 +1,7 @@
 import { PropertyID, PropertyTypes } from "../../../core/types";
 import { CollapsedDelta } from "../../lossless";
+import Debug from 'debug';
+const debug = Debug('rz:custom-resolver:plugin');
 
 /**
  * Type representing a mapping of dependency names to their state types
@@ -15,18 +17,16 @@ export type DependencyStates = Record<string, unknown>;
  * @template T - Type of the plugin's internal state
  * @template D - Union type of dependency names (e.g., 'discount' | 'tax')
  */
-export abstract class ResolverPlugin<
-  T = unknown,
-  D extends string = never
-> {
+export abstract class ResolverPlugin< T = unknown > {
+  name?: string;
+  dependencies?: readonly string[];
 
-  name?: PropertyID;
+  constructor(readonly target?: string) {
+    if (target) {
+      this.dependencies = [target];
+    }
+  }
 
-  /**
-   * Array of property IDs that this plugin depends on.
-   * The plugins corresponding to these properties will be processed before this plugin.
-   */
-  dependencies?: readonly D[];
 
   /**
    * Convenience wrapper to avoid calling update() when there is no new value
@@ -42,21 +42,17 @@ export abstract class ResolverPlugin<
     delta?: CollapsedDelta,
     dependencies?: DependencyStates
   ): T {
+    debug(`applyUpdate, currentState: ${JSON.stringify(currentState)}, newValue: ${JSON.stringify(newValue)}, dependencies: ${JSON.stringify(dependencies)}`)
     if (newValue === undefined) {
-      switch(this.dependencies?.length) {
-        case 0: {
-          // No dependencies, no new value -- nothing to do.
-          return currentState;
-        }
-        case 1: {
-          // Only one dependency, use it as the new value.
-          newValue = dependencies![this.dependencies[0]] as PropertyTypes;
-          break;
-        }
-        default: {
-          // Pass dependencies as is, and leave newValue undefined.
-          break;
-        }
+      debug(`No new value, checking dependencies. Plugin target is ${JSON.stringify(this.target)}`)
+      if (this.target && dependencies) {
+        // Pass the target value as the new value
+        newValue = dependencies[this.target] as PropertyTypes;
+        debug(`Found target ${JSON.stringify(this.target)}, value: ${JSON.stringify(newValue)}`)
+      } else if (!this.dependencies?.length) {
+        // No dependencies, no new value -- nothing to do.
+        debug(`No dependencies, no new value -- nothing to do.`)
+        return currentState;
       }
     }
     return this.update(currentState, newValue, delta, dependencies);
@@ -92,15 +88,15 @@ export abstract class ResolverPlugin<
  * Configuration for custom resolver with type-safe plugin configurations
  */
 export type CustomResolverConfig = {
-  [P in PropertyID]: ResolverPlugin<unknown, string>;
+  [P in PropertyID]: ResolverPlugin<unknown>;
 };
 
 /**
  * Helper type to extract the state type from a ResolverPlugin
  */
-export type PluginState<T> = T extends ResolverPlugin<infer S, string> ? S : never;
+export type PluginState<T> = T extends ResolverPlugin<infer S> ? S : never;
 
 /**
  * Helper type to extract the dependency names from a ResolverPlugin
  */
-export type PluginDependencies<T> = T extends ResolverPlugin<unknown, infer D> ? D : never;
+export type PluginDependencies<T> = T extends ResolverPlugin<unknown> ? string[] : never;

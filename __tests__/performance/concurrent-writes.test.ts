@@ -7,7 +7,9 @@ import {
   LastWriteWinsPlugin,
   MajorityVotePlugin,
   TimestampResolver
-} from "../../src";
+} from "@src";
+import Debug from 'debug';
+const debug = Debug('rz:test:performance');
 
 describe('Concurrent Write Scenarios', () => {
   let node: RhizomeNode;
@@ -20,6 +22,8 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('Simultaneous Writes with Same Timestamp', () => {
     test('should handle simultaneous writes using last-write-wins resolver', () => {
+      const resolver = new TimestampResolver(lossless);
+
       const timestamp = 1000;
       
       // Simulate two writers updating the same property at the exact same time
@@ -37,10 +41,10 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
+      debug(`Result: ${JSON.stringify(result, null, 2)}`)
       // Should resolve deterministically using the LastWriteWins resolver's tie-breaking algorithm
       expect(typeof result!['entity1'].properties.score).toBe('number');
       expect([100, 200]).toContain(result!['entity1'].properties.score);
@@ -48,7 +52,8 @@ describe('Concurrent Write Scenarios', () => {
 
     test('should handle simultaneous writes using timestamp resolver with tie-breaking', () => {
       const timestamp = 1000;
-      
+      const resolver = new TimestampResolver(lossless, 'creator-id');
+
       lossless.ingestDelta(createDelta('writer_z', 'host1') // Lexicographically later
         .withId('delta-a')
         .withTimestamp(timestamp)
@@ -63,7 +68,6 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new TimestampResolver(lossless, 'creator-id');
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -72,6 +76,8 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should handle multiple writers with aggregation resolver', () => {
+      const resolver = new SumResolver(lossless, ['points']);
+
       // Multiple writers add values simultaneously
       lossless.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(1000)
@@ -92,7 +98,6 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new SumResolver(lossless, ['points']);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -103,6 +108,8 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('Out-of-Order Write Arrival', () => {
     test('should handle writes arriving out of chronological order', () => {
+      const resolver = new TimestampResolver(lossless);
+
       // Newer delta arrives first
       lossless.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(2000)
@@ -119,7 +126,6 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -128,6 +134,8 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should maintain correct aggregation despite out-of-order arrival', () => {
+      const resolver = new SumResolver(lossless, ['score']);
+
       // Add deltas in reverse chronological order
       lossless.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(3000)
@@ -150,7 +158,6 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new SumResolver(lossless, ['score']);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -161,6 +168,8 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('High-Frequency Concurrent Updates', () => {
     test('should handle rapid concurrent updates to the same entity', () => {
+      const resolver = new SumResolver(lossless, ['counter']);
+
       const baseTimestamp = 1000;
       const numWriters = 10;
       const writesPerWriter = 5;
@@ -177,7 +186,6 @@ describe('Concurrent Write Scenarios', () => {
         }
       }
 
-      const resolver = new SumResolver(lossless, ['counter']);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -186,6 +194,11 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should handle concurrent updates to multiple properties', () => {
+      const resolver = new CustomResolver(lossless, {
+        name: new LastWriteWinsPlugin(),
+        score: new LastWriteWinsPlugin()
+      });
+
       const timestamp = 1000;
       
       // Writer 1 updates name and score
@@ -218,11 +231,6 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new CustomResolver(lossless, {
-        name: new LastWriteWinsPlugin(),
-        score: new LastWriteWinsPlugin()
-      });
-
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -233,6 +241,8 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('Cross-Entity Concurrent Writes', () => {
     test('should handle concurrent writes to different entities', () => {
+      const resolver = new TimestampResolver(lossless);
+
       const timestamp = 1000;
       
       // Multiple writers updating different entities simultaneously
@@ -245,7 +255,6 @@ describe('Concurrent Write Scenarios', () => {
         );
       }
 
-      const resolver = new TimestampResolver(lossless);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -257,6 +266,10 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should handle mixed entity and property conflicts', () => {
+      const resolver = new CustomResolver(lossless, {
+        votes: new MajorityVotePlugin(),
+        status: new LastWriteWinsPlugin()
+      });
       const timestamp = 1000;
       
       // Entity1: Multiple writers competing for same property
@@ -289,11 +302,6 @@ describe('Concurrent Write Scenarios', () => {
         .buildV1()
       );
 
-      const resolver = new CustomResolver(lossless, {
-        votes: new MajorityVotePlugin(),
-        status: new LastWriteWinsPlugin()
-      });
-
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -304,6 +312,8 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('Stress Testing', () => {
     test('should handle large number of concurrent writes efficiently', () => {
+      const resolver = new SumResolver(lossless, ['score']);
+
       const numEntities = 100;
       const numWritersPerEntity = 10;
       const baseTimestamp = 1000;
@@ -320,7 +330,6 @@ describe('Concurrent Write Scenarios', () => {
         }
       }
 
-      const resolver = new SumResolver(lossless, ['score']);
       const result = resolver.resolve();
       
       expect(result).toBeDefined();
@@ -335,6 +344,8 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should maintain consistency under rapid updates and resolution calls', () => {
+      const resolver = new SumResolver(lossless, ['counter']);
+
       const entityId = 'stress-test-entity';
       let updateCount = 0;
       
@@ -353,8 +364,7 @@ describe('Concurrent Write Scenarios', () => {
       }
 
       // Verify initial state
-      let resolver = new SumResolver(lossless, ['counter']);
-      let result = resolver.resolve();
+      const result = resolver.resolve();
       expect(result).toBeDefined();
       expect(result![entityId].properties.counter).toBe(updateCount);
       
@@ -369,8 +379,7 @@ describe('Concurrent Write Scenarios', () => {
         updateCount += 2;
         
         // Create a fresh resolver to avoid accumulator caching issues
-        resolver = new SumResolver(lossless, ['counter']);
-        result = resolver.resolve();
+        const result = resolver.resolve();
         expect(result![entityId].properties.counter).toBe(updateCount);
       }
     });

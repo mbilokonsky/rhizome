@@ -11,6 +11,8 @@ import { CommonSchemas } from '../../util/schemas';
 import { TypedCollectionImpl, SchemaValidationError } from '@src/collections';
 import { RhizomeNode } from '@src/node';
 import { createDelta } from '@src/core/delta-builder';
+import Debug from 'debug';
+const debug = Debug('rz:schema-test');
 
 describe('Schema System', () => {
   let schemaRegistry: DefaultSchemaRegistry;
@@ -158,22 +160,17 @@ describe('Schema System', () => {
       // Create a valid lossless view
       const validView: LosslessViewOne = {
         id: 'user123',
-        referencedAs: ['user'],
         propertyDeltas: {
-          name: [{
-            id: 'delta1',
-            timeCreated: 123,
-            host: 'host1',
-            creator: 'creator1',
-            pointers: [{ name: 'Alice' }]
-          }],
-          age: [{
-            id: 'delta2',
-            timeCreated: 124,
-            host: 'host1',
-            creator: 'creator1',
-            pointers: [{ age: 25 }]
-          }]
+          name: [
+            createDelta('creator1', 'host1')
+              .addPointer('name', 'Alice')
+              .buildV1()
+          ],
+          age: [
+            createDelta('creator1', 'host1')
+              .addPointer('age', 25)
+              .buildV1()
+          ]
         },
       };
 
@@ -184,15 +181,12 @@ describe('Schema System', () => {
       // Test invalid view (missing required property)
       const invalidView: LosslessViewOne = {
         id: 'user456',
-        referencedAs: ['user'],
         propertyDeltas: {
-          age: [{
-            id: 'delta3',
-            timeCreated: 125,
-            host: 'host1',
-            creator: 'creator1',
-            pointers: [{ age: 30 }]
-          }]
+          age: [
+            createDelta('creator1', 'host1')
+              .addPointer('age', 30)
+              .buildV1()
+          ]
         }
       };
 
@@ -220,11 +214,25 @@ describe('Schema System', () => {
       // Valid types
       const validView: LosslessViewOne = {
         id: 'test1',
-        referencedAs: [],
         propertyDeltas: {
-          stringProp: [{ id: 'd1', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ stringProp: 'hello' }] }],
-          numberProp: [{ id: 'd2', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ numberProp: 42 }] }],
-          booleanProp: [{ id: 'd3', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ booleanProp: true }] }]
+          stringProp: [
+            createDelta('creator1', 'host1')
+              .addPointer('stringProp', 'hello')
+              .buildV1(),
+            // { id: 'd1', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ localContext: 'stringProp', target: 'hello' }] }],
+          ],
+          numberProp: [
+            createDelta('creator1', 'host1')
+              .addPointer('numberProp', 42)
+              .buildV1(),
+            // { id: 'd2', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ localContext: 'numberProp', target: 42 }] }],
+          ],
+          booleanProp: [
+            createDelta('creator1', 'host1')
+              .addPointer('booleanProp', true)
+              .buildV1(),
+            // { id: 'd3', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ localContext: 'booleanProp', target: true }] }]
+          ],
         }
       };
 
@@ -234,10 +242,19 @@ describe('Schema System', () => {
       // Invalid types
       const invalidView: LosslessViewOne = {
         id: 'test2',
-        referencedAs: [],
         propertyDeltas: {
-          stringProp: [{ id: 'd4', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ stringProp: 123 as never }] }],
-          numberProp: [{ id: 'd5', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ numberProp: 'not-number' as never }] }]
+          stringProp: [
+            createDelta('creator1', 'host1')
+              .addPointer('stringProp', 123 as never)
+              .buildV1(),
+            // { id: 'd4', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ localContext: 'stringProp', target: 123 as never }] }],
+          ],
+          numberProp: [
+            createDelta('creator1', 'host1')
+              .addPointer('numberProp', 'not-number' as never)
+              .buildV1(),
+            // { id: 'd5', timeCreated: 1, host: 'h', creator: 'c', pointers: [{ localContext: 'numberProp', target: 'not-number' as never }] }]
+          ],
         }
       };
 
@@ -336,10 +353,13 @@ describe('Schema System', () => {
 
       // Create invalid entity manually
       const invalidDelta = createDelta(node.config.creator, node.config.peerId)
-        .addPointer('users', 'user3', 'age')
-        .addPointer('age', 'not-a-number')
+        .setProperty('user3', 'age', 'not-a-number', 'users')
         .buildV1();
       node.lossless.ingestDelta(invalidDelta);
+
+      debug(`Manually ingested invalid delta: ${JSON.stringify(invalidDelta)}`)
+
+      debug(`Lossless view: ${JSON.stringify(node.lossless.compose(), null, 2)}`)
 
       const validIds = collection.getValidEntities();
       expect(validIds).toContain('user1');

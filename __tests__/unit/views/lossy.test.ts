@@ -3,7 +3,7 @@ import { PointerTarget } from "@src/core/delta";
 import { Lossless, LosslessViewOne } from "@src/views/lossless";
 import { Lossy } from "@src/views/lossy";
 import { RhizomeNode } from "@src/node";
-import { valueFromCollapsedDelta } from "@src/views/lossless";
+import { valueFromDelta } from "@src/views/lossless";
 import { latestFromCollapsedDeltas } from "@src/views/resolvers/timestamp-resolvers";
 import { createDelta } from "@src/core/delta-builder";
 const debug = Debug('rz:test:lossy');
@@ -38,10 +38,10 @@ class Summarizer extends Lossy<Summary> {
   // TODO: Prove with failing test
 
   reducer(acc: Summary, cur: LosslessViewOne): Summary {
-    this.debug(`Processing view for entity ${cur.id} (referenced as: ${cur.referencedAs.join(', ')})`);
+    this.debug(`Processing view for entity ${cur.id} (referenced as: ${cur.referencedAs?.join(', ')})`);
     this.debug(`lossless view:`, JSON.stringify(cur));
     
-    if (cur.referencedAs.includes("role")) {
+    if (cur.referencedAs?.includes("role")) {
       this.debug(`Found role entity: ${cur.id}`);
       
       const actorDeltas = cur.propertyDeltas["actor"];
@@ -60,7 +60,7 @@ class Summarizer extends Lossy<Summary> {
       }
       
       this.debug(`Found actor: ${actor}`);
-      const film = valueFromCollapsedDelta("film", delta);
+      const film = valueFromDelta("film", delta);
       
       if (!film) {
         this.debug('No film property found in delta');

@@ -12,7 +12,7 @@ type LastWriteWinsState = {
  * 
  * Keeps the most recent value based on the delta's timestamp
  */
-export class LastWriteWinsPlugin extends ResolverPlugin<LastWriteWinsState, never> {
+export class LastWriteWinsPlugin extends ResolverPlugin<LastWriteWinsState> {
   readonly dependencies = [] as const;
 
   initialize(): LastWriteWinsState {

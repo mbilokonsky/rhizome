@@ -137,7 +137,7 @@ export class HttpApi {
       const {params: {id}} = req;
       const v = this.rhizomeNode.lossless.compose([id]);
       const ent = v[id];
-      if (!ent.referencedAs.includes("_transaction")) {
+      if (!ent.referencedAs?.includes("_transaction")) {
         res.status(400).json({error: "Entity is not a transaction", id});
         return;
       }

@@ -1,5 +1,5 @@
 import { createDelta } from '@src/core/delta-builder';
-import {DeltaV1, DeltaV2} from "../../../../src";
+import {DeltaV2} from "../../../../src";
 
 describe("Delta", () => {
   test("can convert DeltaV1 to DeltaV2", () => {

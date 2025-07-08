@@ -7,7 +7,7 @@ describe('RunningAveragePlugin', () => {
     // Arrange & Act
     const entityId = 'player1';
     
-    await testResolverWithPlugins({
+    const result = await testResolverWithPlugins({
       entityId,
       plugins: {
         score: new RunningAveragePlugin()
@@ -28,20 +28,18 @@ describe('RunningAveragePlugin', () => {
           .withTimestamp(3000)
           .setProperty(entityId, 'score', 30, 'game')
           .buildV1()
-      ],
-      expectedResult: (result) => {
-        // Assert
-        expect(result).toBeDefined();
-        expect(result.properties.score).toBe(20); // (10 + 20 + 30) / 3 = 20
-      }
-    });
+      ]});
+      
+    // Assert
+    expect(result).toBeDefined();
+    expect(result.properties.score).toBe(20); // (10 + 20 + 30) / 3 = 20
   });
 
   test('should handle non-numeric values gracefully', async () => {
     // Arrange & Act
     const entityId = 'test1';
     
-    await testResolverWithPlugins({
+    const result = await testResolverWithPlugins({
       entityId,
       plugins: {
         value: new RunningAveragePlugin()
@@ -55,36 +53,25 @@ describe('RunningAveragePlugin', () => {
           .withTimestamp(2000)
           .setProperty(entityId, 'value', 10, 'test')
           .buildV1()
-      ],
-      expectedResult: (result) => {
-        // Assert
-        expect(result).toBeDefined();
-        // First value is treated as 0, second as 10, average is (0 + 10) / 2 = 5
-        expect(result.properties.value).toBe(5);
-      }
-    });
+      ]});
+      
+    // Assert
+    expect(result).toBeDefined();
+    expect(result.properties.value).toBe(5);
   });
 
   test('should handle empty state', async () => {
     // Arrange & Act
     const entityId = 'non-existent';
-    let error: Error | undefined;
     
-    try {
-      await testResolverWithPlugins({
+    const result = await testResolverWithPlugins({
         entityId,
         plugins: {
           value: new RunningAveragePlugin()
         },
         deltas: [],
-        expectedResult: () => {}
       });
-    } catch (err) {
-      error = err as Error;
-    }
 
-    // Assert - The helper should throw when entity is not found
-    expect(error).toBeDefined();
-    expect(error?.message).toContain('No view found for entity non-existent');
-  });
+      expect(result).toBeUndefined(); 
+    });
 });

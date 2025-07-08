@@ -12,7 +12,7 @@ type FirstWriteWinsState = {
  * 
  * Keeps the first value that was written, ignoring subsequent writes
  */
-export class FirstWriteWinsPlugin extends ResolverPlugin<FirstWriteWinsState, never> {
+export class FirstWriteWinsPlugin extends ResolverPlugin<FirstWriteWinsState> {
   readonly dependencies = [] as const;
 
   initialize(): FirstWriteWinsState {

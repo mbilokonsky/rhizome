@@ -1,4 +1,4 @@
-import { PropertyTypes, PropertyID } from "../../../../core/types";
+import { PropertyTypes } from "../../../../core/types";
 import { DependencyStates, ResolverPlugin } from "../plugin";
 
 type MinPluginState = {
@@ -10,16 +10,8 @@ type MinPluginState = {
  * 
  * Tracks the minimum numeric value
  */
-export class MinPlugin<Target extends PropertyID> extends ResolverPlugin<MinPluginState, Target> {
+export class MinPlugin extends ResolverPlugin<MinPluginState> {
   name = 'min';
-  readonly dependencies: Target[] = [];
-
-  constructor(private readonly target?: Target) {
-    super();
-    if (target) {
-      this.dependencies = [target];
-    }
-  }
 
   initialize(dependencies: DependencyStates): MinPluginState {
     return { min: this.target ? dependencies[this.target] as number : undefined };

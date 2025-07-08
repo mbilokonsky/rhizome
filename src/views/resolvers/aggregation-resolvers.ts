@@ -1,8 +1,10 @@
 import { Lossless, LosslessViewOne } from "../lossless";
 import { Lossy } from '../lossy';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
-import { valueFromCollapsedDelta } from "../lossless";
+import { valueFromDelta } from "../lossless";
 import { EntityRecord, EntityRecordMany } from "@src/core/entity";
+import Debug from 'debug';
+const debug = Debug('rz:test:performance');
 
 export type AggregationType = 'min' | 'max' | 'sum' | 'average' | 'count';
 
@@ -76,18 +78,11 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
       }
 
       // Extract numeric values from all deltas for this property
-      for (const delta of deltas || []) {
-        const value = valueFromCollapsedDelta(propertyId, delta);
+      for (const delta of deltas) {
+        const value = valueFromDelta(propertyId, delta);
+
         if (typeof value === 'number') {
-          if (this.config[propertyId] === 'count') {
-            // For count, include all values (including duplicates)
-            acc[cur.id].properties[propertyId].values.push(value);
-          } else {
-            // For other aggregations, only add unique values
-            if (!acc[cur.id].properties[propertyId].values.includes(value)) {
-              acc[cur.id].properties[propertyId].values.push(value);
-            }
-          }
+          acc[cur.id].properties[propertyId].values.push(value);
         }
       }
     }

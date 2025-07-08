@@ -11,8 +11,9 @@ import {
 } from '../schema/schema';
 import { DefaultSchemaRegistry } from '../schema/schema-registry';
 import { LosslessViewOne } from '../views/lossless';
-import { DomainEntityID, PropertyTypes } from '../core/types';
+import { DomainEntityID } from '../core/types';
 import { EntityProperties } from '../core/entity';
+import { createDelta } from '@src/core';
 
 const debug = Debug('rz:typed-collection');
 
@@ -77,17 +78,11 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
       propertyDeltas: {},
     };
 
-    // Create mock deltas for each property
     for (const [key, value] of Object.entries(entity)) {
-      if (value !== undefined) {
-        mockLosslessView.propertyDeltas[key] = [{
-          id: 'mock-delta',
-          timeCreated: Date.now(),
-          host: 'validation',
-          creator: 'validation',
-          pointers: [{ [key]: value as PropertyTypes }]
-        }];
-      }
+      mockLosslessView.propertyDeltas[key] = [createDelta('validation', 'validation')
+        .addPointer(key, value as string)
+        .buildV1(),
+      ];
     }
 
     return this.schemaRegistry.validate('validation-mock', this.schema.id, mockLosslessView);
@@ -130,9 +125,11 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     entityId: DomainEntityID | undefined,
     properties: EntityProperties,
   ): Promise<ResolvedViewOne> {
-    // Validate against schema if strict validation is enabled
+    // Validate against schema
+    const validationResult = this.validate(properties as T);
+
+    // If strict validation is enabled, throw on validation failure
     if (this.applicationOptions.strictValidation) {
-      const validationResult = this.validate(properties as T);
       if (!validationResult.valid) {
         throw new SchemaValidationError(
           `Schema validation failed: ${validationResult.errors.map(e => e.message).join(', ')}`,
@@ -145,7 +142,6 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const result = await super.put(entityId, properties);
 
     // Log validation warnings if any
-    const validationResult = this.validate(properties as T);
     if (validationResult.warnings.length > 0) {
       debug(`Validation warnings for entity ${entityId}:`, validationResult.warnings);
     }
@@ -200,13 +196,21 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
 
   // Filter entities by schema validation status
   getValidEntities(): DomainEntityID[] {
-    if (!this.rhizomeNode) return [];
-    
+    if (!this.rhizomeNode) {
+      debug(`No rhizome node connected`)
+      return [];
+    }
+    const losslessView = this.rhizomeNode.lossless.compose(this.getIds());
+    if (!losslessView) {
+      debug(`No lossless view found`)
+      return [];
+    }
+    debug(`getValidEntities, losslessView: ${JSON.stringify(losslessView, null, 2)}`)
+    debug(`Validating ${this.getIds().length} entities`)
     return this.getIds().filter(entityId => {
-      const losslessView = this.rhizomeNode!.lossless.compose([entityId])[entityId];
-      if (!losslessView) return false;
-      
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);
+      debug(`Validating entity ${entityId}`)
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView[entityId]);
+      debug(`Validation result for entity ${entityId}: ${JSON.stringify(validationResult)}`)
       return validationResult.valid;
     });
   }

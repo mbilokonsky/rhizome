@@ -13,7 +13,7 @@ type ConcatenationState = {
  * 
  * Concatenates all string values with a separator
  */
-export class ConcatenationPlugin extends ResolverPlugin<ConcatenationState, never> {
+export class ConcatenationPlugin extends ResolverPlugin<ConcatenationState> {
   readonly dependencies = [] as const;
 
   constructor(private separator: string = ' ') {

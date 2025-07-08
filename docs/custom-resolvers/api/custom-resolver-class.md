@@ -131,7 +131,7 @@ The resolver is configured with an object mapping property IDs to their resolver
 
 ```typescript
 interface ResolverConfig {
-  [propertyId: string]: ResolverPlugin<any, string>;
+  [propertyId: string]: ResolverPlugin<any>;
 }
 ```
 
@@ -164,7 +164,7 @@ const resolver = new CustomResolver(view, {
   taxRate: new LastWriteWinsPlugin(),
   
   // Complex plugin with multiple dependencies
-  subtotal: new class extends ResolverPlugin<SubtotalState, 'unitPrice' | 'quantity'> {
+  subtotal: new class extends ResolverPlugin<SubtotalState> {
     readonly dependencies = ['unitPrice', 'quantity'] as const;
     
     initialize() { return { value: 0 }; }
