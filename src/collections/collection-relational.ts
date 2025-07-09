@@ -17,7 +17,7 @@ export class RelationalCollection extends Collection<RelationalView> {
     id: string
   ): ResolvedViewOne | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
-    if (!this.view) throw new Error('view view not initialized');
+    if (!this.view) throw new Error('view not initialized');
 
     const res = this.view.resolve([id]) || {};
 

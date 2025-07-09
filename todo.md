@@ -186,7 +186,7 @@ This document tracks work needed to achieve full specification compliance, organ
 
 1. **Phase 1** ✅ - These are foundational requirements
 2. **Phase 2.1 (Negation)** ✅ - Core spec feature that affects all views
-3. **Phase 2.2 (Resolvers)** ✅ - Needed for proper view views
+3. **Phase 2.2 (Resolvers)** ✅ - Needed for proper views
 4. **Phase 2.3 (Nesting)** ✅ - Depends on schemas and queries
 5. **Phase 3 (Query)** ✅ - Unlocks powerful data access
 6. **Phase 4 (Relational)** - Builds on query system

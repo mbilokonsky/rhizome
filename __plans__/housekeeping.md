@@ -2,8 +2,8 @@
 
 - [x] Organize tests?
 - [x] More documentation in docs/
-- [x] Rename/consolidate, hyperview view() and compose() --> composeView()
-- [x] Rename Hyperview to HyperView
+- [x] Rename/consolidate, hyperview view() and compose() 
+- [x] Rename Lossless to HyperView
 - [x] Rename Lossy to View
 - [x] Consider whether we should use collapsed deltas
 - [ ] Improve ergonomics of declaring multiple entity properties in one delta

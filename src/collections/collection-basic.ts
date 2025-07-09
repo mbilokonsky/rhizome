@@ -18,7 +18,7 @@ export class BasicCollection extends Collection<TimestampResolver> {
     id: string
   ) {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
-    if (!this.view) throw new Error('view view not initialized');
+    if (!this.view) throw new Error('view not initialized');
 
     const res = this.view.resolve([id]) || {};
 

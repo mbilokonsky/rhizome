@@ -90,7 +90,7 @@ graph TD
   - Design storage layer (Mnesia/ETS)
 
 - **View System**
-  - Implement Lossy/Hyperview views
+  - Implement Lossy/Hyperviews
   - Create resolver framework
   - Add caching layer
 

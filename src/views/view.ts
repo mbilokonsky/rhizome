@@ -50,7 +50,7 @@ export abstract class Lossy<Accumulator, Result = Accumulator> {
 
     if (!hyperviewPartial) {
       // This should not happen; this should only be called after the hyperview has been updated
-      console.error(`Hyperview view for entity ${entityId} not found`);
+      console.error(`Hyperview for entity ${entityId} not found`);
       return;
     }
 

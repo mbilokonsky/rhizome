@@ -359,7 +359,7 @@ describe('Schema System', () => {
 
       debug(`Manually ingested invalid delta: ${JSON.stringify(invalidDelta)}`)
 
-      debug(`Hyperview view: ${JSON.stringify(node.hyperview.compose(), null, 2)}`)
+      debug(`Hyperview: ${JSON.stringify(node.hyperview.compose(), null, 2)}`)
 
       const validIds = collection.getValidEntities();
       expect(validIds).toContain('user1');
