@@ -83,7 +83,7 @@ describe('Nested Object Resolution Performance', () => {
             const friendshipDelta = createDelta(node.config.creator, node.config.peerId)
               .setProperty(userId, 'friends', friendId, 'users')
               .buildV1();
-            node.lossless.ingestDelta(friendshipDelta);
+            node.hyperview.ingestDelta(friendshipDelta);
           }
         }
 
@@ -96,7 +96,7 @@ describe('Nested Object Resolution Performance', () => {
             const followDelta = createDelta(node.config.creator, node.config.peerId)
               .setProperty(userId, 'followers', followerId, 'users')
               .buildV1();
-            node.lossless.ingestDelta(followDelta);
+            node.hyperview.ingestDelta(followDelta);
           }
         }
 
@@ -107,7 +107,7 @@ describe('Nested Object Resolution Performance', () => {
           const mentorshipDelta = createDelta(node.config.creator, node.config.peerId)
             .setProperty(userId, 'mentor', mentorId, 'users')
             .buildV1();
-          node.lossless.ingestDelta(mentorshipDelta);
+          node.hyperview.ingestDelta(mentorshipDelta);
         }
       }
 
@@ -116,7 +116,7 @@ describe('Nested Object Resolution Performance', () => {
 
       // Test resolution performance for a user with many connections
       const testUserId = userIds[50]; // Pick a user in the middle
-      const userViews = node.lossless.compose([testUserId]);
+      const userViews = node.hyperview.compose([testUserId]);
       const userView = userViews[testUserId];
 
       const startResolution = performance.now();
@@ -124,7 +124,7 @@ describe('Nested Object Resolution Performance', () => {
       const nestedView = schemaRegistry.applySchemaWithNesting(
         userView,
         'network-user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -197,7 +197,7 @@ describe('Nested Object Resolution Performance', () => {
         const linkDelta = createDelta(node.config.creator, node.config.peerId)
           .setProperty(currentId, 'next', nextId, 'users')
           .buildV1();
-        node.lossless.ingestDelta(linkDelta);
+        node.hyperview.ingestDelta(linkDelta);
       }
 
       const setupTime = performance.now() - startSetup;
@@ -205,7 +205,7 @@ describe('Nested Object Resolution Performance', () => {
 
       // Test resolution from the start of the chain
       const firstUserId = userIds[0];
-      const userViews = node.lossless.compose([firstUserId]);
+      const userViews = node.hyperview.compose([firstUserId]);
       const userView = userViews[firstUserId];
 
       const startResolution = performance.now();
@@ -213,7 +213,7 @@ describe('Nested Object Resolution Performance', () => {
       const nestedView = schemaRegistry.applySchemaWithNesting(
         userView,
         'chain-user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 5 } // Should resolve 5 levels deep
       );
 
@@ -292,7 +292,7 @@ describe('Nested Object Resolution Performance', () => {
             .addPointer('users', userId, 'connections')
             .addPointer('connections', connectedId)
             .buildV1();
-          node.lossless.ingestDelta(connectionDelta);
+          node.hyperview.ingestDelta(connectionDelta);
         }
       }
 
@@ -301,7 +301,7 @@ describe('Nested Object Resolution Performance', () => {
 
       // Test resolution performance with circular references
       const testUserId = userIds[0];
-      const userViews = node.lossless.compose([testUserId]);
+      const userViews = node.hyperview.compose([testUserId]);
       const userView = userViews[testUserId];
 
       const startResolution = performance.now();
@@ -309,7 +309,7 @@ describe('Nested Object Resolution Performance', () => {
       const nestedView = schemaRegistry.applySchemaWithNesting(
         userView,
         'circular-user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 3 }
       );
 

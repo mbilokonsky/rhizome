@@ -1,5 +1,5 @@
 import { PropertyTypes } from "@src/core/types";
-import { CollapsedDelta } from "@src/views/lossless";
+import { CollapsedDelta } from "@src/views/hyperview";
 import { ResolverPlugin, DependencyStates } from "../plugin";
 
 type RunningAverageState = {

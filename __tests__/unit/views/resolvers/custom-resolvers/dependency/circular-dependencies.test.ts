@@ -1,17 +1,17 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless } from '@src';
-import { CollapsedDelta } from '@src/views/lossless';
+import { RhizomeNode, Hyperview } from '@src';
+import { CollapsedDelta } from '@src/views/hyperview';
 import { CustomResolver, ResolverPlugin } from '@src/views/resolvers/custom-resolvers';
 
 type PropertyTypes = string | number | boolean | null;
 
 describe('Circular Dependency Detection', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   test('should detect circular dependencies', () => {
@@ -53,7 +53,7 @@ describe('Circular Dependency Detection', () => {
 
     // Should throw an error when circular dependencies are detected
     expect(() => {
-      new CustomResolver(lossless, {
+      new CustomResolver(hyperview, {
         'a': new PluginA(),
         'b': new PluginB()
       });
@@ -84,7 +84,7 @@ describe('Circular Dependency Detection', () => {
 
     // Should detect the circular dependency: a -> c -> b -> a
     expect(() => {
-      new CustomResolver(lossless, {
+      new CustomResolver(hyperview, {
         'a': new PluginA(),
         'b': new PluginB(),
         'c': new PluginC()

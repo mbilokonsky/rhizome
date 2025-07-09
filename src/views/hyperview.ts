@@ -9,7 +9,7 @@ import {Transactions} from '../features/transactions';
 import {DomainEntityID, PropertyID, PropertyTypes, TransactionID, ViewMany} from "../core/types";
 import {Negation} from '../features/negation';
 import {NegationHelper} from '../features/negation';
-const debug = Debug('rz:lossless');
+const debug = Debug('rz:hyperview');
 
 export type CollapsedPointer = {[key: PropertyID]: PropertyTypes};
 
@@ -49,7 +49,7 @@ export function valueFromDelta(
 }
 
 // TODO: Store property deltas as references to reduce memory footprint
-export type LosslessViewOne = {
+export type HyperviewOne = {
   id: DomainEntityID,
   referencedAs?: string[];
   propertyDeltas: {
@@ -57,21 +57,21 @@ export type LosslessViewOne = {
   }
 }
 
-export type CollapsedViewOne = Omit<LosslessViewOne, 'propertyDeltas'> & {
+export type CollapsedViewOne = Omit<HyperviewOne, 'propertyDeltas'> & {
   propertyCollapsedDeltas: {
     [key: PropertyID]: CollapsedDelta[]
   }
 };
 
-export type LosslessViewMany = ViewMany<LosslessViewOne>;
+export type HyperviewMany = ViewMany<HyperviewOne>;
 export type CollapsedViewMany = ViewMany<CollapsedViewOne>;
 
-class LosslessEntityMap extends Map<DomainEntityID, LosslessEntity> {};
+class HyperviewEntityMap extends Map<DomainEntityID, HyperviewEntity> {};
 
-class LosslessEntity {
+class HyperviewEntity {
   properties = new Map<PropertyID, Set<Delta>>();
 
-  constructor(readonly lossless: Lossless, readonly id: DomainEntityID) {}
+  constructor(readonly hyperview: Hyperview, readonly id: DomainEntityID) {}
 
   addDelta(delta: Delta | DeltaV2) {
     // Convert DeltaV2 to DeltaV1 if needed
@@ -93,7 +93,7 @@ class LosslessEntity {
       propertyDeltas.add(delta);
     }
 
-    debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `entity ${this.id} added delta:`, JSON.stringify(delta));
+    debug(`[${this.hyperview.rhizomeNode.config.peerId}]`, `entity ${this.id} added delta:`, JSON.stringify(delta));
   }
 
   toJSON() {
@@ -103,14 +103,14 @@ class LosslessEntity {
     }
     return {
       id: this.id,
-      referencedAs: Array.from(this.lossless.referencedAs.get(this.id) ?? []),
+      referencedAs: Array.from(this.hyperview.referencedAs.get(this.id) ?? []),
       properties
     };
   }
 }
 
-export class Lossless {
-  domainEntities = new LosslessEntityMap();
+export class Hyperview {
+  domainEntities = new HyperviewEntityMap();
   transactions: Transactions;
   eventStream = new EventEmitter();
 
@@ -160,7 +160,7 @@ export class Lossless {
           for (const entityId of affectedEntities) {
             let ent = this.domainEntities.get(entityId);
             if (!ent) {
-              ent = new LosslessEntity(this, entityId);
+              ent = new HyperviewEntity(this, entityId);
               this.domainEntities.set(entityId, ent);
             }
             // Add negation delta to the entity
@@ -189,7 +189,7 @@ export class Lossless {
         let ent = this.domainEntities.get(target);
 
         if (!ent) {
-          ent = new LosslessEntity(this, target);
+          ent = new HyperviewEntity(this, target);
           this.domainEntities.set(target, ent);
         }
 
@@ -208,7 +208,7 @@ export class Lossless {
     return transactionId;
   }
 
-  decompose(view: LosslessViewOne): Delta[] {
+  decompose(view: HyperviewOne): Delta[] {
     const allDeltas: Delta[] = [];
     const seenDeltaIds = new Set<DeltaID>();
     
@@ -225,8 +225,8 @@ export class Lossless {
     return allDeltas;
   }
 
-  compose(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): LosslessViewMany {
-    const view: LosslessViewMany = {};
+  compose(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): HyperviewMany {
+    const view: HyperviewMany = {};
     entityIds = entityIds ?? Array.from(this.domainEntities.keys());
 
     for (const entityId of entityIds) {

@@ -1,6 +1,6 @@
 import { PropertyID } from '@src/core/types';
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta } from '@src';
+import { RhizomeNode, Hyperview, createDelta } from '@src';
 import { 
   CustomResolver, 
   LastWriteWinsPlugin, 
@@ -10,7 +10,7 @@ import {
   ResolverPlugin
 } from '@src/views/resolvers/custom-resolvers';
 import Debug from 'debug';
-const debug = Debug('rz:test:lossless');
+const debug = Debug('rz:test:hyperview');
 
 // A simple plugin that depends on other plugins
 class AveragePlugin<Targets extends PropertyID> extends ResolverPlugin<{ initialized: boolean }> {
@@ -49,15 +49,15 @@ class AveragePlugin<Targets extends PropertyID> extends ResolverPlugin<{ initial
 
 describe('Multiple Plugins Integration', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   test('should handle multiple plugins with dependencies', () => {
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       temperature: new LastWriteWinsPlugin(),
       maxTemp: new MaxPlugin('temperature'),
       minTemp: new MinPlugin('temperature'),
@@ -67,7 +67,7 @@ describe('Multiple Plugins Integration', () => {
     // Add some temperature readings
     const readings = [22, 25, 18, 30, 20];
     readings.forEach((temp, index) => {
-      lossless.ingestDelta(
+      hyperview.ingestDelta(
         createDelta('sensor1', 'host1')
           .withTimestamp(1000 + index * 1000)
           .setProperty('room1', 'temperature', temp, 'sensors')
@@ -89,7 +89,7 @@ describe('Multiple Plugins Integration', () => {
   });
 
   test('should handle multiple entities with different plugins', () => {
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       name: new LastWriteWinsPlugin(),
       tags: new ConcatenationPlugin(),
       score: new MaxPlugin()
@@ -97,7 +97,7 @@ describe('Multiple Plugins Integration', () => {
 
     debug(`Creating and ingesting first delta`);
     // Add data for entity1
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('entity1', 'name', 'Test Entity', 'test-name')
@@ -107,7 +107,7 @@ describe('Multiple Plugins Integration', () => {
 
     debug(`Creating and ingesting second delta`);
     // Add more tags to entity1
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(2000)
         .setProperty('entity1', 'tags', 'tag2', 'test')
@@ -116,7 +116,7 @@ describe('Multiple Plugins Integration', () => {
 
     debug(`Creating and ingesting third delta`);
     // Add data for entity2
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('entity2', 'score', 85, 'test')
@@ -125,7 +125,7 @@ describe('Multiple Plugins Integration', () => {
 
     debug(`Creating and ingesting fourth delta`);
     // Update score for entity2
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(2000)
         .setProperty('entity2', 'score', 90, 'test')

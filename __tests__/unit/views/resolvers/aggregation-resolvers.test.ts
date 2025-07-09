@@ -1,6 +1,6 @@
 import {
   RhizomeNode,
-  Lossless,
+  Hyperview,
   AggregationResolver,
   MinResolver,
   MaxResolver,
@@ -13,31 +13,31 @@ import { createDelta } from "@src/core/delta-builder";
 
 describe('Aggregation Resolvers', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   describe('Basic Aggregation', () => {
     test('should aggregate numbers using min resolver', () => {
-      const minResolver = new MinResolver(lossless, ['score']);
+      const minResolver = new MinResolver(hyperview, ['score']);
 
       // Add first entity with score 10
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
         .buildV1()
       );
 
       // Add second entity with score 5
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity2', 'score', 5, 'collection')
         .buildV1()
       );
 
       // Add third entity with score 15
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity3', 'score', 15, 'collection')
         .buildV1()
       );
@@ -52,20 +52,20 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should aggregate numbers using max resolver', () => {
-      const maxResolver = new MaxResolver(lossless, ['score']);
+      const maxResolver = new MaxResolver(hyperview, ['score']);
 
       // Add deltas for entities
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity2', 'score', 5, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity3', 'score', 15, 'collection')
         .buildV1()
       );
@@ -79,22 +79,22 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should aggregate numbers using sum resolver', () => {
-      const sumResolver = new SumResolver(lossless, ['value']);
+      const sumResolver = new SumResolver(hyperview, ['value']);
 
       // Add first value for entity1
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 10, 'collection')
         .buildV1()
       );
 
       // Add second value for entity1 (should sum)
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 20, 'collection')
         .buildV1()
       );
 
       // Add value for entity2
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity2', 'value', 5, 'collection')
         .buildV1()
       );
@@ -107,21 +107,21 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should aggregate numbers using average resolver', () => {
-      const avgResolver = new AverageResolver(lossless, ['score']);
+      const avgResolver = new AverageResolver(hyperview, ['score']);
 
       // Add multiple scores for entity1
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 20, 'collection')
         .buildV1()
       );
 
       // Single value for entity2
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity2', 'score', 30, 'collection')
         .buildV1()
       );
@@ -134,21 +134,21 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should count values using count resolver', () => {
-      const countResolver = new CountResolver(lossless, ['visits']);
+      const countResolver = new CountResolver(hyperview, ['visits']);
 
       // Add multiple visit deltas for entity1
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'visits', 1, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'visits', 1, 'collection')
         .buildV1()
       );
 
       // Single visit for entity2
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity2', 'visits', 1, 'collection')
         .buildV1()
       );
@@ -163,40 +163,40 @@ describe('Aggregation Resolvers', () => {
 
   describe('Custom Aggregation Configuration', () => {
     test('should handle mixed aggregation types', () => {
-      const resolver = new AggregationResolver(lossless, {
+      const resolver = new AggregationResolver(hyperview, {
         min_val: 'min' as AggregationType,
         max_val: 'max' as AggregationType,
         sum_val: 'sum' as AggregationType
       }); 
       
       // Add first set of values
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'min_val', 10, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'max_val', 5, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'sum_val', 3, 'collection')
         .buildV1()
       );
 
       // Add second set of values
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'min_val', 5, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'max_val', 15, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'sum_val', 7, 'collection')
         .buildV1()
       );
@@ -212,25 +212,25 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should ignore non-numeric values', () => {
-      const resolver = new AggregationResolver(lossless, {
+      const resolver = new AggregationResolver(hyperview, {
         score: 'sum' as AggregationType,
         name: 'count' as AggregationType
       });
       
       // Add numeric value
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 10, 'collection')
         .buildV1()
       );
 
       // Add non-numeric value (string)
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'name', 'test', 'collection')
         .buildV1()
       );
 
       // Add another numeric value
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'score', 20, 'collection')
         .buildV1()
       );
@@ -244,9 +244,9 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle empty value arrays', () => {
-      const sumResolver = new SumResolver(lossless, ['score']);
+      const sumResolver = new SumResolver(hyperview, ['score']);
       // Create entity with non-aggregated property
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'name', 'test', 'collection')
         .buildV1()
       );
@@ -261,9 +261,9 @@ describe('Aggregation Resolvers', () => {
 
   describe('Edge Cases', () => {
     test('should handle single value aggregations', () => {
-      const avgResolver = new AverageResolver(lossless, ['value']);
+      const avgResolver = new AverageResolver(hyperview, ['value']);
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 42, 'collection')
         .buildV1()
       );
@@ -275,14 +275,14 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle zero values', () => {
-      const sumResolver = new SumResolver(lossless, ['value']);
+      const sumResolver = new SumResolver(hyperview, ['value']);
       
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 0, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 10, 'collection')
         .buildV1()
       );
@@ -294,14 +294,14 @@ describe('Aggregation Resolvers', () => {
     });
 
     test('should handle negative values', () => {
-      const minResolver = new MinResolver(lossless, ['value']);
+      const minResolver = new MinResolver(hyperview, ['value']);
       
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', -5, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('test', 'host1')
+      hyperview.ingestDelta(createDelta('test', 'host1')
         .setProperty('entity1', 'value', 10, 'collection')
         .buildV1()
       );

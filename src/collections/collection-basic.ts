@@ -7,20 +7,20 @@ import {Collection} from '../collections/collection-abstract';
 import {TimestampResolver} from '../views/resolvers/timestamp-resolvers';
 
 export class BasicCollection extends Collection<TimestampResolver> {
-  declare lossy?: TimestampResolver;
+  declare view?: TimestampResolver;
 
   initializeView() {
     if (!this.rhizomeNode) throw new Error('not connected to rhizome');
-    this.lossy = new TimestampResolver(this.rhizomeNode.lossless);
+    this.view = new TimestampResolver(this.rhizomeNode.hyperview);
   }
 
   resolve(
     id: string
   ) {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
-    if (!this.lossy) throw new Error('lossy view not initialized');
+    if (!this.view) throw new Error('view not initialized');
 
-    const res = this.lossy.resolve([id]) || {};
+    const res = this.view.resolve([id]) || {};
 
     return res[id];
   }

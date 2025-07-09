@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta, CollapsedDelta } from '@src';
+import { RhizomeNode, Hyperview, createDelta, CollapsedDelta } from '@src';
 import { 
   CustomResolver, 
   ResolverPlugin,
@@ -51,20 +51,20 @@ type LifecycleTestState = {
 
 describe('Plugin Lifecycle', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   test('should call initialize, update, and resolve in order', () => {
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       test: new LifecycleTestPlugin()
     });
 
     // Add some data
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('test1', 'test', 'value1')
@@ -92,12 +92,12 @@ describe('Plugin Lifecycle', () => {
   });
 
   test('should handle multiple updates correctly', () => {
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       test: new LifecycleTestPlugin()
     });
 
     // First update
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('test2', 'test', 'value1')
@@ -105,7 +105,7 @@ describe('Plugin Lifecycle', () => {
     );
 
     // Second update
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(2000)
         .setProperty('test2', 'test', 'value2')
@@ -132,7 +132,7 @@ describe('Plugin Lifecycle', () => {
   });
 
   test('should handle empty state', () => {
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       test: new LifecycleTestPlugin()
     });
 

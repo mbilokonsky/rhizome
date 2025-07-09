@@ -1,5 +1,5 @@
-import { RhizomeNode, Lossless, createDelta } from "@src";
-import { CollapsedDelta } from "@src/views/lossless";
+import { RhizomeNode, Hyperview, createDelta } from "@src";
+import { CollapsedDelta } from "@src/views/hyperview";
 import { 
   CustomResolver, 
   ResolverPlugin, 
@@ -10,11 +10,11 @@ import { PropertyTypes } from '@src/core/types';
 
 describe('State Visibility', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   // A test plugin that records which states it sees
@@ -88,10 +88,10 @@ describe('State Visibility', () => {
       prop2: spy2
     } as const;
 
-    const resolver = new CustomResolver(lossless, config);
+    const resolver = new CustomResolver(hyperview, config);
 
     // Add some data
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('entity1', 'prop1', 'value1', 'entity-prop1')
@@ -127,10 +127,10 @@ describe('State Visibility', () => {
       dependsOn: dependency
     } as const;
 
-    const resolver = new CustomResolver(lossless, config);
+    const resolver = new CustomResolver(hyperview, config);
 
     // Add some data
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('entity1', 'dependsOn', 'baseValue', 'prop1')
@@ -157,14 +157,14 @@ describe('State Visibility', () => {
     const lastWrite = new LastWriteWinsPlugin();
     const other = new LastWriteWinsPlugin();
     
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       dependent: dependent,
       dependsOn: lastWrite,
       other: other  // Not declared as a dependency
     });
 
     // Add some data
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('entity1', 'dependsOn', 'baseValue', 'prop1')
@@ -214,7 +214,7 @@ describe('State Visibility', () => {
     }
 
     expect(() => {
-      new CustomResolver(lossless, {
+      new CustomResolver(hyperview, {
         bad: new PluginWithBadDeps()
       });
     }).toThrow("Dependency nonexistent not found for plugin bad");

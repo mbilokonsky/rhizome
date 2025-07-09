@@ -1,5 +1,5 @@
 # Test structure
-- before test, initialize node and lossless view
+- before test, initialize node and hyperview
 - when test begins, create and ingest a series of deltas
 - instantiate a resolver, in this case using custom resolver plugins
 - call the resolver's initializer with the view

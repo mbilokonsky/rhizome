@@ -1,7 +1,7 @@
 import { createDelta } from '@src/core/delta-builder';
 import {
   RhizomeNode,
-  Lossless,
+  Hyperview,
   SumResolver,
   CustomResolver,
   LastWriteWinsPlugin,
@@ -13,28 +13,28 @@ const debug = Debug('rz:test:performance');
 
 describe('Concurrent Write Scenarios', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   describe('Simultaneous Writes with Same Timestamp', () => {
     test('should handle simultaneous writes using last-write-wins resolver', () => {
-      const resolver = new TimestampResolver(lossless);
+      const resolver = new TimestampResolver(hyperview);
 
       const timestamp = 1000;
       
       // Simulate two writers updating the same property at the exact same time
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withId('delta-a')
         .withTimestamp(timestamp)
         .setProperty('entity1', 'score', 100, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer2', 'host2')
+      hyperview.ingestDelta(createDelta('writer2', 'host2')
         .withId('delta-b')
         .withTimestamp(timestamp) // Same timestamp
         .setProperty('entity1', 'score', 200, 'collection')
@@ -52,16 +52,16 @@ describe('Concurrent Write Scenarios', () => {
 
     test('should handle simultaneous writes using timestamp resolver with tie-breaking', () => {
       const timestamp = 1000;
-      const resolver = new TimestampResolver(lossless, 'creator-id');
+      const resolver = new TimestampResolver(hyperview, 'creator-id');
 
-      lossless.ingestDelta(createDelta('writer_z', 'host1') // Lexicographically later
+      hyperview.ingestDelta(createDelta('writer_z', 'host1') // Lexicographically later
         .withId('delta-a')
         .withTimestamp(timestamp)
         .setProperty('entity1', 'score', 100, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer_a', 'host2') // Lexicographically earlier
+      hyperview.ingestDelta(createDelta('writer_a', 'host2') // Lexicographically earlier
         .withId('delta-b')
         .withTimestamp(timestamp) // Same timestamp
         .setProperty('entity1', 'score', 200, 'collection')
@@ -76,23 +76,23 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should handle multiple writers with aggregation resolver', () => {
-      const resolver = new SumResolver(lossless, ['points']);
+      const resolver = new SumResolver(hyperview, ['points']);
 
       // Multiple writers add values simultaneously
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(1000)
         .setProperty('entity1', 'points', 10, 'collection')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer2', 'host2')
+      hyperview.ingestDelta(createDelta('writer2', 'host2')
         .withTimestamp(1000) // Same timestamp
         .setProperty('entity1', 'points', 20, 'collection')
         .buildV1()
       );
 
       // Third writer adds another value
-      lossless.ingestDelta(createDelta('writer3', 'host3')
+      hyperview.ingestDelta(createDelta('writer3', 'host3')
         .withTimestamp(1000) // Same timestamp
         .setProperty('entity1', 'points', 30, 'collection')
         .buildV1()
@@ -108,10 +108,10 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('Out-of-Order Write Arrival', () => {
     test('should handle writes arriving out of chronological order', () => {
-      const resolver = new TimestampResolver(lossless);
+      const resolver = new TimestampResolver(hyperview);
 
       // Newer delta arrives first
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(2000)
         .addPointer('collection', 'entity1', 'value')
         .addPointer('value', 'newer')
@@ -119,7 +119,7 @@ describe('Concurrent Write Scenarios', () => {
       );
 
       // Older delta arrives later
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'value')
         .addPointer('value', 'older')
@@ -134,24 +134,24 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should maintain correct aggregation despite out-of-order arrival', () => {
-      const resolver = new SumResolver(lossless, ['score']);
+      const resolver = new SumResolver(hyperview, ['score']);
 
       // Add deltas in reverse chronological order
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(3000)
         .addPointer('collection', 'entity1', 'score')
         .addPointer('score', 30)
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'score')
         .addPointer('score', 10)
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(2000)
         .addPointer('collection', 'entity1', 'score')
         .addPointer('score', 20)
@@ -168,7 +168,7 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('High-Frequency Concurrent Updates', () => {
     test('should handle rapid concurrent updates to the same entity', () => {
-      const resolver = new SumResolver(lossless, ['counter']);
+      const resolver = new SumResolver(hyperview, ['counter']);
 
       const baseTimestamp = 1000;
       const numWriters = 10;
@@ -177,7 +177,7 @@ describe('Concurrent Write Scenarios', () => {
       // Simulate multiple writers making rapid updates
       for (let writer = 0; writer < numWriters; writer++) {
         for (let write = 0; write < writesPerWriter; write++) {
-          lossless.ingestDelta(createDelta(`writer${writer}`, `host${writer}`)
+          hyperview.ingestDelta(createDelta(`writer${writer}`, `host${writer}`)
             .withTimestamp(baseTimestamp + write)
             .addPointer('collection', 'entity1', 'counter')
             .addPointer('counter', 1)
@@ -194,7 +194,7 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should handle concurrent updates to multiple properties', () => {
-      const resolver = new CustomResolver(lossless, {
+      const resolver = new CustomResolver(hyperview, {
         name: new LastWriteWinsPlugin(),
         score: new LastWriteWinsPlugin()
       });
@@ -202,14 +202,14 @@ describe('Concurrent Write Scenarios', () => {
       const timestamp = 1000;
       
       // Writer 1 updates name and score
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(timestamp)
         .addPointer('collection', 'entity1', 'name')
         .addPointer('name', 'alice')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(timestamp + 1)
         .addPointer('collection', 'entity1', 'score')
         .addPointer('score', 100)
@@ -217,14 +217,14 @@ describe('Concurrent Write Scenarios', () => {
       );
 
       // Writer 2 updates name and score concurrently
-      lossless.ingestDelta(createDelta('writer2', 'host2')
+      hyperview.ingestDelta(createDelta('writer2', 'host2')
         .withTimestamp(timestamp + 2)
         .addPointer('collection', 'entity1', 'name')
         .addPointer('name', 'bob')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer2', 'host2')
+      hyperview.ingestDelta(createDelta('writer2', 'host2')
         .withTimestamp(timestamp + 3)
         .addPointer('collection', 'entity1', 'score')
         .addPointer('score', 200)
@@ -241,13 +241,13 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('Cross-Entity Concurrent Writes', () => {
     test('should handle concurrent writes to different entities', () => {
-      const resolver = new TimestampResolver(lossless);
+      const resolver = new TimestampResolver(hyperview);
 
       const timestamp = 1000;
       
       // Multiple writers updating different entities simultaneously
       for (let i = 0; i < 5; i++) {
-        lossless.ingestDelta(createDelta(`writer${i}`, `host${i}`)
+        hyperview.ingestDelta(createDelta(`writer${i}`, `host${i}`)
           .withTimestamp(timestamp)
           .addPointer('collection', `entity${i}`, 'value')
           .addPointer('value', (i + 1) * 10)
@@ -266,28 +266,28 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should handle mixed entity and property conflicts', () => {
-      const resolver = new CustomResolver(lossless, {
+      const resolver = new CustomResolver(hyperview, {
         votes: new MajorityVotePlugin(),
         status: new LastWriteWinsPlugin()
       });
       const timestamp = 1000;
       
       // Entity1: Multiple writers competing for same property
-      lossless.ingestDelta(createDelta('writer1', 'host1')
+      hyperview.ingestDelta(createDelta('writer1', 'host1')
         .withTimestamp(timestamp)
         .addPointer('collection', 'entity1', 'votes')
         .addPointer('votes', 'option_a')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer2', 'host2')
+      hyperview.ingestDelta(createDelta('writer2', 'host2')
         .withTimestamp(timestamp)
         .addPointer('collection', 'entity1', 'votes')
         .addPointer('votes', 'option_a')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('writer3', 'host3')
+      hyperview.ingestDelta(createDelta('writer3', 'host3')
         .withTimestamp(timestamp)
         .addPointer('collection', 'entity1', 'votes')
         .addPointer('votes', 'option_b')
@@ -295,7 +295,7 @@ describe('Concurrent Write Scenarios', () => {
       );
 
       // Entity2: Single writer, no conflict
-      lossless.ingestDelta(createDelta('writer4', 'host4')
+      hyperview.ingestDelta(createDelta('writer4', 'host4')
         .withTimestamp(timestamp)
         .addPointer('collection', 'entity2', 'status')
         .addPointer('status', 'active')
@@ -312,7 +312,7 @@ describe('Concurrent Write Scenarios', () => {
 
   describe('Stress Testing', () => {
     test('should handle large number of concurrent writes efficiently', () => {
-      const resolver = new SumResolver(lossless, ['score']);
+      const resolver = new SumResolver(hyperview, ['score']);
 
       const numEntities = 100;
       const numWritersPerEntity = 10;
@@ -321,7 +321,7 @@ describe('Concurrent Write Scenarios', () => {
       // Generate a large number of concurrent writes
       for (let entity = 0; entity < numEntities; entity++) {
         for (let writer = 0; writer < numWritersPerEntity; writer++) {
-          lossless.ingestDelta(createDelta(`writer${writer}`, `host${writer}`)
+          hyperview.ingestDelta(createDelta(`writer${writer}`, `host${writer}`)
             .withTimestamp(baseTimestamp + Math.floor(Math.random() * 1000))
             .addPointer('collection', `entity${entity}`, 'score')
             .addPointer('score', Math.floor(Math.random() * 100))
@@ -344,14 +344,14 @@ describe('Concurrent Write Scenarios', () => {
     });
 
     test('should maintain consistency under rapid updates and resolution calls', () => {
-      const resolver = new SumResolver(lossless, ['counter']);
+      const resolver = new SumResolver(hyperview, ['counter']);
 
       const entityId = 'stress-test-entity';
       let updateCount = 0;
       
       // Add initial deltas
       for (let i = 0; i < 50; i++) {
-        lossless.ingestDelta(createDelta(
+        hyperview.ingestDelta(createDelta(
           `writer${i % 5}`, 
           `host${i % 3}`
         )
@@ -370,7 +370,7 @@ describe('Concurrent Write Scenarios', () => {
       
       // Add more deltas and verify consistency
       for (let i = 0; i < 25; i++) {
-        lossless.ingestDelta(createDelta('late-writer', 'late-host')
+        hyperview.ingestDelta(createDelta('late-writer', 'late-host')
           .withTimestamp(2000 + i)
           .addPointer('collection', entityId, 'counter')
           .addPointer('counter', 2)

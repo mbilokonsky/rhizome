@@ -1,5 +1,5 @@
 import { PropertyID, PropertyTypes } from "../../../core/types";
-import { CollapsedDelta } from "../../lossless";
+import { CollapsedDelta } from "../../hyperview";
 import Debug from 'debug';
 const debug = Debug('rz:custom-resolver:plugin');
 

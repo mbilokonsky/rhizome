@@ -1,6 +1,6 @@
 import Debug from "debug";
 import { createDelta } from '@src/core/delta-builder';
-import { Lossless, RhizomeNode } from '@src';
+import { Hyperview, RhizomeNode } from '@src';
 import { TimestampResolver } from '@src/views/resolvers/timestamp-resolvers';
 const debug = Debug('rz:test:last-write-wins');
 
@@ -11,24 +11,24 @@ describe('Last write wins', () => {
 
   describe('given that two separate writes occur', () => {
     const node = new RhizomeNode();
-    const lossless = new Lossless(node);
+    const hyperview = new Hyperview(node);
 
-    const lossy = new TimestampResolver(lossless);
+    const view = new TimestampResolver(hyperview);
 
     beforeAll(() => {
-      lossless.ingestDelta(createDelta('a', 'h')
+      hyperview.ingestDelta(createDelta('a', 'h')
         .setProperty('broccoli', 'want', 95, 'vegetable')
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('a', 'h')
+      hyperview.ingestDelta(createDelta('a', 'h')
         .setProperty('broccoli', 'want', 90, 'vegetable')
         .buildV1()
       );
     });
 
     test('our resolver should return the most recently written value', () => {
-      const result = lossy.resolve(["broccoli"]);
+      const result = view.resolve(["broccoli"]);
       debug('result', result);
       expect(result).toMatchObject({
         broccoli: {

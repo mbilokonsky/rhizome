@@ -90,7 +90,7 @@ graph TD
   - Design storage layer (Mnesia/ETS)
 
 - **View System**
-  - Implement Lossy/Lossless views
+  - Implement Lossy/Hyperviews
   - Create resolver framework
   - Add caching layer
 
@@ -237,7 +237,7 @@ sequenceDiagram
 - [ ] Define delta types and operations
 - [ ] Implement DeltaBuilder
 - [ ] Basic storage with Mnesia/ETS
-- [ ] View system with Lossy/Lossless support
+- [ ] View system with Lossy/Hyperview support
 
 ### 2. Distributed Foundation
 - [ ] Node discovery and membership

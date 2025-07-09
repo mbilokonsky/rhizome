@@ -1,5 +1,5 @@
 import { RhizomeNode } from '@src';
-import { Lossless } from '@src/views/lossless';
+import { Hyperview } from '@src/views/hyperview';
 import { Delta } from '@src/core/delta';
 import { createDelta } from '@src/core/delta-builder';
 import { CustomResolver } from '@src/views/resolvers/custom-resolvers';
@@ -29,12 +29,12 @@ export async function testResolverWithPlugins<T extends TestPluginMap>(
 
   // Setup test environment
   const node = new RhizomeNode();
-  const lossless = new Lossless(node);
-  const view = new CustomResolver(lossless, plugins);
+  const hyperview = new Hyperview(node);
+  const view = new CustomResolver(hyperview, plugins);
 
-  // Ingest all deltas through the lossless instance
+  // Ingest all deltas through the hyperview instance
   for (const delta of deltas) {
-    lossless.ingestDelta(delta);
+    hyperview.ingestDelta(delta);
   }
 
   // Get the resolved view

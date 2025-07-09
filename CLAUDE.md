@@ -42,7 +42,7 @@ npm run example-app
    - DeltaV2 is the current format (DeltaV1 is legacy)
 
 2. **Views**: Different ways to interpret the delta stream:
-   - **Lossless View**: Stores all deltas without conflict resolution
+   - **Hyperview View**: Stores all deltas without conflict resolution
    - **Lossy Views**: Apply conflict resolution (e.g., Last-Write-Wins)
    - Custom resolvers can be implemented
 
@@ -60,7 +60,7 @@ npm run example-app
 
 - `src/node.ts`: Main `RhizomeNode` class orchestrating all components
 - `src/delta.ts`: Delta data structures and conversion logic
-- `src/lossless.ts`: Core lossless view implementation
+- `src/hyperview.ts`: Core hyperview implementation
 - `src/collection-basic.ts`: Basic collection implementation
 - `src/http/api.ts`: REST API endpoints
 - `src/pub-sub.ts`: Network communication layer
@@ -78,7 +78,7 @@ The HTTP API provides RESTful endpoints:
 - `GET/PUT /collection/:name/:id` - Entity operations
 - `GET /peers` - Peer information
 - `GET /deltas/stats` - Delta statistics
-- `GET /lossless/:entityId` - Raw delta access
+- `GET /hyperview/:entityId` - Raw delta access
 
 ### Important Implementation Notes
 

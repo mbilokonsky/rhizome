@@ -1,4 +1,4 @@
-import { LosslessViewOne } from '@src/views/lossless';
+import { HyperviewOne } from '@src/views/hyperview';
 import { 
   SchemaBuilder, 
   PrimitiveSchemas, 
@@ -153,12 +153,12 @@ describe('Schema System', () => {
       expect(schemaRegistry.hasCircularDependencies()).toBe(true);
     });
 
-    test('should validate lossless views against schemas', () => {
+    test('should validate hyperviews against schemas', () => {
       const userSchema = CommonSchemas.User();
       schemaRegistry.register(userSchema);
 
-      // Create a valid lossless view
-      const validView: LosslessViewOne = {
+      // Create a valid hyperview
+      const validView: HyperviewOne = {
         id: 'user123',
         propertyDeltas: {
           name: [
@@ -179,7 +179,7 @@ describe('Schema System', () => {
       expect(result.errors).toHaveLength(0);
 
       // Test invalid view (missing required property)
-      const invalidView: LosslessViewOne = {
+      const invalidView: HyperviewOne = {
         id: 'user456',
         propertyDeltas: {
           age: [
@@ -212,7 +212,7 @@ describe('Schema System', () => {
       schemaRegistry.register(schema);
 
       // Valid types
-      const validView: LosslessViewOne = {
+      const validView: HyperviewOne = {
         id: 'test1',
         propertyDeltas: {
           stringProp: [
@@ -240,7 +240,7 @@ describe('Schema System', () => {
       expect(validResult.valid).toBe(true);
 
       // Invalid types
-      const invalidView: LosslessViewOne = {
+      const invalidView: HyperviewOne = {
         id: 'test2',
         propertyDeltas: {
           stringProp: [
@@ -331,7 +331,7 @@ describe('Schema System', () => {
         .addPointer('users', 'user3', 'email')
         .addPointer('email', 'invalid@test.com')
         .buildV1();
-      node.lossless.ingestDelta(invalidDelta);
+      node.hyperview.ingestDelta(invalidDelta);
 
       const stats = collection.getValidationStats();
       expect(stats.totalEntities).toBe(3);
@@ -355,11 +355,11 @@ describe('Schema System', () => {
       const invalidDelta = createDelta(node.config.creator, node.config.peerId)
         .setProperty('user3', 'age', 'not-a-number', 'users')
         .buildV1();
-      node.lossless.ingestDelta(invalidDelta);
+      node.hyperview.ingestDelta(invalidDelta);
 
       debug(`Manually ingested invalid delta: ${JSON.stringify(invalidDelta)}`)
 
-      debug(`Lossless view: ${JSON.stringify(node.lossless.compose(), null, 2)}`)
+      debug(`Hyperview: ${JSON.stringify(node.hyperview.compose(), null, 2)}`)
 
       const validIds = collection.getValidEntities();
       expect(validIds).toContain('user1');
@@ -371,7 +371,7 @@ describe('Schema System', () => {
       expect(invalidEntities[0].entityId).toBe('user3');
     });
 
-    test('should apply schema to lossless views', async () => {
+    test('should apply schema to hyperviews', async () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;

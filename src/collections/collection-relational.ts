@@ -6,20 +6,20 @@ class RelationalView extends TimestampResolver {
 }
 
 export class RelationalCollection extends Collection<RelationalView> {
-  declare lossy?: RelationalView;
+  declare view?: RelationalView;
 
   initializeView() {
     if (!this.rhizomeNode) throw new Error('not connected to rhizome');
-    this.lossy = new RelationalView(this.rhizomeNode.lossless);
+    this.view = new RelationalView(this.rhizomeNode.hyperview);
   }
 
   resolve(
     id: string
   ): ResolvedViewOne | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
-    if (!this.lossy) throw new Error('lossy view not initialized');
+    if (!this.view) throw new Error('view not initialized');
 
-    const res = this.lossy.resolve([id]) || {};
+    const res = this.view.resolve([id]) || {};
 
     return res[id];
   }

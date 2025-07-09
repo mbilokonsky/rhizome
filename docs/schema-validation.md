@@ -56,7 +56,7 @@ const unsafeDelta = createDelta('peer1', 'peer1')
   .buildV1();
 
 // This will be ingested without validation
-node.lossless.ingestDelta(unsafeDelta);
+node.hyperview.ingestDelta(unsafeDelta);
 
 // 5. Check validation status after the fact
 const stats = collection.getValidationStats();

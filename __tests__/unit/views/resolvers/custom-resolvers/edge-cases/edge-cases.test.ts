@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta, CollapsedDelta } from '@src';
+import { RhizomeNode, Hyperview, createDelta, CollapsedDelta } from '@src';
 import { 
   CustomResolver, 
   DependencyStates, 
@@ -9,11 +9,11 @@ import { PropertyTypes } from '@src/core/types';
 
 describe('Edge Cases', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   test('should handle null values', () => {
@@ -45,11 +45,11 @@ describe('Edge Cases', () => {
       }
     }
 
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       value: new NullSafeLastWriteWinsPlugin()
     });
 
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('test2', 'value', null, 'test')
@@ -95,19 +95,19 @@ describe('Edge Cases', () => {
       }
     }
 
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       value: new ConcurrentUpdatePlugin()
     });
 
     // Two updates with the same timestamp
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('test2', 'value', null, 'test')
         .buildV1()
     );
 
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user2', 'host2')
         .withTimestamp(1000)  // Same timestamp
         .setProperty('test2', 'value', 'xylophone', 'test')
@@ -149,13 +149,13 @@ describe('Edge Cases', () => {
       }
     }
 
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       counter: new CounterPlugin()
     });
 
     // Add 1000 updates
     for (let i = 0; i < 1000; i++) {
-      lossless.ingestDelta(
+      hyperview.ingestDelta(
         createDelta('user1', 'host1')
           .withTimestamp(1000 + i)
           .setProperty('test3', 'counter', i, 'test')
@@ -193,7 +193,7 @@ describe('Edge Cases', () => {
       }
     }
 
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       missing: new MissingPropertyPlugin()
     });
 

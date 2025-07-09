@@ -1,12 +1,12 @@
 import Debug from 'debug';
 import { PointerTarget } from "@src/core/delta";
-import { Lossless, LosslessViewOne } from "@src/views/lossless";
-import { Lossy } from "@src/views/lossy";
+import { Hyperview, HyperviewOne } from "@src/views/hyperview";
+import { Lossy } from "@src/views/view";
 import { RhizomeNode } from "@src/node";
-import { valueFromDelta } from "@src/views/lossless";
+import { valueFromDelta } from "@src/views/hyperview";
 import { latestFromCollapsedDeltas } from "@src/views/resolvers/timestamp-resolvers";
 import { createDelta } from "@src/core/delta-builder";
-const debug = Debug('rz:test:lossy');
+const debug = Debug('rz:test:view');
 
 type Role = {
   actor: PointerTarget,
@@ -21,9 +21,9 @@ type Summary = {
 class Summarizer extends Lossy<Summary> {
   private readonly debug: debug.Debugger;
 
-  constructor(lossless: Lossless) {
-    super(lossless);
-    this.debug = Debug('rz:test:lossy:summarizer');
+  constructor(hyperview: Hyperview) {
+    super(hyperview);
+    this.debug = Debug('rz:test:view:summarizer');
   }
 
   initializer(): Summary {
@@ -37,9 +37,9 @@ class Summarizer extends Lossy<Summary> {
   // it's really not CRDT, it likely depends on the order of the pointers.
   // TODO: Prove with failing test
 
-  reducer(acc: Summary, cur: LosslessViewOne): Summary {
+  reducer(acc: Summary, cur: HyperviewOne): Summary {
     this.debug(`Processing view for entity ${cur.id} (referenced as: ${cur.referencedAs?.join(', ')})`);
-    this.debug(`lossless view:`, JSON.stringify(cur));
+    this.debug(`hyperview:`, JSON.stringify(cur));
     
     if (cur.referencedAs?.includes("role")) {
       this.debug(`Found role entity: ${cur.id}`);
@@ -92,12 +92,12 @@ class Summarizer extends Lossy<Summary> {
 describe('Lossy', () => {
   describe('use a provided initializer, reducer, and resolver to resolve entity views', () => {
     const node = new RhizomeNode();
-    const lossless = new Lossless(node);
+    const hyperview = new Hyperview(node);
 
-    const lossy = new Summarizer(lossless);
+    const view = new Summarizer(hyperview);
 
     beforeAll(() => {
-      lossless.ingestDelta(createDelta('a', 'h')
+      hyperview.ingestDelta(createDelta('a', 'h')
         .addPointer('actor', 'keanu', 'roles')
         .addPointer('role', 'neo', 'actor')
         .addPointer('film', 'the_matrix', 'cast')
@@ -108,7 +108,7 @@ describe('Lossy', () => {
     });
 
     test('example summary', () => {
-      const result = lossy.resolve();
+      const result = view.resolve();
       debug('result', result);
       expect(result).toEqual({
         roles: [{

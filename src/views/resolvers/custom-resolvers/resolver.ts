@@ -1,5 +1,5 @@
-import { Lossless, LosslessViewOne } from "../../lossless";
-import { Lossy } from '../../lossy';
+import { Hyperview, HyperviewOne } from "../../hyperview";
+import { Lossy } from '../../view';
 import { DomainEntityID, PropertyID, PropertyTypes } from "../../../core/types";
 import { ResolverPlugin, DependencyStates } from "./plugin";
 import { EntityRecord } from "@src/core/entity";
@@ -46,14 +46,14 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
 
   /**
    * Creates a new CustomResolver instance
-   * @param lossless - The Lossless instance to use for delta tracking
+   * @param hyperview - The Hyperview instance to use for delta tracking
    * @param config - A mapping of property IDs to their resolver plugins
    */
   constructor(
-    lossless: Lossless,
+    hyperview: Hyperview,
     config: PluginMap
   ) {
-    super(lossless);
+    super(hyperview);
     this.config = config;
     this.buildDependencyGraph();
     this.executionOrder = this.calculateExecutionOrder();
@@ -244,7 +244,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
   /**
    * Update the state with new deltas from the view
    */
-  reducer(acc: Accumulator, {id: entityId, propertyDeltas}: LosslessViewOne): Accumulator {
+  reducer(acc: Accumulator, {id: entityId, propertyDeltas}: HyperviewOne): Accumulator {
     debug(`Processing deltas for entity: ${entityId}`);
     debug('Property deltas:', JSON.stringify(propertyDeltas));
 

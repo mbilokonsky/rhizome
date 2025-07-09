@@ -78,11 +78,11 @@ Create tests to verify your plugin's behavior:
 
 ```typescript
 describe('DiscountedPricePlugin', () => {
-  let view: LosslessView;
+  let view: Hyperview;
   let resolver: CustomResolver;
   
   beforeEach(() => {
-    view = new LosslessView();
+    view = new Hyperview();
     resolver = new CustomResolver(view, {
       basePrice: new LastWriteWinsPlugin(),
       discount: new LastWriteWinsPlugin(),

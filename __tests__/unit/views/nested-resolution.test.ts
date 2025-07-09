@@ -59,10 +59,10 @@ describe('Nested Object Resolution', () => {
         .addPointer('users', 'alice', 'friends')
         .addPointer('friends', 'bob')
         .buildV1();
-      node.lossless.ingestDelta(friendshipDelta);
+      node.hyperview.ingestDelta(friendshipDelta);
 
-      // Get Alice's lossless view
-      const aliceViews = node.lossless.compose(['alice']);
+      // Get Alice's hyperview
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
       
       expect(aliceView).toBeDefined();
@@ -73,7 +73,7 @@ describe('Nested Object Resolution', () => {
       const nestedView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -107,15 +107,15 @@ describe('Nested Object Resolution', () => {
         .addPointer('users', 'alice', 'friends')
         .addPointer('friends', 'nonexistent')
         .buildV1();
-      node.lossless.ingestDelta(friendshipDelta);
+      node.hyperview.ingestDelta(friendshipDelta);
 
-      const aliceViews = node.lossless.compose(['alice']);
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
       
       const nestedView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -158,23 +158,23 @@ describe('Nested Object Resolution', () => {
         .addPointer('deep-users', 'alice', 'mentor')
         .addPointer('mentor', 'bob')
         .buildV1();
-      node.lossless.ingestDelta(mentorshipDelta1);
+      node.hyperview.ingestDelta(mentorshipDelta1);
 
       // Bob's mentor is Charlie
       const mentorshipDelta2 = createDelta(node.config.creator, node.config.peerId)
         .addPointer('deep-users', 'bob', 'mentor')
         .addPointer('mentor', 'charlie')
         .buildV1();
-      node.lossless.ingestDelta(mentorshipDelta2);
+      node.hyperview.ingestDelta(mentorshipDelta2);
 
-      const aliceViews = node.lossless.compose(['alice']);
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       // Test with maxDepth = 1 (should only resolve Alice and Bob)
       const shallowView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'deep-user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 1 }
       );
 
@@ -197,7 +197,7 @@ describe('Nested Object Resolution', () => {
       const deepView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'deep-user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -234,22 +234,22 @@ describe('Nested Object Resolution', () => {
         .addPointer('users', 'alice', 'friends')
         .addPointer('friends', 'bob')
         .buildV1();
-      node.lossless.ingestDelta(friendship1);
+      node.hyperview.ingestDelta(friendship1);
 
       const friendship2 = createDelta(node.config.creator, node.config.peerId)
         .addPointer('users', 'bob', 'friends')
         .addPointer('friends', 'alice')
         .buildV1();
-      node.lossless.ingestDelta(friendship2);
+      node.hyperview.ingestDelta(friendship2);
 
-      const aliceViews = node.lossless.compose(['alice']);
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       // Should handle circular reference without infinite recursion
       const nestedView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 3 }
       );
 
@@ -275,15 +275,15 @@ describe('Nested Object Resolution', () => {
         .addPointer('users', 'alice', 'friends')
         .addPointer('friends', 'alice')
         .buildV1();
-      node.lossless.ingestDelta(selfFriendship);
+      node.hyperview.ingestDelta(selfFriendship);
 
-      const aliceViews = node.lossless.compose(['alice']);
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -311,21 +311,21 @@ describe('Nested Object Resolution', () => {
         .addPointer('users', 'alice', 'friends')
         .addPointer('friends', 'bob')
         .buildV1();
-      node.lossless.ingestDelta(friendship1);
+      node.hyperview.ingestDelta(friendship1);
 
       const friendship2 = createDelta(node.config.creator, node.config.peerId)
         .addPointer('users', 'alice', 'friends')
         .addPointer('friends', 'charlie')
         .buildV1();
-      node.lossless.ingestDelta(friendship2);
+      node.hyperview.ingestDelta(friendship2);
 
-      const aliceViews = node.lossless.compose(['alice']);
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -373,15 +373,15 @@ describe('Nested Object Resolution', () => {
         .addPointer('users', 'alice', 'friends')
         .addPointer('friends', 'bob')
         .buildV1();
-      node.lossless.ingestDelta(friendship);
+      node.hyperview.ingestDelta(friendship);
 
-      const aliceViews = node.lossless.compose(['alice']);
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'user',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 3 }
       );
 

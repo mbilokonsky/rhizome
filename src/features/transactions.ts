@@ -1,7 +1,7 @@
 import Debug from "debug";
 import EventEmitter from "events";
 import {Delta, DeltaID} from "../core/delta";
-import {Lossless} from "../views/lossless";
+import {Hyperview} from "../views/hyperview";
 import {DomainEntityID, TransactionID} from "../core/types";
 const debug = Debug('rz:transactions');
 
@@ -72,7 +72,7 @@ export class Transactions {
   transactions = new Map<TransactionID, Transaction>();
   eventStream = new EventEmitter();
 
-  constructor(readonly lossless: Lossless) {}
+  constructor(readonly hyperview: Hyperview) {}
 
   get(id: TransactionID): Transaction | undefined {
     return this.transactions.get(id);
@@ -116,7 +116,7 @@ export class Transactions {
     {
       const {transactionId, size} = getTransactionSize(delta) || {};
       if (transactionId && size) {
-        debug(`[${this.lossless.rhizomeNode.config.peerId}]`, `Transaction ${transactionId} has size ${size}`);
+        debug(`[${this.hyperview.rhizomeNode.config.peerId}]`, `Transaction ${transactionId} has size ${size}`);
 
         this.setSize(transactionId, size as number);
 

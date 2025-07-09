@@ -1,12 +1,12 @@
 import {DeltaFilter} from '@src/core';
-import {Lossless} from '@src/views';
+import {Hyperview} from '@src/views';
 import {RhizomeNode} from '@src/node';
 import {createDelta} from '@src/core/delta-builder';
 
-describe('Lossless', () => {
+describe('Hyperview', () => {
   const node = new RhizomeNode();
 
-  test('creates a lossless view of keanu as neo in the matrix', () => {
+  test('creates a hyperview of keanu as neo in the matrix', () => {
     const delta = createDelta('a', 'h')
       .addPointer('actor', 'keanu', 'roles')
       .addPointer('role', 'neo', 'actor')
@@ -35,11 +35,11 @@ describe('Lossless', () => {
       target: "usd"
     }]);
 
-    const lossless = new Lossless(node);
+    const hyperview = new Hyperview(node);
 
-    lossless.ingestDelta(delta);
+    hyperview.ingestDelta(delta);
 
-    expect(lossless.compose()).toMatchObject({
+    expect(hyperview.compose()).toMatchObject({
       keanu: {
         referencedAs: ["actor"],
         propertyDeltas: {
@@ -100,11 +100,11 @@ describe('Lossless', () => {
       .addPointer('salary_currency', 'usd')
       .buildV2();
 
-    const lossless = new Lossless(node);
+    const hyperview = new Hyperview(node);
 
-    lossless.ingestDelta(delta);
+    hyperview.ingestDelta(delta);
 
-    expect(lossless.compose()).toMatchObject({
+    expect(hyperview.compose()).toMatchObject({
       keanu: {
         referencedAs: ["actor"],
         propertyDeltas: {
@@ -157,18 +157,18 @@ describe('Lossless', () => {
   });
 
   describe('can filter deltas', () => {
-    const lossless = new Lossless(node);
+    const hyperview = new Hyperview(node);
 
     beforeAll(() => {
       // First delta
-      lossless.ingestDelta(
+      hyperview.ingestDelta(
         createDelta('A', 'H')
           .setProperty('ace', 'value', '1', 'ace')
           .buildV1()
       );
 
       // Second delta
-      lossless.ingestDelta(
+      hyperview.ingestDelta(
         createDelta('B', 'H')
           // 10 11j 12q 13k 14a
           // .addPointer('14', 'ace', 'value')
@@ -176,7 +176,7 @@ describe('Lossless', () => {
           .buildV1()
       );
 
-      expect(lossless.compose()).toMatchObject({
+      expect(hyperview.compose()).toMatchObject({
         ace: {
           referencedAs: ["ace"],
           propertyDeltas: {
@@ -205,7 +205,7 @@ describe('Lossless', () => {
         return creator === 'A' && host === 'H';
       };
 
-      expect(lossless.compose(undefined, filter)).toMatchObject({
+      expect(hyperview.compose(undefined, filter)).toMatchObject({
         ace: {
           referencedAs: ["ace"],
           propertyDeltas: {
@@ -221,7 +221,7 @@ describe('Lossless', () => {
         }
       });
 
-      expect(lossless.compose(["ace"], filter)).toMatchObject({
+      expect(hyperview.compose(["ace"], filter)).toMatchObject({
         ace: {
           referencedAs: ["ace"],
           propertyDeltas: {
@@ -239,18 +239,18 @@ describe('Lossless', () => {
     });
 
     test('filter with transactions', () => {
-      const losslessT = new Lossless(node);
+      const hyperviewT = new Hyperview(node);
       const transactionId = 'tx-filter-test';
 
       // Declare transaction with 3 deltas
-      losslessT.ingestDelta(
+      hyperviewT.ingestDelta(
         createDelta('system', 'H')
           .declareTransaction(transactionId, 3)
           .buildV1()
       );
 
       // A1: First delta from creator A
-      losslessT.ingestDelta(
+      hyperviewT.ingestDelta(
         createDelta('A', 'H')
           .inTransaction(transactionId)
           .setProperty('process1', 'status', 'started', 'step')
@@ -258,7 +258,7 @@ describe('Lossless', () => {
       );
 
       // B: Delta from creator B
-      losslessT.ingestDelta(
+      hyperviewT.ingestDelta(
         createDelta('B', 'H')
           .inTransaction(transactionId)
           .setProperty('process1', 'status', 'processing', 'step')
@@ -266,11 +266,11 @@ describe('Lossless', () => {
       );
 
       // Transaction incomplete - nothing should show
-      const incompleteView = losslessT.compose(['process1']);
+      const incompleteView = hyperviewT.compose(['process1']);
       expect(incompleteView.process1).toBeUndefined();
 
       // A2: Second delta from creator A completes transaction
-      losslessT.ingestDelta(
+      hyperviewT.ingestDelta(
         createDelta('A', 'H')
           .inTransaction(transactionId)
           .addPointer('step', 'process1', 'status')
@@ -279,13 +279,13 @@ describe('Lossless', () => {
       );
 
       // All deltas visible now
-      const completeView = losslessT.compose(['process1']);
+      const completeView = hyperviewT.compose(['process1']);
       expect(completeView.process1).toBeDefined();
       expect(completeView.process1.propertyDeltas.status).toHaveLength(3);
 
       // Filter by creator A only
       const filterA: DeltaFilter = ({creator}) => creator === 'A';
-      const filteredView = losslessT.compose(['process1'], filterA);
+      const filteredView = hyperviewT.compose(['process1'], filterA);
       
       expect(filteredView.process1).toBeDefined();
       expect(filteredView.process1.propertyDeltas.status).toHaveLength(2);

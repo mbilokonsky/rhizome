@@ -10,11 +10,11 @@ The `CustomResolver` class is the main entry point for the Custom Resolver syste
 class CustomResolver {
   /**
    * Creates a new CustomResolver instance
-   * @param view The lossless view to resolve
+   * @param view The hyperview to resolve
    * @param config Plugin configuration
    */
   constructor(
-    private readonly view: LosslessView,
+    private readonly view: Hyperview,
     private readonly config: ResolverConfig
   );
 
@@ -48,7 +48,7 @@ class CustomResolver {
 Creates a new instance of the CustomResolver.
 
 **Parameters:**
-- `view: LosslessView` - The lossless view containing the data to resolve
+- `view: Hyperview` - The hyperview containing the data to resolve
 - `config: ResolverConfig` - Configuration object mapping property IDs to their resolver plugins
 
 **Example:**
@@ -146,10 +146,10 @@ The resolver may throw the following errors:
 
 ```typescript
 import { CustomResolver, LastWriteWinsPlugin } from './resolver';
-import { LosslessView } from '../lossless-view';
+import { Hyperview } from '../hyperview-view';
 
-// Create a lossless view with some data
-const view = new LosslessView();
+// Create a hyperview with some data
+const view = new Hyperview();
 // ... add data to the view ...
 
 // Configure the resolver

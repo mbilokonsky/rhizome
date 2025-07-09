@@ -1,17 +1,17 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { RhizomeNode, Lossless, createDelta } from '@src';
-import { CollapsedDelta } from '@src/views/lossless';
+import { RhizomeNode, Hyperview, createDelta } from '@src';
+import { CollapsedDelta } from '@src/views/hyperview';
 import { CustomResolver, ResolverPlugin } from '@src/views/resolvers/custom-resolvers';
 
 type PropertyTypes = string | number | boolean | null;
 
 describe('Basic Dependency Resolution', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   test('should resolve dependencies in correct order', () => {
@@ -51,20 +51,20 @@ describe('Basic Dependency Resolution', () => {
       }
     }
 
-    const resolver = new CustomResolver(lossless, {
+    const resolver = new CustomResolver(hyperview, {
       first: new FirstPlugin(),
       second: new SecondPlugin()
     });
 
     // Add some data
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(1000)
         .setProperty('test1', 'first', 'hello', 'test')
         .buildV1()
     );
 
-    lossless.ingestDelta(
+    hyperview.ingestDelta(
       createDelta('user1', 'host1')
         .withTimestamp(2000)
         .setProperty('test1', 'second', 'world', 'test')

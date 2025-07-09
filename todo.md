@@ -12,7 +12,7 @@ This document tracks work needed to achieve full specification compliance, organ
 - [x] Add validation for pointer consistency
 
 ### 1.2 Complete Transaction Support ✅ (mostly)
-- [x] Implement transaction-based filtering in lossless views
+- [x] Implement transaction-based filtering in hyperviews
 - [x] Add transaction grouping in delta streams
 - [x] Test atomic transaction operations
 - [ ] Add transaction rollback capabilities (deferred - not critical for spec parity)
@@ -29,8 +29,8 @@ This document tracks work needed to achieve full specification compliance, organ
 ### 2.1 Negation Deltas ✅
 - [x] Implement negation delta type with "negates" pointer
 - [x] Add "negated_by" context handling
-- [x] Update lossless view to handle negations
-- [x] Update lossy resolvers to respect negations
+- [x] Update hyperview to handle negations
+- [x] Update view resolvers to respect negations
 - [x] Add comprehensive negation tests
 
 ### 2.2 Advanced Conflict Resolution ✅
@@ -50,7 +50,7 @@ This document tracks work needed to achieve full specification compliance, organ
 
 ### 3.1 Query Engine Foundation ✅
 - [x] Implement JSON Logic parser (using json-logic-js)
-- [x] Create query planner for lossless views
+- [x] Create query planner for hyperviews
 - [x] Add query execution engine (QueryEngine class)
 - [x] Implement schema-driven entity discovery
 - [x] Enable the skipped query tests
@@ -91,7 +91,7 @@ This document tracks work needed to achieve full specification compliance, organ
 
 ### 4.4 Schema-as-Deltas (Meta-Schema System)
 - [ ] Define schema entities that are stored as deltas in the system
-- [ ] Implement schema queries that return schema instances from lossless views
+- [ ] Implement schema queries that return schema instances from hyperviews
 - [ ] Create schema evolution through delta mutations
 - [ ] Add temporal schema queries (schema time-travel)
 - [ ] Build schema conflict resolution for competing schema definitions
@@ -186,7 +186,7 @@ This document tracks work needed to achieve full specification compliance, organ
 
 1. **Phase 1** ✅ - These are foundational requirements
 2. **Phase 2.1 (Negation)** ✅ - Core spec feature that affects all views
-3. **Phase 2.2 (Resolvers)** ✅ - Needed for proper lossy views
+3. **Phase 2.2 (Resolvers)** ✅ - Needed for proper views
 4. **Phase 2.3 (Nesting)** ✅ - Depends on schemas and queries
 5. **Phase 3 (Query)** ✅ - Unlocks powerful data access
 6. **Phase 4 (Relational)** - Builds on query system

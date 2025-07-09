@@ -84,9 +84,9 @@ const delta = createTestDelta('user1', 'host1')
 
 ## How It Works
 
-1. Creates a new `Lossless` instance for the test
+1. Creates a new `Hyperview` instance for the test
 2. Sets up a `CustomResolver` with the provided plugins
-3. Ingests all provided deltas into the `Lossless` instance
+3. Ingests all provided deltas into the `Hyperview` instance
 4. Retrieves a view for the specified entity
 5. Processes the view through the resolver
 6. Calls the `expectedResult` callback with the resolved entity
@@ -97,4 +97,4 @@ const delta = createTestDelta('user1', 'host1')
 - The helper handles all setup and teardown of test resources
 - Use `createTestDelta` for consistent delta creation in tests
 - The helper ensures type safety between the resolver and the expected result type
-- Each test gets a fresh `Lossless` instance automatically
+- Each test gets a fresh `Hyperview` instance automatically

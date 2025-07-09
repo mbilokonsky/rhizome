@@ -2,17 +2,17 @@ import Debug from 'debug';
 import { createDelta } from '@src/core/delta-builder';
 import { NegationHelper } from '@src/features';
 import { RhizomeNode } from '@src/node';
-import { Lossless } from '@src/views';
+import { Hyperview } from '@src/views';
 
 const debug = Debug('rz:negation:test');
 
 describe('Negation System', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   describe('Negation Helper', () => {
@@ -179,8 +179,8 @@ describe('Negation System', () => {
     });
   });
 
-  describe('Lossless View Integration', () => {
-    test('should filter negated deltas in lossless views', () => {
+  describe('Hyperview View Integration', () => {
+    test('should filter negated deltas in hyperviews', () => {
       // Create original delta
       const originalDelta = createDelta('user1', 'host1')
         .setProperty('user123', 'name', 'Alice')
@@ -198,12 +198,12 @@ describe('Negation System', () => {
         .buildV1();
 
       // Ingest all deltas
-      lossless.ingestDelta(originalDelta);
-      lossless.ingestDelta(negationDelta);
-      lossless.ingestDelta(nonNegatedDelta);
+      hyperview.ingestDelta(originalDelta);
+      hyperview.ingestDelta(negationDelta);
+      hyperview.ingestDelta(nonNegatedDelta);
 
       // Get view - should only show non-negated delta
-      const view = lossless.compose(['user123']);
+      const view = hyperview.compose(['user123']);
       
       expect(view.user123).toBeDefined();
       
@@ -220,11 +220,11 @@ describe('Negation System', () => {
       const negation1 = createDelta('mod1', 'host1').negate(originalDelta.id).buildV1();
       const negation2 = createDelta('mod2', 'host1').negate(originalDelta.id).buildV1();
 
-      lossless.ingestDelta(originalDelta);
-      lossless.ingestDelta(negation1);
-      lossless.ingestDelta(negation2);
+      hyperview.ingestDelta(originalDelta);
+      hyperview.ingestDelta(negation1);
+      hyperview.ingestDelta(negation2);
 
-      const view = lossless.compose(['post1']);
+      const view = hyperview.compose(['post1']);
       
       // Original delta should be negated (not visible)
       expect(view.post1).toBeUndefined();
@@ -241,11 +241,11 @@ describe('Negation System', () => {
 
       const negation1 = createDelta('mod1', 'host1').negate(delta1.id).buildV1();
 
-      lossless.ingestDelta(delta1);
-      lossless.ingestDelta(delta2);
-      lossless.ingestDelta(negation1);
+      hyperview.ingestDelta(delta1);
+      hyperview.ingestDelta(delta2);
+      hyperview.ingestDelta(negation1);
 
-      const stats = lossless.getNegationStats('article1');
+      const stats = hyperview.getNegationStats('article1');
       
       expect(stats.totalDeltas).toBe(3);
       expect(stats.negationDeltas).toBe(1);
@@ -262,10 +262,10 @@ describe('Negation System', () => {
 
       const negationDelta = createDelta('admin', 'host1').negate(originalDelta.id).buildV1();
 
-      lossless.ingestDelta(originalDelta);
-      lossless.ingestDelta(negationDelta);
+      hyperview.ingestDelta(originalDelta);
+      hyperview.ingestDelta(negationDelta);
 
-      const negations = lossless.getNegationDeltas('task1');
+      const negations = hyperview.getNegationDeltas('task1');
       expect(negations).toHaveLength(1);
       expect(negations[0].id).toBe(negationDelta.id);
       expect(negations[0].creator).toBe('admin');
@@ -275,7 +275,7 @@ describe('Negation System', () => {
       const transactionId = 'tx-negation';
 
       // Create transaction declaration
-      lossless.ingestDelta(createDelta('system', 'host1')
+      hyperview.ingestDelta(createDelta('system', 'host1')
         .declareTransaction(transactionId, 2)
         .buildV1()
       );
@@ -294,11 +294,11 @@ describe('Negation System', () => {
         targetContext: 'deltas'
       });
 
-      lossless.ingestDelta(originalDelta);
-      lossless.ingestDelta(negationDelta);
+      hyperview.ingestDelta(originalDelta);
+      hyperview.ingestDelta(negationDelta);
 
       // Transaction should complete, but original delta should be negated
-      const view = lossless.compose(['post1']);
+      const view = hyperview.compose(['post1']);
       expect(view.post1).toBeUndefined(); // No visible deltas
     });
 
@@ -321,11 +321,11 @@ describe('Negation System', () => {
         .setProperty('post1', 'content', 'Edited post')
         .buildV1();
 
-      lossless.ingestDelta(postDelta);
-      lossless.ingestDelta(negationDelta);
-      lossless.ingestDelta(editDelta);
+      hyperview.ingestDelta(postDelta);
+      hyperview.ingestDelta(negationDelta);
+      hyperview.ingestDelta(editDelta);
 
-      const view = lossless.compose(['post1']);
+      const view = hyperview.compose(['post1']);
       
       // Should show edited content (edit happened after negation)
       expect(view.post1).toBeDefined();
@@ -341,10 +341,10 @@ describe('Negation System', () => {
     test('should handle negation of non-existent deltas', () => {
       const negationDelta = createDelta('moderator', 'host1').negate('non-existent-delta-id').buildV1();
 
-      lossless.ingestDelta(negationDelta);
+      hyperview.ingestDelta(negationDelta);
 
       // Should not crash and stats should reflect the orphaned negation
-      const stats = lossless.getNegationStats('entity1');
+      const stats = hyperview.getNegationStats('entity1');
       expect(stats.negationDeltas).toBe(0); // No negations for this entity
     });
 
@@ -357,16 +357,16 @@ describe('Negation System', () => {
 
       const negationDelta = createDelta('admin', 'host1').negate(selfRefDelta.id).buildV1();
 
-      lossless.ingestDelta(selfRefDelta);
-      lossless.ingestDelta(negationDelta);
+      hyperview.ingestDelta(selfRefDelta);
+      hyperview.ingestDelta(negationDelta);
 
-      const view = lossless.compose(['node1']);
+      const view = hyperview.compose(['node1']);
       expect(view.node1).toBeUndefined(); // Should be negated
     });
 
     test('should handle multiple direct negations of the same delta', () => {
       const testNode = new RhizomeNode();
-      const testLossless = new Lossless(testNode);
+      const testHyperview = new Hyperview(testNode);
       
       // Create the original delta
       const originalDelta = createDelta('user1', 'host1')
@@ -378,18 +378,18 @@ describe('Negation System', () => {
       const negation2 = createDelta('user3', 'host1').negate(originalDelta.id).buildV1();
 
       // Process all deltas
-      testLossless.ingestDelta(originalDelta);
-      testLossless.ingestDelta(negation1);
-      testLossless.ingestDelta(negation2);
+      testHyperview.ingestDelta(originalDelta);
+      testHyperview.ingestDelta(negation1);
+      testHyperview.ingestDelta(negation2);
 
       // Get the view after processing all deltas
-      const view = testLossless.compose(['entity2']);
+      const view = testHyperview.compose(['entity2']);
       
       // The original delta should be negated (not in view) because it has two direct negations
       expect(view.entity2).toBeUndefined();
 
       // Verify the stats
-      const stats = testLossless.getNegationStats('entity2');
+      const stats = testHyperview.getNegationStats('entity2');
       expect(stats.negationDeltas).toBe(2);
       expect(stats.negatedDeltas).toBe(1);
       expect(stats.effectiveDeltas).toBe(0);
@@ -397,7 +397,7 @@ describe('Negation System', () => {
 
     test('should handle complex negation chains', () => {
       const testNode = new RhizomeNode();
-      const testLossless = new Lossless(testNode);
+      const testHyperview = new Hyperview(testNode);
       
       // Create the original delta
       const deltaA = createDelta('user1', 'host1')
@@ -415,13 +415,13 @@ describe('Negation System', () => {
       debug('Delta D (negates C): %s', deltaD.id);
 
       // Process all deltas in order
-      testLossless.ingestDelta(deltaA);
-      testLossless.ingestDelta(deltaB);
-      testLossless.ingestDelta(deltaC);
-      testLossless.ingestDelta(deltaD);
+      testHyperview.ingestDelta(deltaA);
+      testHyperview.ingestDelta(deltaB);
+      testHyperview.ingestDelta(deltaC);
+      testHyperview.ingestDelta(deltaD);
 
       // Get the view after processing all deltas
-      const view = testLossless.compose(['entity3']);
+      const view = testHyperview.compose(['entity3']);
       
       // The original delta should be negated because:
       // - B negates A
@@ -433,7 +433,7 @@ describe('Negation System', () => {
       const allDeltas = [deltaA, deltaB, deltaC, deltaD];
       
       // Get the stats
-      const stats = testLossless.getNegationStats('entity3');
+      const stats = testHyperview.getNegationStats('entity3');
       const isANegated = NegationHelper.isDeltaNegated(deltaA.id, allDeltas);
       const isBNegated = NegationHelper.isDeltaNegated(deltaB.id, allDeltas);
       const isCNegated = NegationHelper.isDeltaNegated(deltaC.id, allDeltas);
@@ -470,7 +470,7 @@ describe('Negation System', () => {
 
     test('should handle multiple independent negations', () => {
       const testNode = new RhizomeNode();
-      const testLossless = new Lossless(testNode);
+      const testHyperview = new Hyperview(testNode);
       
       // Create two independent deltas
       const delta1 = createDelta('user1', 'host1')
@@ -486,19 +486,19 @@ describe('Negation System', () => {
       const negation2 = createDelta('user4', 'host1').negate(delta2.id).buildV1();
 
       // Process all deltas
-      testLossless.ingestDelta(delta1);
-      testLossless.ingestDelta(delta2);
-      testLossless.ingestDelta(negation1);
-      testLossless.ingestDelta(negation2);
+      testHyperview.ingestDelta(delta1);
+      testHyperview.ingestDelta(delta2);
+      testHyperview.ingestDelta(negation1);
+      testHyperview.ingestDelta(negation2);
 
       // Get the view after processing all deltas
-      const view = testLossless.compose(['entity4']);
+      const view = testHyperview.compose(['entity4']);
       
       // Both deltas should be negated
       expect(view.entity4).toBeUndefined();
 
       // Verify the stats
-      const stats = testLossless.getNegationStats('entity4');
+      const stats = testHyperview.getNegationStats('entity4');
       expect(stats.negationDeltas).toBe(2);
       expect(stats.negatedDeltas).toBe(2);
       expect(stats.effectiveDeltas).toBe(0);

@@ -10,7 +10,7 @@ import {
   SchemaApplicationOptions
 } from '../schema/schema';
 import { DefaultSchemaRegistry } from '../schema/schema-registry';
-import { LosslessViewOne } from '../views/lossless';
+import { HyperviewOne } from '../views/hyperview';
 import { DomainEntityID } from '../core/types';
 import { EntityProperties } from '../core/entity';
 import { createDelta } from '@src/core';
@@ -58,38 +58,38 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
 
   initializeView(): void {
     if (!this.rhizomeNode) throw new Error('not connected to rhizome');
-    this.lossy = new TimestampResolver(this.rhizomeNode.lossless);
+    this.view = new TimestampResolver(this.rhizomeNode.hyperview);
   }
 
   resolve(id: string): ResolvedViewOne | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
-    if (!this.lossy) throw new Error('lossy view not initialized');
+    if (!this.view) throw new Error('view not initialized');
 
-    const res = this.lossy.resolve([id]) || {};
+    const res = this.view.resolve([id]) || {};
     return res[id];
   }
 
   // Validate an entity against the schema
   validate(entity: T): SchemaValidationResult {
-    // Convert entity to a mock lossless view for validation
-    const mockLosslessView: LosslessViewOne = {
+    // Convert entity to a mock hyperview for validation
+    const mockHyperview: HyperviewOne = {
       id: 'validation-mock',
       referencedAs: [],
       propertyDeltas: {},
     };
 
     for (const [key, value] of Object.entries(entity)) {
-      mockLosslessView.propertyDeltas[key] = [createDelta('validation', 'validation')
+      mockHyperview.propertyDeltas[key] = [createDelta('validation', 'validation')
         .addPointer(key, value as string)
         .buildV1(),
       ];
     }
 
-    return this.schemaRegistry.validate('validation-mock', this.schema.id, mockLosslessView);
+    return this.schemaRegistry.validate('validation-mock', this.schema.id, mockHyperview);
   }
 
-  // Apply schema to a lossless view
-  apply(view: LosslessViewOne): SchemaAppliedView {
+  // Apply schema to a hyperview
+  apply(view: HyperviewOne): SchemaAppliedView {
     return this.schemaRegistry.applySchema(view, this.schema.id, this.applicationOptions);
   }
 
@@ -97,10 +97,10 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
   getValidatedView(entityId: DomainEntityID): SchemaAppliedView | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
     
-    const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
-    if (!losslessView) return undefined;
+    const hyperview = this.rhizomeNode.hyperview.compose([entityId])[entityId];
+    if (!hyperview) return undefined;
 
-    return this.apply(losslessView);
+    return this.apply(hyperview);
   }
 
   // Get all entities in this collection with schema validation
@@ -169,10 +169,10 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     for (const entityId of entityIds) {
       if (!this.rhizomeNode) continue;
       
-      const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
-      if (!losslessView) continue;
+      const hyperview = this.rhizomeNode.hyperview.compose([entityId])[entityId];
+      if (!hyperview) continue;
 
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperview);
       
       if (validationResult.valid) {
         stats.validEntities++;
@@ -200,16 +200,16 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
       debug(`No rhizome node connected`)
       return [];
     }
-    const losslessView = this.rhizomeNode.lossless.compose(this.getIds());
-    if (!losslessView) {
-      debug(`No lossless view found`)
+    const hyperview = this.rhizomeNode.hyperview.compose(this.getIds());
+    if (!hyperview) {
+      debug(`No hyperview found`)
       return [];
     }
-    debug(`getValidEntities, losslessView: ${JSON.stringify(losslessView, null, 2)}`)
+    debug(`getValidEntities, hyperview: ${JSON.stringify(hyperview, null, 2)}`)
     debug(`Validating ${this.getIds().length} entities`)
     return this.getIds().filter(entityId => {
       debug(`Validating entity ${entityId}`)
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView[entityId]);
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperview[entityId]);
       debug(`Validation result for entity ${entityId}: ${JSON.stringify(validationResult)}`)
       return validationResult.valid;
     });
@@ -221,10 +221,10 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const invalid: Array<{ entityId: DomainEntityID; errors: string[] }> = [];
     
     for (const entityId of this.getIds()) {
-      const losslessView = this.rhizomeNode.lossless.compose([entityId])[entityId];
-      if (!losslessView) continue;
+      const hyperview = this.rhizomeNode.hyperview.compose([entityId])[entityId];
+      if (!hyperview) continue;
       
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, losslessView);
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperview);
       if (!validationResult.valid) {
         invalid.push({
           entityId,
