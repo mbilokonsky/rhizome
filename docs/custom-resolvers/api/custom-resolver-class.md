@@ -14,7 +14,7 @@ class CustomResolver {
    * @param config Plugin configuration
    */
   constructor(
-    private readonly view: HyperviewView,
+    private readonly view: Hyperview,
     private readonly config: ResolverConfig
   );
 
@@ -48,7 +48,7 @@ class CustomResolver {
 Creates a new instance of the CustomResolver.
 
 **Parameters:**
-- `view: HyperviewView` - The hyperview containing the data to resolve
+- `view: Hyperview` - The hyperview containing the data to resolve
 - `config: ResolverConfig` - Configuration object mapping property IDs to their resolver plugins
 
 **Example:**
@@ -146,10 +146,10 @@ The resolver may throw the following errors:
 
 ```typescript
 import { CustomResolver, LastWriteWinsPlugin } from './resolver';
-import { HyperviewView } from '../hyperview-view';
+import { Hyperview } from '../hyperview-view';
 
 // Create a hyperview with some data
-const view = new HyperviewView();
+const view = new Hyperview();
 // ... add data to the view ...
 
 // Configure the resolver

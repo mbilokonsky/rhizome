@@ -14,7 +14,7 @@ import {
   SchemaApplicationOptions,
   ResolutionContext
 } from '../schema/schema';
-import { Hyperview, HyperviewViewOne } from '../views/hyperview';
+import { Hyperview, HyperviewOne } from '../views/hyperview';
 import { DomainEntityID, PropertyID, PropertyTypes } from '../core/types';
 import { CollapsedDelta } from '../views/hyperview';
 import { Delta } from '@src/core';
@@ -103,7 +103,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
     }
   }
 
-  validate(entityId: DomainEntityID, schemaId: SchemaID, view: HyperviewViewOne): SchemaValidationResult {
+  validate(entityId: DomainEntityID, schemaId: SchemaID, view: HyperviewOne): SchemaValidationResult {
     const schema = this.get(schemaId);
     if (!schema) {
       return {
@@ -282,7 +282,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
   }
 
   applySchema(
-    view: HyperviewViewOne,
+    view: HyperviewOne,
     schemaId: SchemaID,
     options: SchemaApplicationOptions = {}
   ): SchemaAppliedView {
@@ -333,9 +333,9 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
    * Resolves references to other entities according to schema specifications
    */
   applySchemaWithNesting(
-    view: HyperviewViewOne,
+    view: HyperviewOne,
     schemaId: SchemaID,
-    hyperviewView: Hyperview,
+    hyperview: Hyperview,
     options: SchemaApplicationOptions = {}
   ): SchemaAppliedViewWithNesting {
     const { maxDepth = 3, includeMetadata = true, strictValidation = false } = options;
@@ -344,16 +344,16 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
     return this.resolveNestedView(
       view,
       schemaId,
-      hyperviewView,
+      hyperview,
       resolutionContext,
       { includeMetadata, strictValidation }
     );
   }
 
   private resolveNestedView(
-    view: HyperviewViewOne,
+    view: HyperviewOne,
     schemaId: SchemaID,
-    hyperviewView: Hyperview,
+    hyperview: Hyperview,
     context: ResolutionContext,
     options: { includeMetadata: boolean; strictValidation: boolean }
   ): SchemaAppliedViewWithNesting {
@@ -401,7 +401,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
         const nestedViews = this.resolveReferenceProperty(
           deltas,
           referenceSchema,
-          hyperviewView,
+          hyperview,
           context.withDepth(context.currentDepth + 1),
           options,
           view.id
@@ -415,7 +415,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
         const nestedViews = this.resolveReferenceProperty(
           deltas,
           referenceSchema,
-          hyperviewView,
+          hyperview,
           context.withDepth(context.currentDepth + 1),
           options,
           view.id
@@ -449,7 +449,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
   private resolveReferenceProperty(
     deltas: Delta[],
     referenceSchema: ReferenceSchema,
-    hyperviewView: Hyperview,
+    hyperview: Hyperview,
     context: ResolutionContext,
     options: { includeMetadata: boolean; strictValidation: boolean },
     parentEntityId: string
@@ -469,7 +469,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
           delta,
           parentEntityId,
           referenceSchema.targetSchema,
-          hyperviewView,
+          hyperview,
           context,
           options
         );
@@ -481,7 +481,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
           for (const referenceId of referenceIds) {
             try {
               // Get the referenced entity's hyperview
-              const referencedViews = hyperviewView.compose([referenceId]);
+              const referencedViews = hyperview.compose([referenceId]);
               const referencedView = referencedViews[referenceId];
               
               if (referencedView) {
@@ -489,7 +489,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
                 const nestedView = this.resolveNestedView(
                   referencedView,
                   referenceSchema.targetSchema,
-                  hyperviewView,
+                  hyperview,
                   context,
                   options
                 );
@@ -514,7 +514,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
     delta: Delta,
     parentEntityId: string,
     targetSchema: SchemaID,
-    hyperviewView: Hyperview,
+    hyperview: Hyperview,
     context: ResolutionContext,
     options: { includeMetadata: boolean; strictValidation: boolean }
   ): SchemaAppliedViewWithNesting | null {
@@ -536,7 +536,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
         
       // Count entity references vs scalars
       if (typeof target === 'string') {
-        const referencedViews = hyperviewView.compose([target]);
+        const referencedViews = hyperview.compose([target]);
         if (referencedViews[target]) {
           entityReferenceCount++;
         } else {
@@ -568,7 +568,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
         if (typeof target === 'string') {
           // Try to resolve as entity reference
           try {
-            const referencedViews = hyperviewView.compose([target]);
+            const referencedViews = hyperview.compose([target]);
             const referencedView = referencedViews[target];
             
             if (referencedView) {
@@ -576,7 +576,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
               const nestedView = this.resolveNestedView(
                 referencedView,
                 targetSchema,
-                hyperviewView,
+                hyperview,
                 context,
                 options
               );
@@ -601,14 +601,14 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
           if (typeof target === 'string') {
             // Try to resolve as entity reference
             try {
-              const referencedViews = hyperviewView.compose([target]);
+              const referencedViews = hyperview.compose([target]);
               const referencedView = referencedViews[target];
               
               if (referencedView) {
                 const nestedView = this.resolveNestedView(
                   referencedView,
                   targetSchema,
-                  hyperviewView,
+                  hyperview,
                   context,
                   options
                 );

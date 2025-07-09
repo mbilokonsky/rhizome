@@ -1,4 +1,4 @@
-import { HyperviewViewOne } from '@src/views/hyperview';
+import { HyperviewOne } from '@src/views/hyperview';
 import { 
   SchemaBuilder, 
   PrimitiveSchemas, 
@@ -158,7 +158,7 @@ describe('Schema System', () => {
       schemaRegistry.register(userSchema);
 
       // Create a valid hyperview
-      const validView: HyperviewViewOne = {
+      const validView: HyperviewOne = {
         id: 'user123',
         propertyDeltas: {
           name: [
@@ -179,7 +179,7 @@ describe('Schema System', () => {
       expect(result.errors).toHaveLength(0);
 
       // Test invalid view (missing required property)
-      const invalidView: HyperviewViewOne = {
+      const invalidView: HyperviewOne = {
         id: 'user456',
         propertyDeltas: {
           age: [
@@ -212,7 +212,7 @@ describe('Schema System', () => {
       schemaRegistry.register(schema);
 
       // Valid types
-      const validView: HyperviewViewOne = {
+      const validView: HyperviewOne = {
         id: 'test1',
         propertyDeltas: {
           stringProp: [
@@ -240,7 +240,7 @@ describe('Schema System', () => {
       expect(validResult.valid).toBe(true);
 
       // Invalid types
-      const invalidView: HyperviewViewOne = {
+      const invalidView: HyperviewOne = {
         id: 'test2',
         propertyDeltas: {
           stringProp: [

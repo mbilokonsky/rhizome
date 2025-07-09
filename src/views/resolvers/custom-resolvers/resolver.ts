@@ -1,4 +1,4 @@
-import { Hyperview, HyperviewViewOne } from "../../hyperview";
+import { Hyperview, HyperviewOne } from "../../hyperview";
 import { Lossy } from '../../view';
 import { DomainEntityID, PropertyID, PropertyTypes } from "../../../core/types";
 import { ResolverPlugin, DependencyStates } from "./plugin";
@@ -244,7 +244,7 @@ export class CustomResolver extends Lossy<Accumulator, Result> {
   /**
    * Update the state with new deltas from the view
    */
-  reducer(acc: Accumulator, {id: entityId, propertyDeltas}: HyperviewViewOne): Accumulator {
+  reducer(acc: Accumulator, {id: entityId, propertyDeltas}: HyperviewOne): Accumulator {
     debug(`Processing deltas for entity: ${entityId}`);
     debug('Property deltas:', JSON.stringify(propertyDeltas));
 

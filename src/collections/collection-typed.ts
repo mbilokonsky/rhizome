@@ -10,7 +10,7 @@ import {
   SchemaApplicationOptions
 } from '../schema/schema';
 import { DefaultSchemaRegistry } from '../schema/schema-registry';
-import { HyperviewViewOne } from '../views/hyperview';
+import { HyperviewOne } from '../views/hyperview';
 import { DomainEntityID } from '../core/types';
 import { EntityProperties } from '../core/entity';
 import { createDelta } from '@src/core';
@@ -72,24 +72,24 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
   // Validate an entity against the schema
   validate(entity: T): SchemaValidationResult {
     // Convert entity to a mock hyperview for validation
-    const mockHyperviewView: HyperviewViewOne = {
+    const mockHyperview: HyperviewOne = {
       id: 'validation-mock',
       referencedAs: [],
       propertyDeltas: {},
     };
 
     for (const [key, value] of Object.entries(entity)) {
-      mockHyperviewView.propertyDeltas[key] = [createDelta('validation', 'validation')
+      mockHyperview.propertyDeltas[key] = [createDelta('validation', 'validation')
         .addPointer(key, value as string)
         .buildV1(),
       ];
     }
 
-    return this.schemaRegistry.validate('validation-mock', this.schema.id, mockHyperviewView);
+    return this.schemaRegistry.validate('validation-mock', this.schema.id, mockHyperview);
   }
 
   // Apply schema to a hyperview
-  apply(view: HyperviewViewOne): SchemaAppliedView {
+  apply(view: HyperviewOne): SchemaAppliedView {
     return this.schemaRegistry.applySchema(view, this.schema.id, this.applicationOptions);
   }
 
@@ -97,10 +97,10 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
   getValidatedView(entityId: DomainEntityID): SchemaAppliedView | undefined {
     if (!this.rhizomeNode) throw new Error('collection not connected to rhizome');
     
-    const hyperviewView = this.rhizomeNode.hyperview.compose([entityId])[entityId];
-    if (!hyperviewView) return undefined;
+    const hyperview = this.rhizomeNode.hyperview.compose([entityId])[entityId];
+    if (!hyperview) return undefined;
 
-    return this.apply(hyperviewView);
+    return this.apply(hyperview);
   }
 
   // Get all entities in this collection with schema validation
@@ -169,10 +169,10 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     for (const entityId of entityIds) {
       if (!this.rhizomeNode) continue;
       
-      const hyperviewView = this.rhizomeNode.hyperview.compose([entityId])[entityId];
-      if (!hyperviewView) continue;
+      const hyperview = this.rhizomeNode.hyperview.compose([entityId])[entityId];
+      if (!hyperview) continue;
 
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperviewView);
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperview);
       
       if (validationResult.valid) {
         stats.validEntities++;
@@ -200,16 +200,16 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
       debug(`No rhizome node connected`)
       return [];
     }
-    const hyperviewView = this.rhizomeNode.hyperview.compose(this.getIds());
-    if (!hyperviewView) {
+    const hyperview = this.rhizomeNode.hyperview.compose(this.getIds());
+    if (!hyperview) {
       debug(`No hyperview found`)
       return [];
     }
-    debug(`getValidEntities, hyperviewView: ${JSON.stringify(hyperviewView, null, 2)}`)
+    debug(`getValidEntities, hyperview: ${JSON.stringify(hyperview, null, 2)}`)
     debug(`Validating ${this.getIds().length} entities`)
     return this.getIds().filter(entityId => {
       debug(`Validating entity ${entityId}`)
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperviewView[entityId]);
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperview[entityId]);
       debug(`Validation result for entity ${entityId}: ${JSON.stringify(validationResult)}`)
       return validationResult.valid;
     });
@@ -221,10 +221,10 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     const invalid: Array<{ entityId: DomainEntityID; errors: string[] }> = [];
     
     for (const entityId of this.getIds()) {
-      const hyperviewView = this.rhizomeNode.hyperview.compose([entityId])[entityId];
-      if (!hyperviewView) continue;
+      const hyperview = this.rhizomeNode.hyperview.compose([entityId])[entityId];
+      if (!hyperview) continue;
       
-      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperviewView);
+      const validationResult = this.schemaRegistry.validate(entityId, this.schema.id, hyperview);
       if (!validationResult.valid) {
         invalid.push({
           entityId,

@@ -15,7 +15,7 @@ The rhizome-node implementation demonstrates strong alignment with core spec con
 
 2. **Hyperview Views**
    - **Spec**: Full inventory of all deltas composing an object
-   - **Implementation**: `HyperviewViewDomain` correctly accumulates deltas by entity/property
+   - **Implementation**: `HyperviewDomain` correctly accumulates deltas by entity/property
    - **Tests**: Good coverage of basic transformation, filtering by creator/host
 
 3. **Lossy Views**

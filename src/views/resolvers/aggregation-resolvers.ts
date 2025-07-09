@@ -1,4 +1,4 @@
-import { Hyperview, HyperviewViewOne } from "../hyperview";
+import { Hyperview, HyperviewOne } from "../hyperview";
 import { Lossy } from '../view';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
 import { valueFromDelta } from "../hyperview";
@@ -59,7 +59,7 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
     super(hyperview);
   }
 
-  reducer(acc: Accumulator, cur: HyperviewViewOne): Accumulator {
+  reducer(acc: Accumulator, cur: HyperviewOne): Accumulator {
     if (!acc[cur.id]) {
       acc[cur.id] = { id: cur.id, properties: {} };
     }

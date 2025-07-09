@@ -4,7 +4,7 @@
 
 import Debug from 'debug';
 import {Delta, DeltaFilter, DeltaID} from "../core/delta";
-import {Hyperview, HyperviewViewOne} from "./hyperview";
+import {Hyperview, HyperviewOne} from "./hyperview";
 import {DomainEntityID, PropertyID, PropertyTypes, ViewMany} from "../core/types";
 const debug = Debug('rz:view');
 
@@ -23,7 +23,7 @@ export abstract class Lossy<Accumulator, Result = Accumulator> {
   private accumulator?: Accumulator;
 
   initializer?(): Accumulator;
-  abstract reducer(acc: Accumulator, cur: HyperviewViewOne): Accumulator;
+  abstract reducer(acc: Accumulator, cur: HyperviewOne): Accumulator;
   resolver?(acc: Accumulator, entityIds: DomainEntityID[]): Result;
 
   constructor(

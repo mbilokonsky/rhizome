@@ -1,6 +1,6 @@
 import Debug from 'debug';
 import { PointerTarget } from "@src/core/delta";
-import { Hyperview, HyperviewViewOne } from "@src/views/hyperview";
+import { Hyperview, HyperviewOne } from "@src/views/hyperview";
 import { Lossy } from "@src/views/view";
 import { RhizomeNode } from "@src/node";
 import { valueFromDelta } from "@src/views/hyperview";
@@ -37,7 +37,7 @@ class Summarizer extends Lossy<Summary> {
   // it's really not CRDT, it likely depends on the order of the pointers.
   // TODO: Prove with failing test
 
-  reducer(acc: Summary, cur: HyperviewViewOne): Summary {
+  reducer(acc: Summary, cur: HyperviewOne): Summary {
     this.debug(`Processing view for entity ${cur.id} (referenced as: ${cur.referencedAs?.join(', ')})`);
     this.debug(`hyperview:`, JSON.stringify(cur));
     

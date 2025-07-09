@@ -1,5 +1,5 @@
 import { EntityProperties } from "../../core/entity";
-import { Hyperview, CollapsedDelta, valueFromDelta, HyperviewViewOne } from "../hyperview";
+import { Hyperview, CollapsedDelta, valueFromDelta, HyperviewOne } from "../hyperview";
 import { Lossy } from '../view';
 import { DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany } from "../../core/types";
 import Debug from 'debug';
@@ -83,7 +83,7 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
     super(hyperview);
   }
 
-  reducer(acc: Accumulator, cur: HyperviewViewOne): Accumulator {
+  reducer(acc: Accumulator, cur: HyperviewOne): Accumulator {
     if (!acc[cur.id]) {
       acc[cur.id] = { id: cur.id, properties: {} };
     }

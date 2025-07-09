@@ -2,7 +2,7 @@ import jsonLogic from 'json-logic-js';
 const { apply, is_logic } = jsonLogic;
 import Debug from 'debug';
 import { SchemaRegistry, SchemaID, ObjectSchema } from '../schema/schema';
-import { Hyperview, HyperviewViewMany, HyperviewViewOne, valueFromDelta } from '../views/hyperview';
+import { Hyperview, HyperviewMany, HyperviewOne, valueFromDelta } from '../views/hyperview';
 import { DomainEntityID } from '../core/types';
 import { Delta, DeltaFilter } from '../core/delta';
 
@@ -31,7 +31,7 @@ export interface QueryOptions {
 }
 
 export interface QueryResult {
-  entities: HyperviewViewMany;
+  entities: HyperviewMany;
   totalFound: number;
   limited: boolean;
 }
@@ -101,7 +101,7 @@ export class QueryEngine {
     debug(`Composed ${Object.keys(allViews).length} hyperviews`);
 
     // 3. Apply JSON Logic filter if provided
-    let filteredViews: HyperviewViewMany = allViews;
+    let filteredViews: HyperviewMany = allViews;
     
     if (filter) {
       filteredViews = this.applyJsonLogicFilter(allViews, filter, schemaId);
@@ -132,7 +132,7 @@ export class QueryEngine {
   /**
    * Query for a single entity by ID with schema validation
    */
-  async queryOne(schemaId: SchemaID, entityId: DomainEntityID): Promise<HyperviewViewOne | null> {
+  async queryOne(schemaId: SchemaID, entityId: DomainEntityID): Promise<HyperviewOne | null> {
     debug(`Querying single entity ${entityId} with schema ${schemaId}`);
 
     const views = this.hyperview.compose([entityId]);
@@ -199,24 +199,24 @@ export class QueryEngine {
    * This requires converting each hyperview to a queryable object
    */
   private applyJsonLogicFilter(
-    views: HyperviewViewMany, 
+    views: HyperviewMany, 
     filter: JsonLogic, 
     schemaId: SchemaID
-  ): HyperviewViewMany {
+  ): HyperviewMany {
     const schema = this.schemaRegistry.get(schemaId);
     if (!schema) {
       debug(`Cannot filter without schema ${schemaId}`);
       return views;
     }
 
-    const filteredViews: HyperviewViewMany = {};
+    const filteredViews: HyperviewMany = {};
     let hasFilterErrors = false;
     const filterErrors: string[] = [];
 
     for (const [entityId, view] of Object.entries(views)) {
       try {
         // Convert hyperview to queryable object using schema
-        const queryableObject = this.hyperviewViewToQueryableObject(view, schema);
+        const queryableObject = this.hyperviewToQueryableObject(view, schema);
         
         // Apply JSON Logic filter
         const matches = apply(filter, queryableObject);
@@ -249,7 +249,7 @@ export class QueryEngine {
    * Convert a hyperview to a queryable object based on schema
    * Uses simple resolution strategies for now
    */
-  private hyperviewViewToQueryableObject(view: HyperviewViewOne, schema: ObjectSchema): Record<string, unknown> {
+  private hyperviewToQueryableObject(view: HyperviewOne, schema: ObjectSchema): Record<string, unknown> {
     const obj: Record<string, unknown> = {
       id: view.id,
       _referencedAs: view.referencedAs
@@ -315,7 +315,7 @@ export class QueryEngine {
   /**
    * Check if an entity matches a schema (basic validation)
    */
-  private entityMatchesSchema(view: HyperviewViewOne, schemaId: SchemaID): boolean {
+  private entityMatchesSchema(view: HyperviewOne, schemaId: SchemaID): boolean {
     const schema = this.schemaRegistry.get(schemaId);
     if (!schema) return false;
 

@@ -30,8 +30,8 @@ classDiagram
     class Hyperview {
         -domainEntities: Map<DomainEntityID, HyperviewEntity>
         -transactions: Transactions
-        +view(ids: DomainEntityID[]): HyperviewViewMany
-        +compose(ids: DomainEntityID[]): HyperviewViewMany
+        +view(ids: DomainEntityID[]): HyperviewMany
+        +compose(ids: DomainEntityID[]): HyperviewMany
     }
     
     class QueryEngine {

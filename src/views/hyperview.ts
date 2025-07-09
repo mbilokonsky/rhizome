@@ -49,7 +49,7 @@ export function valueFromDelta(
 }
 
 // TODO: Store property deltas as references to reduce memory footprint
-export type HyperviewViewOne = {
+export type HyperviewOne = {
   id: DomainEntityID,
   referencedAs?: string[];
   propertyDeltas: {
@@ -57,13 +57,13 @@ export type HyperviewViewOne = {
   }
 }
 
-export type CollapsedViewOne = Omit<HyperviewViewOne, 'propertyDeltas'> & {
+export type CollapsedViewOne = Omit<HyperviewOne, 'propertyDeltas'> & {
   propertyCollapsedDeltas: {
     [key: PropertyID]: CollapsedDelta[]
   }
 };
 
-export type HyperviewViewMany = ViewMany<HyperviewViewOne>;
+export type HyperviewMany = ViewMany<HyperviewOne>;
 export type CollapsedViewMany = ViewMany<CollapsedViewOne>;
 
 class HyperviewEntityMap extends Map<DomainEntityID, HyperviewEntity> {};
@@ -208,7 +208,7 @@ export class Hyperview {
     return transactionId;
   }
 
-  decompose(view: HyperviewViewOne): Delta[] {
+  decompose(view: HyperviewOne): Delta[] {
     const allDeltas: Delta[] = [];
     const seenDeltaIds = new Set<DeltaID>();
     
@@ -225,8 +225,8 @@ export class Hyperview {
     return allDeltas;
   }
 
-  compose(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): HyperviewViewMany {
-    const view: HyperviewViewMany = {};
+  compose(entityIds?: DomainEntityID[], deltaFilter?: DeltaFilter): HyperviewMany {
+    const view: HyperviewMany = {};
     entityIds = entityIds ?? Array.from(this.domainEntities.keys());
 
     for (const entityId of entityIds) {

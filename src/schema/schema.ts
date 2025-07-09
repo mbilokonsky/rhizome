@@ -1,5 +1,5 @@
 import { DomainEntityID, PropertyID, PropertyTypes } from "../core/types";
-import { HyperviewViewOne } from "../views/hyperview";
+import { HyperviewOne } from "../views/hyperview";
 import { CollapsedDelta } from "../views/hyperview";
 
 // Base schema types
@@ -52,7 +52,7 @@ export interface SchemaRegistry {
   register(schema: ObjectSchema): void;
   get(id: SchemaID): ObjectSchema | undefined;
   list(): ObjectSchema[];
-  validate(entityId: DomainEntityID, schemaId: SchemaID, view: HyperviewViewOne): SchemaValidationResult;
+  validate(entityId: DomainEntityID, schemaId: SchemaID, view: HyperviewOne): SchemaValidationResult;
 }
 
 // Validation result types
@@ -105,7 +105,7 @@ export interface SchemaAppliedViewWithNesting extends SchemaAppliedView {
 export interface TypedCollection<T> {
   schema: ObjectSchema;
   validate(entity: T): SchemaValidationResult;
-  apply(view: HyperviewViewOne): SchemaAppliedView;
+  apply(view: HyperviewOne): SchemaAppliedView;
 }
 
 // Built-in schema helpers
