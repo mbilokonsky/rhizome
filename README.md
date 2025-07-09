@@ -52,11 +52,10 @@ npm test
 
 ### Development
 - [Testing Helpers](./docs/test-helpers.md) - Utilities for testing Rhizome applications
-- [Contributing](./CONTRIBUTING.md) - Guidelines for contributing to the project
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Unlicense - see the [LICENSE](LICENSE) file for details.
 
 ---
 
