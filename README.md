@@ -36,10 +36,24 @@ npm test
 
 ## Documentation
 
-- [Architecture Overview](./docs/architecture.md) - High-level system design and components
+### Core Concepts
 - [Delta Specification](./spec.md) - Detailed specification of the delta format
-- [Custom Resolvers](./docs/custom-resolvers/overview.md) - Flexible property resolution system with plugin support
-- [API Reference](./docs/api/README.md) - Comprehensive API documentation
+- [Delta Patterns](./docs/delta-patterns.md) - Common patterns for working with deltas
+- [JSON AST](./docs/json-ast.md) - Understanding the JSON Abstract Syntax Tree representation
+
+### Custom Resolvers
+- [Overview](./docs/custom-resolvers/overview.md) - Introduction to the resolver system
+- [Creating Resolvers](./docs/custom-resolvers/creating-resolvers.md) - Guide to building custom resolvers
+- [Built-in Plugins](./docs/custom-resolvers/plugins/builtin-plugins.md) - Available resolver plugins
+- [Dependency Resolution](./docs/custom-resolvers/dependencies/dependency-resolution.md) - Managing resolver dependencies
+
+### Schema & Validation
+- [Schema Validation](./docs/schema-validation.md) - Defining and validating data schemas
+- [Classes](./docs/classes.md) - Working with typed collections and classes
+
+### Development
+- [Testing Helpers](./docs/test-helpers.md) - Utilities for testing Rhizome applications
+- [Contributing](./CONTRIBUTING.md) - Guidelines for contributing to the project
 
 ## License
 
