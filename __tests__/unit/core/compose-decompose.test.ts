@@ -1,6 +1,6 @@
 /**
- * Tests for hyperview view compose() and decompose() bidirectional conversion
- * Ensures that deltas can be composed into hyperview views and decomposed back
+ * Tests for hyperview compose() and decompose() bidirectional conversion
+ * Ensures that deltas can be composed into hyperviews and decomposed back
  * to the original deltas with all pointer relationships preserved.
  */
 
@@ -31,7 +31,7 @@ describe('Hyperview View Compose/Decompose', () => {
       // Ingest the deltas
       nameDeltas.forEach(delta => node.hyperview.ingestDelta(delta));
 
-      // Compose hyperview view
+      // Compose hyperview
       const composed = node.hyperview.compose(['alice']);
       const aliceView = composed['alice'];
 

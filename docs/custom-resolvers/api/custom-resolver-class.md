@@ -10,7 +10,7 @@ The `CustomResolver` class is the main entry point for the Custom Resolver syste
 class CustomResolver {
   /**
    * Creates a new CustomResolver instance
-   * @param view The hyperview view to resolve
+   * @param view The hyperview to resolve
    * @param config Plugin configuration
    */
   constructor(
@@ -48,7 +48,7 @@ class CustomResolver {
 Creates a new instance of the CustomResolver.
 
 **Parameters:**
-- `view: HyperviewView` - The hyperview view containing the data to resolve
+- `view: HyperviewView` - The hyperview containing the data to resolve
 - `config: ResolverConfig` - Configuration object mapping property IDs to their resolver plugins
 
 **Example:**
@@ -148,7 +148,7 @@ The resolver may throw the following errors:
 import { CustomResolver, LastWriteWinsPlugin } from './resolver';
 import { HyperviewView } from '../hyperview-view';
 
-// Create a hyperview view with some data
+// Create a hyperview with some data
 const view = new HyperviewView();
 // ... add data to the view ...
 

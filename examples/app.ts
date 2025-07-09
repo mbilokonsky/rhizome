@@ -18,7 +18,7 @@ type User = {
 (async () => {
   const rhizomeNode = new RhizomeNode();
 
-  // Enable API to read hyperview view
+  // Enable API to read hyperview
   rhizomeNode.httpServer.httpApi.serveHyperview();
 
   const users = new BasicCollection("user");

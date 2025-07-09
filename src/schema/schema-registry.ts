@@ -480,7 +480,7 @@ export class DefaultSchemaRegistry implements SchemaRegistry {
           const referenceIds = this.extractReferenceIdsFromDelta(delta, parentEntityId);
           for (const referenceId of referenceIds) {
             try {
-              // Get the referenced entity's hyperview view
+              // Get the referenced entity's hyperview
               const referencedViews = hyperviewView.compose([referenceId]);
               const referencedView = referencedViews[referenceId];
               

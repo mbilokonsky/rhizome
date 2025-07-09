@@ -39,7 +39,7 @@ class Summarizer extends Lossy<Summary> {
 
   reducer(acc: Summary, cur: HyperviewViewOne): Summary {
     this.debug(`Processing view for entity ${cur.id} (referenced as: ${cur.referencedAs?.join(', ')})`);
-    this.debug(`hyperview view:`, JSON.stringify(cur));
+    this.debug(`hyperview:`, JSON.stringify(cur));
     
     if (cur.referencedAs?.includes("role")) {
       this.debug(`Found role entity: ${cur.id}`);

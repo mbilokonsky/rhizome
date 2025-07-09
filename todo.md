@@ -12,7 +12,7 @@ This document tracks work needed to achieve full specification compliance, organ
 - [x] Add validation for pointer consistency
 
 ### 1.2 Complete Transaction Support ✅ (mostly)
-- [x] Implement transaction-based filtering in hyperview views
+- [x] Implement transaction-based filtering in hyperviews
 - [x] Add transaction grouping in delta streams
 - [x] Test atomic transaction operations
 - [ ] Add transaction rollback capabilities (deferred - not critical for spec parity)
@@ -29,7 +29,7 @@ This document tracks work needed to achieve full specification compliance, organ
 ### 2.1 Negation Deltas ✅
 - [x] Implement negation delta type with "negates" pointer
 - [x] Add "negated_by" context handling
-- [x] Update hyperview view to handle negations
+- [x] Update hyperview to handle negations
 - [x] Update view resolvers to respect negations
 - [x] Add comprehensive negation tests
 
@@ -50,7 +50,7 @@ This document tracks work needed to achieve full specification compliance, organ
 
 ### 3.1 Query Engine Foundation ✅
 - [x] Implement JSON Logic parser (using json-logic-js)
-- [x] Create query planner for hyperview views
+- [x] Create query planner for hyperviews
 - [x] Add query execution engine (QueryEngine class)
 - [x] Implement schema-driven entity discovery
 - [x] Enable the skipped query tests
@@ -91,7 +91,7 @@ This document tracks work needed to achieve full specification compliance, organ
 
 ### 4.4 Schema-as-Deltas (Meta-Schema System)
 - [ ] Define schema entities that are stored as deltas in the system
-- [ ] Implement schema queries that return schema instances from hyperview views
+- [ ] Implement schema queries that return schema instances from hyperviews
 - [ ] Create schema evolution through delta mutations
 - [ ] Add temporal schema queries (schema time-travel)
 - [ ] Build schema conflict resolution for competing schema definitions

@@ -71,7 +71,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
 
   // Validate an entity against the schema
   validate(entity: T): SchemaValidationResult {
-    // Convert entity to a mock hyperview view for validation
+    // Convert entity to a mock hyperview for validation
     const mockHyperviewView: HyperviewViewOne = {
       id: 'validation-mock',
       referencedAs: [],
@@ -88,7 +88,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     return this.schemaRegistry.validate('validation-mock', this.schema.id, mockHyperviewView);
   }
 
-  // Apply schema to a hyperview view
+  // Apply schema to a hyperview
   apply(view: HyperviewViewOne): SchemaAppliedView {
     return this.schemaRegistry.applySchema(view, this.schema.id, this.applicationOptions);
   }
@@ -202,7 +202,7 @@ export class TypedCollectionImpl<T extends Record<string, unknown>>
     }
     const hyperviewView = this.rhizomeNode.hyperview.compose(this.getIds());
     if (!hyperviewView) {
-      debug(`No hyperview view found`)
+      debug(`No hyperview found`)
       return [];
     }
     debug(`getValidEntities, hyperviewView: ${JSON.stringify(hyperviewView, null, 2)}`)

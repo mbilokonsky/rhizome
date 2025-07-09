@@ -91,9 +91,9 @@ export class RhizomeNode {
   }: { syncOnStart?: boolean } = {}): Promise<void> {
     debug(`[${this.config.peerId}]`, 'Starting node (waiting for ready)...');
     
-    // Connect our hyperview view to the delta stream
+    // Connect our hyperview to the delta stream
     this.deltaStream.subscribeDeltas(async (delta) => {
-      // Ingest into hyperview view
+      // Ingest into hyperview
       this.hyperview.ingestDelta(delta);
       
       // Also store in persistent storage
@@ -150,11 +150,11 @@ export class RhizomeNode {
   }
 
   /**
-   * Sync existing hyperview view data to persistent storage
+   * Sync existing hyperview data to persistent storage
    * Useful for migrating from memory-only to persistent storage
    */
   async syncToStorage(): Promise<void> {
-    debug(`[${this.config.peerId}]`, 'Syncing hyperview view to storage');
+    debug(`[${this.config.peerId}]`, 'Syncing hyperview to storage');
     
     const allDeltas = this.deltaStream.deltasAccepted;
     let synced = 0;

@@ -26,7 +26,7 @@ import { CustomResolver } from '../src/views/resolvers/custom-resolvers';
 import { LastWriteWinsPlugin } from '../src/views/resolvers/custom-resolvers/plugins';
 import { Hyperview } from '../src/views/hyperview';
 
-// Create a hyperview view
+// Create a hyperview
 const hyperview = new Hyperview();
 
 // Create a resolver with a last-write-wins strategy
@@ -34,7 +34,7 @@ const resolver = new CustomResolver(hyperview, {
   myProperty: new LastWriteWinsPlugin()
 });
 
-// Process updates through the hyperview view
+// Process updates through the hyperview
 // hyperview.applyDelta(delta);
 
 // Get resolved values for specific entities

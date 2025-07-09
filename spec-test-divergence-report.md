@@ -19,7 +19,7 @@ The rhizome-node implementation demonstrates strong alignment with core spec con
    - **Tests**: Good coverage of basic transformation, filtering by creator/host
 
 3. **Lossy Views**
-   - **Spec**: Compression of hyperview views using resolution strategies
+   - **Spec**: Compression of hyperviews using resolution strategies
    - **Implementation**: Initializer/reducer/resolver pattern provides flexibility
    - **Tests**: Domain-specific example (Role/Actor/Film) demonstrates concept
 

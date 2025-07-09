@@ -6,7 +6,7 @@ import {createDelta} from '@src/core/delta-builder';
 describe('Hyperview', () => {
   const node = new RhizomeNode();
 
-  test('creates a hyperview view of keanu as neo in the matrix', () => {
+  test('creates a hyperview of keanu as neo in the matrix', () => {
     const delta = createDelta('a', 'h')
       .addPointer('actor', 'keanu', 'roles')
       .addPointer('role', 'neo', 'actor')

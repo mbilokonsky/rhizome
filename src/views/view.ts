@@ -1,5 +1,5 @@
 // We have the hyperview transformation of the delta stream.
-// We want to enable transformations from the hyperview view, 
+// We want to enable transformations from the hyperview, 
 // into various possible "view" views that combine or exclude some information.
 
 import Debug from 'debug';
@@ -49,7 +49,7 @@ export abstract class Lossy<Accumulator, Result = Accumulator> {
     const hyperviewPartial = this.hyperview.compose([entityId], combinedFilter);
 
     if (!hyperviewPartial) {
-      // This should not happen; this should only be called after the hyperview view has been updated
+      // This should not happen; this should only be called after the hyperview has been updated
       console.error(`Hyperview view for entity ${entityId} not found`);
       return;
     }

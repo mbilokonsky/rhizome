@@ -61,7 +61,7 @@ describe('Nested Object Resolution', () => {
         .buildV1();
       node.hyperview.ingestDelta(friendshipDelta);
 
-      // Get Alice's hyperview view
+      // Get Alice's hyperview
       const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
       

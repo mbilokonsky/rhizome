@@ -17,7 +17,7 @@ Phase 4 recognizes that in Rhizome, **deltas ARE relationships**. Instead of add
 - **All tests passing**: 21/21 suites, 183/183 tests (100%)
 - **Delta system**: Fully functional with pointers expressing relationships
 - **Negation system**: Can invalidate deltas (and thus relationships)
-- **Query system**: Basic traversal of hyperview views
+- **Query system**: Basic traversal of hyperviews
 - **Schema system**: Can describe entity structures
 - **Resolver system**: Application-level interpretation of deltas
 

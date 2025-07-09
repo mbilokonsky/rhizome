@@ -76,7 +76,7 @@ export interface SchemaApplicationOptions {
   strictValidation?: boolean;
 }
 
-// Applied schema result - a hyperview view filtered through a schema
+// Applied schema result - a hyperview filtered through a schema
 export interface SchemaAppliedView {
   id: DomainEntityID;
   schemaId: SchemaID;

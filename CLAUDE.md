@@ -60,7 +60,7 @@ npm run example-app
 
 - `src/node.ts`: Main `RhizomeNode` class orchestrating all components
 - `src/delta.ts`: Delta data structures and conversion logic
-- `src/hyperview.ts`: Core hyperview view implementation
+- `src/hyperview.ts`: Core hyperview implementation
 - `src/collection-basic.ts`: Basic collection implementation
 - `src/http/api.ts`: REST API endpoints
 - `src/pub-sub.ts`: Network communication layer

@@ -180,7 +180,7 @@ describe('Negation System', () => {
   });
 
   describe('Hyperview View Integration', () => {
-    test('should filter negated deltas in hyperview views', () => {
+    test('should filter negated deltas in hyperviews', () => {
       // Create original delta
       const originalDelta = createDelta('user1', 'host1')
         .setProperty('user123', 'name', 'Alice')

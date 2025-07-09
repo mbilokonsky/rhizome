@@ -96,9 +96,9 @@ export class QueryEngine {
     const candidateEntityIds = this.discoverEntitiesBySchema(schemaId);
     debug(`Found ${candidateEntityIds.length} candidate entities for schema ${schemaId}`);
 
-    // 2. Compose hyperview views for all candidates
+    // 2. Compose hyperviews for all candidates
     const allViews = this.hyperview.compose(candidateEntityIds, options.deltaFilter);
-    debug(`Composed ${Object.keys(allViews).length} hyperview views`);
+    debug(`Composed ${Object.keys(allViews).length} hyperviews`);
 
     // 3. Apply JSON Logic filter if provided
     let filteredViews: HyperviewViewMany = allViews;
@@ -195,8 +195,8 @@ export class QueryEngine {
   }
 
   /**
-   * Apply JSON Logic filter to hyperview views
-   * This requires converting each hyperview view to a queryable object
+   * Apply JSON Logic filter to hyperviews
+   * This requires converting each hyperview to a queryable object
    */
   private applyJsonLogicFilter(
     views: HyperviewViewMany, 
@@ -215,7 +215,7 @@ export class QueryEngine {
 
     for (const [entityId, view] of Object.entries(views)) {
       try {
-        // Convert hyperview view to queryable object using schema
+        // Convert hyperview to queryable object using schema
         const queryableObject = this.hyperviewViewToQueryableObject(view, schema);
         
         // Apply JSON Logic filter
@@ -246,7 +246,7 @@ export class QueryEngine {
   }
 
   /**
-   * Convert a hyperview view to a queryable object based on schema
+   * Convert a hyperview to a queryable object based on schema
    * Uses simple resolution strategies for now
    */
   private hyperviewViewToQueryableObject(view: HyperviewViewOne, schema: ObjectSchema): Record<string, unknown> {
@@ -255,7 +255,7 @@ export class QueryEngine {
       _referencedAs: view.referencedAs
     };
 
-    // Convert each schema property from hyperview view deltas
+    // Convert each schema property from hyperview deltas
     for (const [propertyId, propertySchema] of Object.entries(schema.properties)) {
       const deltas = view.propertyDeltas[propertyId] || [];
 

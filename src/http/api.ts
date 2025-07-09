@@ -148,7 +148,7 @@ export class HttpApi {
       });
     });
 
-    // Get a hyperview view of a single domain entity
+    // Get a hyperview of a single domain entity
     this.router.get('/hyperview/:id', (req: express.Request, res: express.Response) => {
       const {params: {id}} = req;
       const v = this.rhizomeNode.hyperview.compose([id]);

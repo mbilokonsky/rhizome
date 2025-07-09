@@ -103,7 +103,7 @@ classDiagram
    - Represents atomic changes in the system
    - Contains pointers to entities and their properties
 
-3. **Hyperview**: Manages the hyperview view of data
+3. **Hyperview**: Manages the hyperview of data
    - Maintains the complete history of deltas
    - Provides methods to view and compose entity states
 

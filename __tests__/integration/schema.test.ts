@@ -153,11 +153,11 @@ describe('Schema System', () => {
       expect(schemaRegistry.hasCircularDependencies()).toBe(true);
     });
 
-    test('should validate hyperview views against schemas', () => {
+    test('should validate hyperviews against schemas', () => {
       const userSchema = CommonSchemas.User();
       schemaRegistry.register(userSchema);
 
-      // Create a valid hyperview view
+      // Create a valid hyperview
       const validView: HyperviewViewOne = {
         id: 'user123',
         propertyDeltas: {
@@ -371,7 +371,7 @@ describe('Schema System', () => {
       expect(invalidEntities[0].entityId).toBe('user3');
     });
 
-    test('should apply schema to hyperview views', async () => {
+    test('should apply schema to hyperviews', async () => {
       const userSchema = CommonSchemas.User();
       const collection = new TypedCollectionImpl<{
         name: string;
