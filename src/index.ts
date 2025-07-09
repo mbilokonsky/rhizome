@@ -5,7 +5,7 @@ export * from './core';
 export * from './views';
 
 // Collections exports
-export { Collection, BasicCollection, RelationalCollection as CollectionRelational, TypedCollectionImpl, SchemaValidationError as CollectionSchemaValidationError } from './collections';
+export { Collection, BasicCollection, RelationalCollection, TypedCollectionImpl, SchemaValidationError as CollectionSchemaValidationError } from './collections';
 
 // Features exports
 export * from './features';

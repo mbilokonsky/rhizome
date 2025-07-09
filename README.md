@@ -1,3 +1,52 @@
+# Rhizome Node
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
+
+A distributed, peer-to-peer database engine built with TypeScript, designed for building decentralized applications with flexible data modeling and conflict-free replication.
+
+## Key Features
+
+- **Immutable Delta-based Storage**: All changes are stored as immutable deltas, enabling full history and audit trails
+- **Peer-to-Peer Networking**: Built-in support for ZeroMQ and Libp2p for decentralized node communication
+- **Flexible Data Modeling**: Schema-optional approach with support for typed collections and relationships
+- **Conflict Resolution**: Customizable resolution strategies for handling concurrent modifications
+- **Event Sourcing**: Built-in support for event-driven architectures with delta streams
+- **Extensible Views**: Powerful view system for materializing and transforming data
+- **REST API**: Built-in HTTP server for easy integration with other systems
+
+## Quick Start
+
+```bash
+# Clone the repository
+git clone https://gitea.dgov.io/ladd/rhizome
+cd rhizome-node
+
+# Install dependencies
+nvm use
+npm install
+
+# Build the project
+npm run build
+
+# Run tests
+npm test
+```
+
+## Documentation
+
+- [Architecture Overview](./docs/architecture.md) - High-level system design and components
+- [Delta Specification](./spec.md) - Detailed specification of the delta format
+- [Custom Resolvers](./docs/custom-resolvers/overview.md) - Flexible property resolution system with plugin support
+- [API Reference](./docs/api/README.md) - Comprehensive API documentation
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
 See [spec.md](spec.md) for additional specification details about this project.
 
 ## Documentation
