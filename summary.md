@@ -7,7 +7,7 @@
 - **Delta Lifecycle**: 
   - Creation via `DeltaBuilder`
   - Propagation through `DeltaStream`
-  - Storage in `Lossless` view
+  - Storage in `Hyperview` view
   - Transformation in `Lossy` views
 
 ### 2. Network Layer
@@ -22,7 +22,7 @@
 
 ### 3. Storage
 - **In-Memory Storage**:
-  - `Lossless` view maintains complete delta history
+  - `Hyperview` view maintains complete delta history
   - `Lossy` views provide optimized access patterns
 - **Persistence**:
   - LevelDB integration
@@ -49,8 +49,8 @@
    - `request-reply.ts`: Direct node communication
 
 3. **Views**:
-   - `lossless.ts`: Complete delta history
-   - `lossy.ts`: Derived, optimized views
+   - `hyperview.ts`: Complete delta history
+   - `view.ts`: Derived, optimized views
 
 4. **Schema**:
    - `schema.ts`: Type definitions

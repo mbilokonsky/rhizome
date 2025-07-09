@@ -1,7 +1,7 @@
-import { Lossless, LosslessViewOne } from "../lossless";
-import { Lossy } from '../lossy';
+import { Hyperview, HyperviewViewOne } from "../hyperview";
+import { Lossy } from '../view';
 import { DomainEntityID, PropertyID, ViewMany } from "../../core/types";
-import { valueFromDelta } from "../lossless";
+import { valueFromDelta } from "../hyperview";
 import { EntityRecord, EntityRecordMany } from "@src/core/entity";
 
 export type AggregationType = 'min' | 'max' | 'sum' | 'average' | 'count';
@@ -53,13 +53,13 @@ function aggregateValues(values: number[], type: AggregationType): number {
 
 export class AggregationResolver extends Lossy<Accumulator, Result> {
   constructor(
-    lossless: Lossless,
+    hyperview: Hyperview,
     private config: AggregationConfig
   ) {
-    super(lossless);
+    super(hyperview);
   }
 
-  reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
+  reducer(acc: Accumulator, cur: HyperviewViewOne): Accumulator {
     if (!acc[cur.id]) {
       acc[cur.id] = { id: cur.id, properties: {} };
     }
@@ -111,41 +111,41 @@ export class AggregationResolver extends Lossy<Accumulator, Result> {
 
 // Convenience classes for common aggregation types
 export class MinResolver extends AggregationResolver {
-  constructor(lossless: Lossless, properties: PropertyID[]) {
+  constructor(hyperview: Hyperview, properties: PropertyID[]) {
     const config: AggregationConfig = {};
     properties.forEach(prop => config[prop] = 'min');
-    super(lossless, config);
+    super(hyperview, config);
   }
 }
 
 export class MaxResolver extends AggregationResolver {
-  constructor(lossless: Lossless, properties: PropertyID[]) {
+  constructor(hyperview: Hyperview, properties: PropertyID[]) {
     const config: AggregationConfig = {};
     properties.forEach(prop => config[prop] = 'max');
-    super(lossless, config);
+    super(hyperview, config);
   }
 }
 
 export class SumResolver extends AggregationResolver {
-  constructor(lossless: Lossless, properties: PropertyID[]) {
+  constructor(hyperview: Hyperview, properties: PropertyID[]) {
     const config: AggregationConfig = {};
     properties.forEach(prop => config[prop] = 'sum');
-    super(lossless, config);
+    super(hyperview, config);
   }
 }
 
 export class AverageResolver extends AggregationResolver {
-  constructor(lossless: Lossless, properties: PropertyID[]) {
+  constructor(hyperview: Hyperview, properties: PropertyID[]) {
     const config: AggregationConfig = {};
     properties.forEach(prop => config[prop] = 'average');
-    super(lossless, config);
+    super(hyperview, config);
   }
 }
 
 export class CountResolver extends AggregationResolver {
-  constructor(lossless: Lossless, properties: PropertyID[]) {
+  constructor(hyperview: Hyperview, properties: PropertyID[]) {
     const config: AggregationConfig = {};
     properties.forEach(prop => config[prop] = 'count');
-    super(lossless, config);
+    super(hyperview, config);
   }
 }

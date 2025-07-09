@@ -34,10 +34,10 @@ Pre-built technologies? LevelDB
 Can use LevelDB to store deltas
 Structure can correspond to our desired ontology
 Layers for 
-- primitives - what's a delta, schema, materialized view, lossy view
+- primitives - what's a delta, schema, materialized view, view view
 - delta store - allows you to persiste deltas and query over the delta stream
-- materialized view store - lossy snapshot(s)
-- lossy bindings - e.g. graphql, define what a user looks like, that gets application bindings
+- materialized view store - view snapshot(s)
+- view bindings - e.g. graphql, define what a user looks like, that gets application bindings
   e.g. where your resolvers come in, so that your fields aren't all arrays, i.e. you resolve conflicts
 
 Protocol involving ZeroMQ--

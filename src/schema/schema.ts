@@ -1,6 +1,6 @@
 import { DomainEntityID, PropertyID, PropertyTypes } from "../core/types";
-import { LosslessViewOne } from "../views/lossless";
-import { CollapsedDelta } from "../views/lossless";
+import { HyperviewViewOne } from "../views/hyperview";
+import { CollapsedDelta } from "../views/hyperview";
 
 // Base schema types
 export type SchemaID = string;
@@ -52,7 +52,7 @@ export interface SchemaRegistry {
   register(schema: ObjectSchema): void;
   get(id: SchemaID): ObjectSchema | undefined;
   list(): ObjectSchema[];
-  validate(entityId: DomainEntityID, schemaId: SchemaID, view: LosslessViewOne): SchemaValidationResult;
+  validate(entityId: DomainEntityID, schemaId: SchemaID, view: HyperviewViewOne): SchemaValidationResult;
 }
 
 // Validation result types
@@ -76,7 +76,7 @@ export interface SchemaApplicationOptions {
   strictValidation?: boolean;
 }
 
-// Applied schema result - a lossless view filtered through a schema
+// Applied schema result - a hyperview view filtered through a schema
 export interface SchemaAppliedView {
   id: DomainEntityID;
   schemaId: SchemaID;
@@ -105,7 +105,7 @@ export interface SchemaAppliedViewWithNesting extends SchemaAppliedView {
 export interface TypedCollection<T> {
   schema: ObjectSchema;
   validate(entity: T): SchemaValidationResult;
-  apply(view: LosslessViewOne): SchemaAppliedView;
+  apply(view: HyperviewViewOne): SchemaAppliedView;
 }
 
 // Built-in schema helpers

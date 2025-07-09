@@ -1,5 +1,5 @@
 import { PropertyTypes } from "../../../../core/types";
-import { CollapsedDelta } from "../../../lossless";
+import { CollapsedDelta } from "../../../hyperview";
 import { ResolverPlugin } from "../plugin";
 
 type FirstWriteWinsState = {

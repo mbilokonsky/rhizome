@@ -1,13 +1,13 @@
 /**
- * Tests for lossless view compose() and decompose() bidirectional conversion
- * Ensures that deltas can be composed into lossless views and decomposed back
+ * Tests for hyperview view compose() and decompose() bidirectional conversion
+ * Ensures that deltas can be composed into hyperview views and decomposed back
  * to the original deltas with all pointer relationships preserved.
  */
 
 import { RhizomeNode } from '@src/node';
 import { createDelta } from '@src/core/delta-builder';
 
-describe('Lossless View Compose/Decompose', () => {
+describe('Hyperview View Compose/Decompose', () => {
   let node: RhizomeNode;
 
   beforeEach(() => {
@@ -29,10 +29,10 @@ describe('Lossless View Compose/Decompose', () => {
       ];
 
       // Ingest the deltas
-      nameDeltas.forEach(delta => node.lossless.ingestDelta(delta));
+      nameDeltas.forEach(delta => node.hyperview.ingestDelta(delta));
 
-      // Compose lossless view
-      const composed = node.lossless.compose(['alice']);
+      // Compose hyperview view
+      const composed = node.hyperview.compose(['alice']);
       const aliceView = composed['alice'];
 
       expect(aliceView).toBeDefined();
@@ -41,7 +41,7 @@ describe('Lossless View Compose/Decompose', () => {
       expect(aliceView.propertyDeltas.email).toHaveLength(1);
 
       // Decompose back to deltas
-      const decomposed = node.lossless.decompose(aliceView);
+      const decomposed = node.hyperview.decompose(aliceView);
 
       expect(decomposed).toHaveLength(2);
       
@@ -73,12 +73,12 @@ describe('Lossless View Compose/Decompose', () => {
         .addPointer('intensity', 8)
         .buildV1();
 
-      node.lossless.ingestDelta(relationshipDelta);
+      node.hyperview.ingestDelta(relationshipDelta);
 
       // Compose and decompose
-      const composed = node.lossless.compose(['alice']);
+      const composed = node.hyperview.compose(['alice']);
       const aliceView = composed['alice'];
-      const decomposed = node.lossless.decompose(aliceView);
+      const decomposed = node.hyperview.decompose(aliceView);
 
       expect(decomposed).toHaveLength(1);
       const reconstituted = decomposed[0];
@@ -119,16 +119,16 @@ describe('Lossless View Compose/Decompose', () => {
         .addPointer('friend', 'bob', 'friends')
         .buildV1();
 
-      [aliceDelta, bobDelta, friendshipDelta].forEach(d => node.lossless.ingestDelta(d));
+      [aliceDelta, bobDelta, friendshipDelta].forEach(d => node.hyperview.ingestDelta(d));
 
       // Compose Alice's view
-      const composed = node.lossless.compose(['alice']);
+      const composed = node.hyperview.compose(['alice']);
       const aliceView = composed['alice'];
 
       expect(aliceView.propertyDeltas.friends).toHaveLength(1);
 
       // Decompose and verify the friendship delta is correctly reconstructed
-      const decomposed = node.lossless.decompose(aliceView);
+      const decomposed = node.hyperview.decompose(aliceView);
       const friendshipReconstituted = decomposed.find(d => 
         d.pointers.some(p => p.localContext === 'friend')
       );
@@ -152,10 +152,10 @@ describe('Lossless View Compose/Decompose', () => {
         .addPointer('name', 'Alice')
         .buildV1();
 
-      node.lossless.ingestDelta(originalDelta);
+      node.hyperview.ingestDelta(originalDelta);
 
-      const composed = node.lossless.compose(['alice']);
-      const decomposed = node.lossless.decompose(composed['alice']);
+      const composed = node.hyperview.compose(['alice']);
+      const decomposed = node.hyperview.decompose(composed['alice']);
 
       expect(decomposed).toHaveLength(1);
       const reconstituted = decomposed[0];
@@ -184,15 +184,15 @@ describe('Lossless View Compose/Decompose', () => {
           .buildV1()
       ];
 
-      nameDeltas.forEach(d => node.lossless.ingestDelta(d));
+      nameDeltas.forEach(d => node.hyperview.ingestDelta(d));
 
-      const composed = node.lossless.compose(['alice']);
+      const composed = node.hyperview.compose(['alice']);
       const aliceView = composed['alice'];
 
       // Should have 3 deltas for the name property
       expect(aliceView.propertyDeltas.name).toHaveLength(3);
 
-      const decomposed = node.lossless.decompose(aliceView);
+      const decomposed = node.hyperview.decompose(aliceView);
 
       // Should decompose back to 3 separate deltas
       expect(decomposed).toHaveLength(3);

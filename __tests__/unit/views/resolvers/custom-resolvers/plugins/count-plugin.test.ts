@@ -1,7 +1,7 @@
 import { describe, test, expect } from '@jest/globals';
 import { ResolverPlugin, DependencyStates } from '@src/views/resolvers/custom-resolvers';
 import { PropertyTypes } from '@src/core/types';
-import type { CollapsedDelta } from '@src/views/lossless';
+import type { CollapsedDelta } from '@src/views/hyperview';
 import { testResolverWithPlugins, createTestDelta } from '@test-helpers/resolver-test-helper';
 
 class CountPlugin extends ResolverPlugin<{ count: number }> {

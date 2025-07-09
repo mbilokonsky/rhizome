@@ -1,5 +1,5 @@
 import { PropertyTypes } from "../../../../core/types";
-import { CollapsedDelta } from "../../../../views/lossless";
+import { CollapsedDelta } from "../../../hyperview";
 import { ResolverPlugin } from "../plugin";
 import Debug from 'debug';
 const debug = Debug('rz:concatenation-plugin');

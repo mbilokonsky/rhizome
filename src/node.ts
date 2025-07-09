@@ -2,7 +2,7 @@ import Debug from 'debug';
 import {CREATOR, HTTP_API_ADDR, HTTP_API_ENABLE, HTTP_API_PORT, PEER_ID, PUBLISH_BIND_ADDR, PUBLISH_BIND_HOST, PUBLISH_BIND_PORT, REQUEST_BIND_ADDR, REQUEST_BIND_HOST, REQUEST_BIND_PORT, SEED_PEERS, STORAGE_TYPE, STORAGE_PATH} from './config';
 import {DeltaStream, parseAddressList, PeerAddress, Peers, PubSub, RequestReply} from './network';
 import {HttpServer} from './http/index';
-import {Lossless} from './views';
+import {Hyperview} from './views';
 import {QueryEngine, StorageQueryEngine} from './query';
 import {DefaultSchemaRegistry} from './schema';
 import {DeltaQueryStorage, StorageFactory, StorageConfig} from './storage';
@@ -29,7 +29,7 @@ export class RhizomeNode {
   requestReply: RequestReply;
   httpServer: HttpServer;
   deltaStream: DeltaStream;
-  lossless: Lossless;
+  hyperview: Hyperview;
   peers: Peers;
   queryEngine: QueryEngine;
   storageQueryEngine: StorageQueryEngine;
@@ -70,14 +70,14 @@ export class RhizomeNode {
     this.httpServer = new HttpServer(this);
     this.deltaStream = new DeltaStream(this);
     this.peers = new Peers(this);
-    this.lossless = new Lossless(this);
+    this.hyperview = new Hyperview(this);
     this.schemaRegistry = new DefaultSchemaRegistry();
     
     // Initialize storage backend
     this.deltaStorage = StorageFactory.create(this.config.storage!);
     
-    // Initialize query engines (both lossless-based and storage-based)
-    this.queryEngine = new QueryEngine(this.lossless, this.schemaRegistry);
+    // Initialize query engines (both hyperview-based and storage-based)
+    this.queryEngine = new QueryEngine(this.hyperview, this.schemaRegistry);
     this.storageQueryEngine = new StorageQueryEngine(this.deltaStorage, this.schemaRegistry);
   }
 
@@ -91,10 +91,10 @@ export class RhizomeNode {
   }: { syncOnStart?: boolean } = {}): Promise<void> {
     debug(`[${this.config.peerId}]`, 'Starting node (waiting for ready)...');
     
-    // Connect our lossless view to the delta stream
+    // Connect our hyperview view to the delta stream
     this.deltaStream.subscribeDeltas(async (delta) => {
-      // Ingest into lossless view
-      this.lossless.ingestDelta(delta);
+      // Ingest into hyperview view
+      this.hyperview.ingestDelta(delta);
       
       // Also store in persistent storage
       try {
@@ -150,11 +150,11 @@ export class RhizomeNode {
   }
 
   /**
-   * Sync existing lossless view data to persistent storage
+   * Sync existing hyperview view data to persistent storage
    * Useful for migrating from memory-only to persistent storage
    */
   async syncToStorage(): Promise<void> {
-    debug(`[${this.config.peerId}]`, 'Syncing lossless view to storage');
+    debug(`[${this.config.peerId}]`, 'Syncing hyperview view to storage');
     
     const allDeltas = this.deltaStream.deltasAccepted;
     let synced = 0;

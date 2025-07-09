@@ -18,8 +18,8 @@ type User = {
 (async () => {
   const rhizomeNode = new RhizomeNode();
 
-  // Enable API to read lossless view
-  rhizomeNode.httpServer.httpApi.serveLossless();
+  // Enable API to read hyperview view
+  rhizomeNode.httpServer.httpApi.serveHyperview();
 
   const users = new BasicCollection("user");
   users.rhizomeConnect(rhizomeNode);

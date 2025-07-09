@@ -1,3 +1,3 @@
-export * from './lossless';
-export * from './lossy';
+export * from './hyperview';
+export * from './view';
 export * from './resolvers';

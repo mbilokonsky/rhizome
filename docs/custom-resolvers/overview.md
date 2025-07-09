@@ -22,22 +22,26 @@ The `CustomResolver` system provides a flexible framework for resolving property
 ## Getting Started
 
 ```typescript
-import { CustomResolver, LastWriteWinsPlugin } from './resolver';
-import { LosslessView } from '../lossless-view';
+import { CustomResolver } from '../src/views/resolvers/custom-resolvers';
+import { LastWriteWinsPlugin } from '../src/views/resolvers/custom-resolvers/plugins';
+import { Hyperview } from '../src/views/hyperview';
 
-// Create a lossless view
-const view = new LosslessView();
+// Create a hyperview view
+const hyperview = new Hyperview();
 
 // Create a resolver with a last-write-wins strategy
-const resolver = new CustomResolver(view, {
+const resolver = new CustomResolver(hyperview, {
   myProperty: new LastWriteWinsPlugin()
 });
 
-// Process updates
-// ...
+// Process updates through the hyperview view
+// hyperview.applyDelta(delta);
 
-// Get resolved values
-const result = resolver.resolve();
+// Get resolved values for specific entities
+const result = resolver.resolve(['entity1', 'entity2']);
+
+// Or get all resolved values
+const allResults = resolver.resolveAll();
 ```
 
 ## Next Steps

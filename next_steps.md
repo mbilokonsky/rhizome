@@ -9,7 +9,7 @@ Phase 4 recognizes that in Rhizome, **deltas ARE relationships**. Instead of add
 1. **Deltas are relationships**: Every delta with pointers already expresses relationships
 2. **Patterns, not structure**: We're recognizing patterns in how deltas connect entities
 3. **Perspective-driven**: Different views/resolvers can interpret the same deltas differently
-4. **No single truth**: Competing deltas are resolved by application-level lossy resolvers
+4. **No single truth**: Competing deltas are resolved by application-level view resolvers
 5. **Time-aware**: All queries are inherently temporal, showing different relationships at different times
 
 ## Current State ✅
@@ -17,7 +17,7 @@ Phase 4 recognizes that in Rhizome, **deltas ARE relationships**. Instead of add
 - **All tests passing**: 21/21 suites, 183/183 tests (100%)
 - **Delta system**: Fully functional with pointers expressing relationships
 - **Negation system**: Can invalidate deltas (and thus relationships)
-- **Query system**: Basic traversal of lossless views
+- **Query system**: Basic traversal of hyperview views
 - **Schema system**: Can describe entity structures
 - **Resolver system**: Application-level interpretation of deltas
 
@@ -120,7 +120,7 @@ Phase 4 recognizes that in Rhizome, **deltas ARE relationships**. Instead of add
    class PatternResolver {
      // Interpret deltas matching certain patterns
      resolveWithPatterns(entityId, patterns) {
-       const deltas = this.lossless.getDeltasForEntity(entityId);
+       const deltas = this.hyperview.getDeltasForEntity(entityId);
        
        return {
          entity: entityId,

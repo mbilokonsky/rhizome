@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { RhizomeNode } from '@src';
-import { Lossless } from '@src/views/lossless';
+import { Hyperview } from '@src/views/hyperview';
 import { CustomResolver } from '@src/views/resolvers/custom-resolvers';
 import { ResolverPlugin } from '@src/views/resolvers/custom-resolvers/plugin';
 // import Debug from 'debug';
@@ -25,11 +25,11 @@ class TestPlugin extends ResolverPlugin<unknown> {
 
 describe('CustomResolver', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
   
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   describe('buildDependencyGraph', () => {
@@ -42,7 +42,7 @@ describe('CustomResolver', () => {
       };
       
       // Act
-      const resolver = new CustomResolver(lossless, plugins);
+      const resolver = new CustomResolver(hyperview, plugins);
       
       const graph = resolver.dependencyGraph;
       
@@ -65,7 +65,7 @@ describe('CustomResolver', () => {
       };
       
       // Act
-      const resolver = new CustomResolver(lossless, plugins);
+      const resolver = new CustomResolver(hyperview, plugins);
       
       // Access private method for testing
       const graph = resolver.dependencyGraph;
@@ -86,7 +86,7 @@ describe('CustomResolver', () => {
       
       // Act & Assert
       expect(() => {
-        new CustomResolver(lossless, plugins);
+        new CustomResolver(hyperview, plugins);
       }).toThrow('Dependency nonexistent not found for plugin a');
     });
 
@@ -99,7 +99,7 @@ describe('CustomResolver', () => {
       };
       
       // Act
-      const resolver = new CustomResolver(lossless, plugins);
+      const resolver = new CustomResolver(hyperview, plugins);
       
       // Access private method for testing
       const graph = resolver.dependencyGraph;
@@ -125,7 +125,7 @@ describe('CustomResolver', () => {
       
       // Act & Assert
       expect(() => {
-        new CustomResolver(lossless, plugins);
+        new CustomResolver(hyperview, plugins);
       }).toThrow('Circular dependency detected in plugin dependencies');
     });
   });

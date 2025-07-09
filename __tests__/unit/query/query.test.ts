@@ -1,5 +1,5 @@
 import { QueryEngine } from '@src/query';
-import { Lossless } from '@src/views';
+import { Hyperview } from '@src/views';
 import { DefaultSchemaRegistry } from '@src/schema';
 import { SchemaBuilder, PrimitiveSchemas } from '@src/schema';
 import { CommonSchemas } from '../../../util/schemas';
@@ -8,7 +8,7 @@ import { RhizomeNode } from '@src/node';
 
 describe('Query Engine', () => {
   let queryEngine: QueryEngine;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
   let schemaRegistry: DefaultSchemaRegistry;
   let rhizomeNode: RhizomeNode;
 
@@ -19,9 +19,9 @@ describe('Query Engine', () => {
       requestBindPort: 4003
     });
     
-    lossless = rhizomeNode.lossless;
+    hyperview = rhizomeNode.hyperview;
     schemaRegistry = new DefaultSchemaRegistry();
-    queryEngine = new QueryEngine(lossless, schemaRegistry);
+    queryEngine = new QueryEngine(hyperview, schemaRegistry);
 
     // Register test schemas
     schemaRegistry.register(CommonSchemas.User());
@@ -53,7 +53,7 @@ describe('Query Engine', () => {
       .withTimestamp(Date.now())
       .setProperty(id, 'name', name, 'user')
       .buildV1();
-    lossless.ingestDelta(nameDelta);
+    hyperview.ingestDelta(nameDelta);
 
     // Add age if provided
     if (age !== undefined) {
@@ -62,7 +62,7 @@ describe('Query Engine', () => {
         .withTimestamp(Date.now())
         .setProperty(id, 'age', age, 'user')
         .buildV1();
-      lossless.ingestDelta(ageDelta);
+      hyperview.ingestDelta(ageDelta);
     }
 
     // Add email if provided
@@ -72,7 +72,7 @@ describe('Query Engine', () => {
         .withTimestamp(Date.now())
         .setProperty(id, 'email', email, 'user')
         .buildV1();
-      lossless.ingestDelta(emailDelta);
+      hyperview.ingestDelta(emailDelta);
     }
   }
 
@@ -83,7 +83,7 @@ describe('Query Engine', () => {
       .withTimestamp(Date.now())
       .setProperty(id, 'title', title, 'post')
       .buildV1();
-    lossless.ingestDelta(titleDelta);
+    hyperview.ingestDelta(titleDelta);
 
     // Author delta
     const authorDelta = createDelta('test', 'test-host')
@@ -91,7 +91,7 @@ describe('Query Engine', () => {
       .withTimestamp(Date.now())
       .setProperty(id, 'author', author, 'post')
       .buildV1();
-    lossless.ingestDelta(authorDelta);
+    hyperview.ingestDelta(authorDelta);
 
     // Published delta
     const publishedDelta = createDelta('test', 'test-host')
@@ -99,7 +99,7 @@ describe('Query Engine', () => {
       .withTimestamp(Date.now())
       .setProperty(id, 'published', published, 'post')
       .buildV1();
-    lossless.ingestDelta(publishedDelta);
+    hyperview.ingestDelta(publishedDelta);
 
     // Views delta
     const viewsDelta = createDelta('test', 'test-host')
@@ -107,7 +107,7 @@ describe('Query Engine', () => {
       .withTimestamp(Date.now())
       .setProperty(id, 'views', views, 'post')
       .buildV1();
-    lossless.ingestDelta(viewsDelta);
+    hyperview.ingestDelta(viewsDelta);
   }
 
   describe('Basic Query Operations', () => {

@@ -71,8 +71,8 @@ export class HttpApi {
       res.json(this.rhizomeNode.peers.peers.length);
     });
 
-    // Initialize lossless and query endpoints
-    this.serveLossless();
+    // Initialize hyperview and query endpoints
+    this.serveHyperview();
     this.serveQuery();
   }
 
@@ -116,17 +116,17 @@ export class HttpApi {
     });
   }
 
-  serveLossless() {
+  serveHyperview() {
     // Get all domain entity IDs. TODO: This won't scale
-    this.router.get('/lossless/ids', (_req: express.Request, res: express.Response) => {
+    this.router.get('/hyperview/ids', (_req: express.Request, res: express.Response) => {
       res.json({
-        ids: Array.from(this.rhizomeNode.lossless.domainEntities.keys())
+        ids: Array.from(this.rhizomeNode.hyperview.domainEntities.keys())
       });
     });
 
     // Get all transaction IDs. TODO: This won't scale
     this.router.get('/transaction/ids', (_req: express.Request, res: express.Response) => {
-      const set = this.rhizomeNode.lossless.referencedAs.get("_transaction");
+      const set = this.rhizomeNode.hyperview.referencedAs.get("_transaction");
       res.json({
         ids: set ? Array.from(set.values()) : []
       });
@@ -135,7 +135,7 @@ export class HttpApi {
     // View a single transaction
     this.router.get('/transaction/:id', (req: express.Request, res: express.Response) => {
       const {params: {id}} = req;
-      const v = this.rhizomeNode.lossless.compose([id]);
+      const v = this.rhizomeNode.hyperview.compose([id]);
       const ent = v[id];
       if (!ent.referencedAs?.includes("_transaction")) {
         res.status(400).json({error: "Entity is not a transaction", id});
@@ -144,19 +144,19 @@ export class HttpApi {
 
       res.json({
         ...ent,
-        isComplete: this.rhizomeNode.lossless.transactions.isComplete(id)
+        isComplete: this.rhizomeNode.hyperview.transactions.isComplete(id)
       });
     });
 
-    // Get a lossless view of a single domain entity
-    this.router.get('/lossless/:id', (req: express.Request, res: express.Response) => {
+    // Get a hyperview view of a single domain entity
+    this.router.get('/hyperview/:id', (req: express.Request, res: express.Response) => {
       const {params: {id}} = req;
-      const v = this.rhizomeNode.lossless.compose([id]);
+      const v = this.rhizomeNode.hyperview.compose([id]);
       const ent = v[id];
 
       res.json({
         ...ent,
-        isComplete: this.rhizomeNode.lossless.transactions.isComplete(id)
+        isComplete: this.rhizomeNode.hyperview.transactions.isComplete(id)
       });
     });
   }

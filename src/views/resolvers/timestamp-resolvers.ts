@@ -1,6 +1,6 @@
 import { EntityProperties } from "../../core/entity";
-import { Lossless, CollapsedDelta, valueFromDelta, LosslessViewOne } from "../lossless";
-import { Lossy } from '../lossy';
+import { Hyperview, CollapsedDelta, valueFromDelta, HyperviewViewOne } from "../hyperview";
+import { Lossy } from '../view';
 import { DomainEntityID, PropertyID, PropertyTypes, Timestamp, ViewMany } from "../../core/types";
 import Debug from 'debug';
 
@@ -77,13 +77,13 @@ function compareWithTieBreaking(
 
 export class TimestampResolver extends Lossy<Accumulator, Result> {
   constructor(
-    lossless: Lossless,
+    hyperview: Hyperview,
     private tieBreakingStrategy: TieBreakingStrategy = 'delta-id'
   ) {
-    super(lossless);
+    super(hyperview);
   }
 
-  reducer(acc: Accumulator, cur: LosslessViewOne): Accumulator {
+  reducer(acc: Accumulator, cur: HyperviewViewOne): Accumulator {
     if (!acc[cur.id]) {
       acc[cur.id] = { id: cur.id, properties: {} };
     }
@@ -138,26 +138,26 @@ export class TimestampResolver extends Lossy<Accumulator, Result> {
 
 // Convenience classes for different tie-breaking strategies
 export class CreatorIdTimestampResolver extends TimestampResolver {
-  constructor(lossless: Lossless) {
-    super(lossless, 'creator-id');
+  constructor(hyperview: Hyperview) {
+    super(hyperview, 'creator-id');
   }
 }
 
 export class DeltaIdTimestampResolver extends TimestampResolver {
-  constructor(lossless: Lossless) {
-    super(lossless, 'delta-id');
+  constructor(hyperview: Hyperview) {
+    super(hyperview, 'delta-id');
   }
 }
 
 export class HostIdTimestampResolver extends TimestampResolver {
-  constructor(lossless: Lossless) {
-    super(lossless, 'host-id');
+  constructor(hyperview: Hyperview) {
+    super(hyperview, 'host-id');
   }
 }
 
 export class LexicographicTimestampResolver extends TimestampResolver {
-  constructor(lossless: Lossless) {
-    super(lossless, 'lexicographic');
+  constructor(hyperview: Hyperview) {
+    super(hyperview, 'lexicographic');
   }
 }
 

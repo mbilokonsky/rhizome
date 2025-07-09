@@ -2,7 +2,7 @@ import jsonLogic from 'json-logic-js';
 const { apply, is_logic } = jsonLogic;
 import Debug from 'debug';
 import { SchemaRegistry, SchemaID, ObjectSchema } from '../schema/schema';
-import { Lossless, LosslessViewMany, LosslessViewOne, valueFromDelta } from '../views/lossless';
+import { Hyperview, HyperviewViewMany, HyperviewViewOne, valueFromDelta } from '../views/hyperview';
 import { DomainEntityID } from '../core/types';
 import { Delta, DeltaFilter } from '../core/delta';
 
@@ -31,14 +31,14 @@ export interface QueryOptions {
 }
 
 export interface QueryResult {
-  entities: LosslessViewMany;
+  entities: HyperviewViewMany;
   totalFound: number;
   limited: boolean;
 }
 
 export class QueryEngine {
   constructor(
-    private lossless: Lossless,
+    private hyperview: Hyperview,
     private schemaRegistry: SchemaRegistry
   ) {}
 
@@ -96,12 +96,12 @@ export class QueryEngine {
     const candidateEntityIds = this.discoverEntitiesBySchema(schemaId);
     debug(`Found ${candidateEntityIds.length} candidate entities for schema ${schemaId}`);
 
-    // 2. Compose lossless views for all candidates
-    const allViews = this.lossless.compose(candidateEntityIds, options.deltaFilter);
-    debug(`Composed ${Object.keys(allViews).length} lossless views`);
+    // 2. Compose hyperview views for all candidates
+    const allViews = this.hyperview.compose(candidateEntityIds, options.deltaFilter);
+    debug(`Composed ${Object.keys(allViews).length} hyperview views`);
 
     // 3. Apply JSON Logic filter if provided
-    let filteredViews: LosslessViewMany = allViews;
+    let filteredViews: HyperviewViewMany = allViews;
     
     if (filter) {
       filteredViews = this.applyJsonLogicFilter(allViews, filter, schemaId);
@@ -132,10 +132,10 @@ export class QueryEngine {
   /**
    * Query for a single entity by ID with schema validation
    */
-  async queryOne(schemaId: SchemaID, entityId: DomainEntityID): Promise<LosslessViewOne | null> {
+  async queryOne(schemaId: SchemaID, entityId: DomainEntityID): Promise<HyperviewViewOne | null> {
     debug(`Querying single entity ${entityId} with schema ${schemaId}`);
 
-    const views = this.lossless.compose([entityId]);
+    const views = this.hyperview.compose([entityId]);
     const view = views[entityId];
     
     if (!view) {
@@ -165,7 +165,7 @@ export class QueryEngine {
 
     // Strategy: Find entities that have deltas for the schema's required properties
     const requiredProperties = schema.requiredProperties || [];
-    const allEntityIds = Array.from(this.lossless.domainEntities.keys());
+    const allEntityIds = Array.from(this.hyperview.domainEntities.keys());
 
     if (requiredProperties.length === 0) {
       // No required properties - return all entities
@@ -177,7 +177,7 @@ export class QueryEngine {
     const candidateEntities: DomainEntityID[] = [];
     
     for (const entityId of allEntityIds) {
-      const entity = this.lossless.domainEntities.get(entityId);
+      const entity = this.hyperview.domainEntities.get(entityId);
       if (!entity) continue;
 
       // Check if entity has deltas for all required property
@@ -195,28 +195,28 @@ export class QueryEngine {
   }
 
   /**
-   * Apply JSON Logic filter to lossless views
-   * This requires converting each lossless view to a queryable object
+   * Apply JSON Logic filter to hyperview views
+   * This requires converting each hyperview view to a queryable object
    */
   private applyJsonLogicFilter(
-    views: LosslessViewMany, 
+    views: HyperviewViewMany, 
     filter: JsonLogic, 
     schemaId: SchemaID
-  ): LosslessViewMany {
+  ): HyperviewViewMany {
     const schema = this.schemaRegistry.get(schemaId);
     if (!schema) {
       debug(`Cannot filter without schema ${schemaId}`);
       return views;
     }
 
-    const filteredViews: LosslessViewMany = {};
+    const filteredViews: HyperviewViewMany = {};
     let hasFilterErrors = false;
     const filterErrors: string[] = [];
 
     for (const [entityId, view] of Object.entries(views)) {
       try {
-        // Convert lossless view to queryable object using schema
-        const queryableObject = this.losslessViewToQueryableObject(view, schema);
+        // Convert hyperview view to queryable object using schema
+        const queryableObject = this.hyperviewViewToQueryableObject(view, schema);
         
         // Apply JSON Logic filter
         const matches = apply(filter, queryableObject);
@@ -246,16 +246,16 @@ export class QueryEngine {
   }
 
   /**
-   * Convert a lossless view to a queryable object based on schema
+   * Convert a hyperview view to a queryable object based on schema
    * Uses simple resolution strategies for now
    */
-  private losslessViewToQueryableObject(view: LosslessViewOne, schema: ObjectSchema): Record<string, unknown> {
+  private hyperviewViewToQueryableObject(view: HyperviewViewOne, schema: ObjectSchema): Record<string, unknown> {
     const obj: Record<string, unknown> = {
       id: view.id,
       _referencedAs: view.referencedAs
     };
 
-    // Convert each schema property from lossless view deltas
+    // Convert each schema property from hyperview view deltas
     for (const [propertyId, propertySchema] of Object.entries(schema.properties)) {
       const deltas = view.propertyDeltas[propertyId] || [];
 
@@ -315,7 +315,7 @@ export class QueryEngine {
   /**
    * Check if an entity matches a schema (basic validation)
    */
-  private entityMatchesSchema(view: LosslessViewOne, schemaId: SchemaID): boolean {
+  private entityMatchesSchema(view: HyperviewViewOne, schemaId: SchemaID): boolean {
     const schema = this.schemaRegistry.get(schemaId);
     if (!schema) return false;
 
@@ -337,7 +337,7 @@ export class QueryEngine {
    * Get statistics about queryable entities
    */
   getStats() {
-    const totalEntities = this.lossless.domainEntities.size;
+    const totalEntities = this.hyperview.domainEntities.size;
     const registeredSchemas = this.schemaRegistry.list().length;
     
     return {

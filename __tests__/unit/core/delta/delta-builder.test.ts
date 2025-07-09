@@ -1,6 +1,6 @@
 import { createDelta } from '@src/core/delta-builder';
 import { DeltaV1, DeltaV2 } from '@src/core/delta';
-import { Lossless } from '@src/views/lossless';
+import { Hyperview } from '@src/views/hyperview';
 import { RhizomeNode } from '@src/node';
 import { TimestampResolver } from '@src/views/resolvers/timestamp-resolvers';
 
@@ -45,10 +45,10 @@ describe('DeltaBuilder', () => {
       });
 
       // Verify that the entity property resolves correctly
-      const lossless = new Lossless(node);
-      const lossy = new TimestampResolver(lossless);
-      lossless.ingestDelta(delta);
-      const result = lossy.resolve();
+      const hyperview = new Hyperview(node);
+      const view = new TimestampResolver(hyperview);
+      hyperview.ingestDelta(delta);
+      const result = view.resolve();
       expect(result).toBeDefined();
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
     });
@@ -70,10 +70,10 @@ describe('DeltaBuilder', () => {
       });
 
       // Verify that the entity property resolves correctly
-      const lossless = new Lossless(node);
-      const lossy = new TimestampResolver(lossless);
-      lossless.ingestDelta(delta);
-      const result = lossy.resolve();
+      const hyperview = new Hyperview(node);
+      const view = new TimestampResolver(hyperview);
+      hyperview.ingestDelta(delta);
+      const result = view.resolve();
       expect(result).toBeDefined();
       expect(result!['entity-1'].properties.name).toBe('Test Entity');
     });
@@ -170,10 +170,10 @@ describe('DeltaBuilder', () => {
       expect(delta.pointers).toHaveProperty('target', 'user-2');
       expect(delta.pointers).toHaveProperty('type', 'follows');
 
-      const lossless = new Lossless(node);
-      const lossy = new TimestampResolver(lossless);
-      lossless.ingestDelta(delta);
-      const result = lossy.resolve([relId]);
+      const hyperview = new Hyperview(node);
+      const view = new TimestampResolver(hyperview);
+      hyperview.ingestDelta(delta);
+      const result = view.resolve([relId]);
       expect(result).toBeDefined();
       expect(result![relId]).toMatchObject({
         properties: {
@@ -200,10 +200,10 @@ describe('DeltaBuilder', () => {
       expect(delta.pointers).toHaveProperty('type', 'follows');
       expect(delta.pointers).toHaveProperty('version', 1);
 
-      const lossless = new Lossless(node);
-      const lossy = new TimestampResolver(lossless);
-      lossless.ingestDelta(delta);
-      const result = lossy.resolve([relId]);
+      const hyperview = new Hyperview(node);
+      const view = new TimestampResolver(hyperview);
+      hyperview.ingestDelta(delta);
+      const result = view.resolve([relId]);
       expect(result).toBeDefined();
       expect(result![relId]).toMatchObject({
         properties: {

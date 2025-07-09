@@ -1,6 +1,6 @@
 import {
   RhizomeNode,
-  Lossless,
+  Hyperview,
   TimestampResolver,
   CreatorIdTimestampResolver,
   DeltaIdTimestampResolver,
@@ -13,19 +13,19 @@ const debug = Debug('rz:test:timestamp-resolvers');
 
 describe('Timestamp Resolvers', () => {
   let node: RhizomeNode;
-  let lossless: Lossless;
+  let hyperview: Hyperview;
 
   beforeEach(() => {
     node = new RhizomeNode();
-    lossless = new Lossless(node);
+    hyperview = new Hyperview(node);
   });
 
   describe('Basic Timestamp Resolution', () => {
     test('should resolve by most recent timestamp', () => {
-      const resolver = new TimestampResolver(lossless);
+      const resolver = new TimestampResolver(hyperview);
 
       // Add older delta
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'score')
@@ -34,7 +34,7 @@ describe('Timestamp Resolvers', () => {
       );
 
       // Add newer delta
-      lossless.ingestDelta(createDelta('user2', 'host2')
+      hyperview.ingestDelta(createDelta('user2', 'host2')
         .withId('delta2')
         .withTimestamp(2000)
         .addPointer('collection', 'entity1', 'score')
@@ -50,10 +50,10 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should handle multiple entities with different timestamps', () => {
-      const resolver = new TimestampResolver(lossless);
+      const resolver = new TimestampResolver(hyperview);
 
       // Entity1 - older value
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'value')
         .addPointer('value', 100)
@@ -61,7 +61,7 @@ describe('Timestamp Resolvers', () => {
       );
 
       // Entity2 - newer value
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withTimestamp(2000)
         .addPointer('collection', 'entity2', 'value')
         .addPointer('value', 200)
@@ -78,10 +78,10 @@ describe('Timestamp Resolvers', () => {
 
   describe('Tie-Breaking Strategies', () => {
     test('should break ties using creator-id strategy', () => {
-      const resolver = new CreatorIdTimestampResolver(lossless);
+      const resolver = new CreatorIdTimestampResolver(hyperview);
 
       // Two deltas with same timestamp, different creators
-      lossless.ingestDelta(createDelta('user_z', 'host1')
+      hyperview.ingestDelta(createDelta('user_z', 'host1')
         .withId('delta1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'score')
@@ -89,7 +89,7 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('user_a', 'host1')
+      hyperview.ingestDelta(createDelta('user_a', 'host1')
         .withId('delta2')
         .withTimestamp(1000) // Same timestamp
         .addPointer('collection', 'entity1', 'score')
@@ -105,10 +105,10 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using delta-id strategy', () => {
-      const resolver = new DeltaIdTimestampResolver(lossless);
+      const resolver = new DeltaIdTimestampResolver(hyperview);
 
       // Two deltas with same timestamp, different delta IDs
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta_a') // Lexicographically earlier
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'score')
@@ -116,7 +116,7 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta_z') // Lexicographically later
         .withTimestamp(1000) // Same timestamp
         .addPointer('collection', 'entity1', 'score')
@@ -132,10 +132,10 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using host-id strategy', () => {
-      const resolver = new HostIdTimestampResolver(lossless);
+      const resolver = new HostIdTimestampResolver(hyperview);
 
       // Two deltas with same timestamp, different hosts
-      lossless.ingestDelta(createDelta('user1', 'host_z') // Lexicographically later
+      hyperview.ingestDelta(createDelta('user1', 'host_z') // Lexicographically later
         .withId('delta1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'score')
@@ -143,7 +143,7 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('user1', 'host_a') // Lexicographically earlier
+      hyperview.ingestDelta(createDelta('user1', 'host_a') // Lexicographically earlier
         .withId('delta2')
         .withTimestamp(1000) // Same timestamp
         .addPointer('collection', 'entity1', 'score')
@@ -159,10 +159,10 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using lexicographic strategy with string values', () => {
-      const resolver = new LexicographicTimestampResolver(lossless);
+      const resolver = new LexicographicTimestampResolver(hyperview);
 
       // Two deltas with same timestamp, different string values
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'name')
@@ -170,7 +170,7 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta2')
         .withTimestamp(1000) // Same timestamp
         .addPointer('collection', 'entity1', 'name')
@@ -186,10 +186,10 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should break ties using lexicographic strategy with numeric values (falls back to delta ID)', () => {
-      const resolver = new LexicographicTimestampResolver(lossless);
+      const resolver = new LexicographicTimestampResolver(hyperview);
 
       // Two deltas with same timestamp, numeric values (should fall back to delta ID comparison)
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta_a') // Lexicographically earlier
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'score')
@@ -197,7 +197,7 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta_z') // Lexicographically later
         .withTimestamp(1000) // Same timestamp
         .addPointer('collection', 'entity1', 'score')
@@ -215,11 +215,11 @@ describe('Timestamp Resolvers', () => {
 
   describe('Complex Tie-Breaking Scenarios', () => {
     test('should handle multiple properties with different tie-breaking outcomes', () => {
-      const creatorResolver = new CreatorIdTimestampResolver(lossless);
-      const deltaResolver = new DeltaIdTimestampResolver(lossless);
+      const creatorResolver = new CreatorIdTimestampResolver(hyperview);
+      const deltaResolver = new DeltaIdTimestampResolver(hyperview);
       
       // Add deltas for multiple properties with same timestamp
-      lossless.ingestDelta(createDelta('user_a', 'host1')
+      hyperview.ingestDelta(createDelta('user_a', 'host1')
         .withId('delta_z')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'name')
@@ -227,7 +227,7 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('user_z', 'host1')
+      hyperview.ingestDelta(createDelta('user_z', 'host1')
         .withId('delta_a')
         .withTimestamp(1000) // Same timestamp
         .addPointer('collection', 'entity1', 'name')
@@ -249,10 +249,10 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should work consistently with timestamp priority over tie-breaking', () => {
-      const resolver = new CreatorIdTimestampResolver(lossless);
+      const resolver = new CreatorIdTimestampResolver(hyperview);
 
       // Add older delta with "better" tie-breaking attributes
-      lossless.ingestDelta(createDelta('user_z', 'host1')
+      hyperview.ingestDelta(createDelta('user_z', 'host1')
         .withId('delta_z') // Would win in delta ID tie-breaking
         .withTimestamp(1000) // Older timestamp
         .addPointer('collection', 'entity1', 'score')
@@ -261,7 +261,7 @@ describe('Timestamp Resolvers', () => {
       );
 
       // Add newer delta with "worse" tie-breaking attributes
-      lossless.ingestDelta(createDelta('user_a', 'host1')
+      hyperview.ingestDelta(createDelta('user_a', 'host1')
         .withId('delta_a') // Would lose in delta ID tie-breaking
         .withTimestamp(2000) // Newer timestamp
         .addPointer('collection', 'entity1', 'score')
@@ -279,8 +279,8 @@ describe('Timestamp Resolvers', () => {
 
   describe('Edge Cases', () => {
     test('should handle single delta correctly', () => {
-      const resolver = new TimestampResolver(lossless, 'creator-id');
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      const resolver = new TimestampResolver(hyperview, 'creator-id');
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'value')
@@ -295,9 +295,9 @@ describe('Timestamp Resolvers', () => {
     });
 
     test('should handle mixed value types correctly', () => {
-      const resolver = new TimestampResolver(lossless);
+      const resolver = new TimestampResolver(hyperview);
 
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta1')
         .withTimestamp(1000)
         .addPointer('collection', 'entity1', 'name')
@@ -305,7 +305,7 @@ describe('Timestamp Resolvers', () => {
         .buildV1()
       );
 
-      lossless.ingestDelta(createDelta('user1', 'host1')
+      hyperview.ingestDelta(createDelta('user1', 'host1')
         .withId('delta2')
         .withTimestamp(1001)
         .addPointer('collection', 'entity1', 'score')

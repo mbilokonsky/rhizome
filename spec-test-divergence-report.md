@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The rhizome-node implementation demonstrates strong alignment with core spec concepts but lacks implementation and testing for several advanced features. The fundamental delta → lossless → lossy transformation pipeline is well-implemented, while query systems, relational features, and advanced conflict resolution remain unimplemented.
+The rhizome-node implementation demonstrates strong alignment with core spec concepts but lacks implementation and testing for several advanced features. The fundamental delta → hyperview → view transformation pipeline is well-implemented, while query systems, relational features, and advanced conflict resolution remain unimplemented.
 
 ## Core Concept Alignment
 
@@ -13,13 +13,13 @@ The rhizome-node implementation demonstrates strong alignment with core spec con
    - **Implementation**: Correctly implements both V1 (array) and V2 (object) formats
    - **Tests**: Basic format conversion tested, but validation gaps exist
 
-2. **Lossless Views**
+2. **Hyperview Views**
    - **Spec**: Full inventory of all deltas composing an object
-   - **Implementation**: `LosslessViewDomain` correctly accumulates deltas by entity/property
+   - **Implementation**: `HyperviewViewDomain` correctly accumulates deltas by entity/property
    - **Tests**: Good coverage of basic transformation, filtering by creator/host
 
 3. **Lossy Views**
-   - **Spec**: Compression of lossless views using resolution strategies
+   - **Spec**: Compression of hyperview views using resolution strategies
    - **Implementation**: Initializer/reducer/resolver pattern provides flexibility
    - **Tests**: Domain-specific example (Role/Actor/Film) demonstrates concept
 
@@ -127,4 +127,4 @@ The rhizome-node implementation demonstrates strong alignment with core spec con
 
 ## Conclusion
 
-The rhizome-node implementation successfully captures the core concepts of the spec but requires significant work to achieve full compliance. The foundation is solid, with the delta/lossless/lossy pipeline working as designed. However, advanced features like queries, schemas, and sophisticated conflict resolution remain unimplemented. The test suite would benefit from expanded coverage of edge cases, validation, and distributed system scenarios.
+The rhizome-node implementation successfully captures the core concepts of the spec but requires significant work to achieve full compliance. The foundation is solid, with the delta/hyperview/view pipeline working as designed. However, advanced features like queries, schemas, and sophisticated conflict resolution remain unimplemented. The test suite would benefit from expanded coverage of edge cases, validation, and distributed system scenarios.

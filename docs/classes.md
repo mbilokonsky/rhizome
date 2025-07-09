@@ -11,7 +11,7 @@ classDiagram
         -requestReply: RequestReply
         -httpServer: HttpServer
         -deltaStream: DeltaStream
-        -lossless: Lossless
+        -hyperview: Hyperview
         -peers: Peers
         -queryEngine: QueryEngine
         -storageQueryEngine: StorageQueryEngine
@@ -27,15 +27,15 @@ classDiagram
         +pointers: PointerV1[]
     }
     
-    class Lossless {
-        -domainEntities: Map<DomainEntityID, LosslessEntity>
+    class Hyperview {
+        -domainEntities: Map<DomainEntityID, HyperviewEntity>
         -transactions: Transactions
-        +view(ids: DomainEntityID[]): LosslessViewMany
-        +compose(ids: DomainEntityID[]): LosslessViewMany
+        +view(ids: DomainEntityID[]): HyperviewViewMany
+        +compose(ids: DomainEntityID[]): HyperviewViewMany
     }
     
     class QueryEngine {
-        -lossless: Lossless
+        -hyperview: Hyperview
         -schemaRegistry: SchemaRegistry
         +query(schemaId: SchemaID, filter?: JsonLogic): Promise<SchemaAppliedViewWithNesting[]>
     }
@@ -69,23 +69,23 @@ classDiagram
     
     %% Relationships
     RhizomeNode --> DeltaStream
-    RhizomeNode --> Lossless
+    RhizomeNode --> Hyperview
     RhizomeNode --> QueryEngine
     RhizomeNode --> StorageQueryEngine
     RhizomeNode --> SchemaRegistry
     RhizomeNode --> DeltaStorage
     
-    Lossless --> Transactions
-    Lossless --> LosslessEntity
+    Hyperview --> Transactions
+    Hyperview --> HyperviewEntity
     
     QueryEngine --> SchemaRegistry
-    QueryEngine --> Lossless
+    QueryEngine --> Hyperview
     
     StorageQueryEngine --> DeltaStorage
     StorageQueryEngine --> SchemaRegistry
     
     DeltaStream --> Delta
-    Lossless --> Delta
+    Hyperview --> Delta
     
     DockerOrchestrator --> ContainerManager
     DockerOrchestrator --> NetworkManager
@@ -103,7 +103,7 @@ classDiagram
    - Represents atomic changes in the system
    - Contains pointers to entities and their properties
 
-3. **Lossless**: Manages the lossless view of data
+3. **Hyperview**: Manages the hyperview view of data
    - Maintains the complete history of deltas
    - Provides methods to view and compose entity states
 
@@ -126,7 +126,7 @@ classDiagram
 ## Data Flow
 
 1. Deltas are received through the DeltaStream
-2. Lossless processes and stores these deltas
+2. Hyperview processes and stores these deltas
 3. Queries can be made through either QueryEngine (in-memory) or StorageQueryEngine (persisted)
 4. The system maintains consistency through the schema system
 5. In distributed mode, DockerOrchestrator manages multiple node instances

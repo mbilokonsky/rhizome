@@ -18,7 +18,7 @@ export abstract class Collection<View> {
   rhizomeNode?: RhizomeNode;
   name: string;
   eventStream = new EventEmitter();
-  lossy?: View;
+  view?: View;
 
   constructor(name: string) {
     this.name = name;
@@ -34,7 +34,7 @@ export abstract class Collection<View> {
     this.initializeView();
 
     // Listen for completed transactions, and emit updates to event stream
-    this.rhizomeNode.lossless.eventStream.on("updated", (id) => {
+    this.rhizomeNode.hyperview.eventStream.on("updated", (id) => {
       // TODO: Filter so we only get members of our collection
 
       // TODO: Reslover / Delta Filter?
@@ -128,7 +128,7 @@ export abstract class Collection<View> {
     }
     debug(`Getting ids for collection ${this.name}`)
     const ids = new Set<string>();
-    for (const [entityId, names] of this.rhizomeNode.lossless.referencedAs.entries()) {
+    for (const [entityId, names] of this.rhizomeNode.hyperview.referencedAs.entries()) {
       if (names.has(this.name)) {
         ids.add(entityId);
       }
@@ -160,7 +160,7 @@ export abstract class Collection<View> {
     );
 
     const ingested = new Promise<boolean>((resolve) => {
-      this.rhizomeNode!.lossless.eventStream.on("updated", (id: DomainEntityID) => {
+      this.rhizomeNode!.hyperview.eventStream.on("updated", (id: DomainEntityID) => {
         if (id === entityId) resolve(true);
       })
     });
@@ -178,7 +178,7 @@ export abstract class Collection<View> {
       await this.rhizomeNode!.deltaStream.publishDelta(delta);
 
       // ingest the delta as though we had received it from a peer
-      this.rhizomeNode!.lossless.ingestDelta(delta);
+      this.rhizomeNode!.hyperview.ingestDelta(delta);
     });
 
     // Return updated view of this entity

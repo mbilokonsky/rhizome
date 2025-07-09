@@ -85,10 +85,10 @@ describe('Multi-Pointer Delta Resolution', () => {
         .addPointer('salary', 15000000)
         .addPointer('contract_date', '1999-03-31')
         .buildV1();
-      node.lossless.ingestDelta(castingDelta);
+      node.hyperview.ingestDelta(castingDelta);
 
       // Test from Keanu's perspective
-      const keanuViews = node.lossless.compose(['keanu']);
+      const keanuViews = node.hyperview.compose(['keanu']);
       const keanuView = keanuViews['keanu'];
 
       expect(keanuView.propertyDeltas.filmography).toBeDefined();
@@ -97,7 +97,7 @@ describe('Multi-Pointer Delta Resolution', () => {
       const nestedKeanuView = schemaRegistry.applySchemaWithNesting(
         keanuView,
         'actor',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -117,13 +117,13 @@ describe('Multi-Pointer Delta Resolution', () => {
       }
 
       // Test from Matrix's perspective
-      const matrixViews = node.lossless.compose(['matrix']);
+      const matrixViews = node.hyperview.compose(['matrix']);
       const matrixView = matrixViews['matrix'];
 
       const nestedMatrixView = schemaRegistry.applySchemaWithNesting(
         matrixView,
         'movie',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -169,16 +169,16 @@ describe('Multi-Pointer Delta Resolution', () => {
         .addPointer('since', '2020-01-15')
         .addPointer('intensity', 8)
         .buildV1();
-      node.lossless.ingestDelta(relationshipDelta);
+      node.hyperview.ingestDelta(relationshipDelta);
 
       // Test from Alice's perspective
-      const aliceViews = node.lossless.compose(['alice']);
+      const aliceViews = node.hyperview.compose(['alice']);
       const aliceView = aliceViews['alice'];
 
       const nestedAliceView = schemaRegistry.applySchemaWithNesting(
         aliceView,
         'person',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
@@ -244,16 +244,16 @@ describe('Multi-Pointer Delta Resolution', () => {
         .addPointer('budget', 50000)
         .addPointer('deadline', '2024-06-01')
         .buildV1();
-      node.lossless.ingestDelta(collaborationDelta);
+      node.hyperview.ingestDelta(collaborationDelta);
 
       // Test from project's perspective
-      const projectViews = node.lossless.compose(['website']);
+      const projectViews = node.hyperview.compose(['website']);
       const projectView = projectViews['website'];
 
       const nestedProjectView = schemaRegistry.applySchemaWithNesting(
         projectView,
         'project',
-        node.lossless,
+        node.hyperview,
         { maxDepth: 2 }
       );
 
