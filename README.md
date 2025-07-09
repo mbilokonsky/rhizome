@@ -43,13 +43,12 @@ npm test
 
 ### Custom Resolvers
 - [Overview](./docs/custom-resolvers/overview.md) - Introduction to the resolver system
-- [Creating Resolvers](./docs/custom-resolvers/creating-resolvers.md) - Guide to building custom resolvers
+- [Creating Plugins](./docs/custom-resolvers/plugins/creating-plugins.md) - Guide to building custom resolver plugins
 - [Built-in Plugins](./docs/custom-resolvers/plugins/builtin-plugins.md) - Available resolver plugins
 - [Dependency Resolution](./docs/custom-resolvers/dependencies/dependency-resolution.md) - Managing resolver dependencies
 
 ### Schema & Validation
 - [Schema Validation](./docs/schema-validation.md) - Defining and validating data schemas
-- [Classes](./docs/classes.md) - Working with typed collections and classes
 
 ### Development
 - [Testing Helpers](./docs/test-helpers.md) - Utilities for testing Rhizome applications
