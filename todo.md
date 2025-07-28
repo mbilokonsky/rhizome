@@ -69,27 +69,51 @@ This document tracks work needed to achieve full specification compliance, organ
 - [ ] Test query performance at scale
 - [ ] Add query result caching with invalidation
 
-## Phase 4: Delta Patterns & Query Traversal
+## Phase 4: Delta Schemas, Hyperview Schemas and View Schemas
+See the [On Schemas](./spec.md#on-schemas) section of the spec for details. We are going to be expanding on the schema work done so far.
 
-### 4.1 Delta Pattern Recognition
+### 4.1 Delta Schemas
+- [ ] Implement delta schemas that define the structure of deltas
+- [ ] Add schema validation for deltas
+- [ ] Create mapping between deltas schemas as rhizome entities and delta schemas as typescript types
+- [ ] Add tests for delta schema validation
+
+### 4.2 Hyperview Schemas
+- [ ] Implement hyperview schemas that define the structure of hyperviews
+- [ ] Partial Application semantics for hyperviews
+- [ ] Materialize hyperview schema from delta store
+- [ ] Hydrate hyperview schema using query engine
+- [ ] Add tests for hyperview schema application
+
+### 4.3 View Schemas
+- [ ] Implement view schemas that define the structure of views
+- [ ] Add view schema validation against hyperview schemas
+- [ ] Create view schema resolvers against hyperview schemas
+- [ ] Implement view schema caching
+- [ ] Add tests for view schema validation and resolution
+- [ ] Prepare for GQL integration in phase 6.
+
+## Phase 5: Delta Patterns & Query Traversal
+
+### 5.1 Delta Pattern Recognition
 - [ ] Define common delta patterns (authorship, membership, etc.)
 - [ ] Create pattern matching utilities
 - [ ] Build pattern validation (guidance, not enforcement)
 - [ ] Document delta-as-relationship philosophy
 
-### 4.2 Pattern-Aware Queries
+### 5.2 Pattern-Aware Queries
 - [ ] Extend QueryEngine with pattern traversal methods
 - [ ] Add multi-perspective query support
 - [ ] Implement temporal relationship queries
 - [ ] Create relationship history and timeline queries
 
-### 4.3 Pattern-Based Resolvers
+### 5.3 Pattern-Based Resolvers
 - [ ] Build pattern-aware resolvers for common relationships
 - [ ] Implement competing relationship resolution
 - [ ] Add missing relationship detection
 - [ ] Create resolver composition utilities
 
-### 4.4 Schema-as-Deltas (Meta-Schema System)
+### 5.4 Schema-as-Deltas (Meta-Schema System)
 - [ ] Define schema entities that are stored as deltas in the system
 - [ ] Implement schema queries that return schema instances from hyperviews
 - [ ] Create schema evolution through delta mutations
@@ -97,67 +121,67 @@ This document tracks work needed to achieve full specification compliance, organ
 - [ ] Build schema conflict resolution for competing schema definitions
 - [ ] Test runtime schema updates and their effects on existing data
 
-## Phase 5: GraphQL API Layer
+## Phase 6: GraphQL API Layer
 
-### 5.1 GraphQL Schema Generation
+### 6.1 GraphQL Schema Generation
 - [ ] Generate GraphQL schemas from Rhizome schemas
 - [ ] Map delta patterns to GraphQL relationships
 - [ ] Support multiple schema perspectives (published, draft, etc.)
 - [ ] Add GraphQL directives for perspective control
 
-### 5.2 GraphQL Resolvers
+### 6.2 GraphQL Resolvers
 - [ ] Implement resolvers that traverse delta patterns
 - [ ] Add support for nested relationship queries
 - [ ] Handle temporal queries (time-travel via arguments)
 - [ ] Implement competing value resolution in GraphQL context
 
-### 5.3 GraphQL Mutations
+### 6.3 GraphQL Mutations
 - [ ] Create mutations that generate appropriate deltas
 - [ ] Handle relationship creation/updates via delta generation
 - [ ] Implement negation mutations for "deletes"
 - [ ] Add transaction support for multi-delta mutations
 
-### 5.4 GraphQL Subscriptions
+### 6.4 GraphQL Subscriptions
 - [ ] Stream delta updates as GraphQL subscriptions
 - [ ] Filter subscriptions by pattern/entity
 - [ ] Support real-time relationship updates
 - [ ] Add perspective-aware subscription filtering
 
-## Phase 6: Performance & Optimization
+## Phase 7: Performance & Optimization
 
-### 6.1 View Optimizations
+### 7.1 View Optimizations
 - [ ] Implement incremental view updates
 - [ ] Add view materialization strategies
 - [ ] Create view caching layer
 - [ ] Add partial view generation
 
-### 6.2 Network Resilience
+### 7.2 Network Resilience
 - [ ] Add network partition handling
 - [ ] Implement delta retry mechanisms
 - [ ] Add peer health monitoring
 - [ ] Test split-brain scenarios
 
-### 6.3 Performance & Scale
+### 7.3 Performance & Scale
 - [ ] Add benchmarks for large datasets
 - [ ] Implement delta pruning strategies
 - [ ] Add memory-efficient view generation
 - [ ] Create performance regression tests
 
-## Phase 7: Developer Experience
+## Phase 8: Developer Experience
 
-### 7.1 Better TypeScript Support
+### 8.1 Better TypeScript Support
 - [ ] Improve TypedCollection type inference
 - [ ] Add stricter schema typing
 - [ ] Create type guards for delta operations
 - [ ] Add better IDE autocomplete support
 
-### 7.2 Debugging & Monitoring
+### 8.2 Debugging & Monitoring
 - [ ] Add delta stream visualization
 - [ ] Create conflict resolution debugger
 - [ ] Add performance profiling hooks
 - [ ] Implement comprehensive logging
 
-### 7.3 Documentation
+### 8.3 Documentation
 - [ ] Document schema definition format
 - [ ] Create resolver implementation guide
 - [ ] Add query language documentation
@@ -181,16 +205,6 @@ This document tracks work needed to achieve full specification compliance, organ
 1. Performance benchmarks
 2. Network resilience tests
 3. Large-scale integration tests
-
-## Implementation Order
-
-1. **Phase 1** ✅ - These are foundational requirements
-2. **Phase 2.1 (Negation)** ✅ - Core spec feature that affects all views
-3. **Phase 2.2 (Resolvers)** ✅ - Needed for proper views
-4. **Phase 2.3 (Nesting)** ✅ - Depends on schemas and queries
-5. **Phase 3 (Query)** ✅ - Unlocks powerful data access
-6. **Phase 4 (Relational)** - Builds on query system
-7. **Phase 5 & 6** - Optimization and polish
 
 ## Notes
 
