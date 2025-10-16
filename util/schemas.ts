@@ -1,9 +1,21 @@
 import { SchemaBuilder } from '../src/schema';
 
 /**
- * Common schemas used for testing purposes.
- * These schemas are not part of the main application code
- * and are only used in test files.
+ * ⚠️  TEST-ONLY SCHEMAS ⚠️
+ * 
+ * These schemas are ONLY for testing purposes and should NOT be used in production code.
+ * 
+ * In the Rhizome architecture, schemas should be:
+ * 1. Created dynamically using SchemaBuilder
+ * 2. Persisted to storage as deltas via SchemaRegistry.persistSchema()
+ * 3. Loaded from storage on node startup
+ * 
+ * The ONLY hard-coded schemas in production should be the bootstrap schemas:
+ * - schema (meta-schema for defining schemas)
+ * - schema-property (defines schema property structure)
+ * 
+ * These test schemas exist to validate the schema system itself and provide
+ * examples for test cases. Do not import these into application code.
  */
 export const CommonSchemas = {
   // User schema with friends references
