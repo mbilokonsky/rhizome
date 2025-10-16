@@ -18,11 +18,100 @@ import { Hyperview, HyperviewOne } from '../views/hyperview';
 import { DomainEntityID, PropertyID, PropertyTypes } from '../core/types';
 import { CollapsedDelta } from '../views/hyperview';
 import { Delta } from '@src/core';
+import { initializeBootstrapSchemas, SchemaFactory, SCHEMA_SCHEMA_ID } from './bootstrap';
+import type { DeltaQueryStorage } from '../storage/interface';
 
 const debug = Debug('rz:schema-registry');
 
 export class DefaultSchemaRegistry implements SchemaRegistry {
   schemas = new Map<SchemaID, ObjectSchema>();
+  private storage?: DeltaQueryStorage;
+  private hyperview?: Hyperview;
+  private initialized = false;
+
+  constructor(storage?: DeltaQueryStorage, hyperview?: Hyperview) {
+    this.storage = storage;
+    this.hyperview = hyperview;
+    
+    // Always register bootstrap schemas
+    const bootstrapSchemas = initializeBootstrapSchemas();
+    for (const schema of bootstrapSchemas) {
+      this.schemas.set(schema.id, schema);
+      debug(`Registered bootstrap schema: ${schema.id} (${schema.name})`);
+    }
+  }
+
+  /**
+   * Initialize the registry by loading dynamic schemas from storage
+   * Should be called after the node is fully set up with storage and hyperview
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      debug('Schema registry already initialized');
+      return;
+    }
+
+    if (!this.storage || !this.hyperview) {
+      debug('No storage or hyperview available, skipping dynamic schema loading');
+      this.initialized = true;
+      return;
+    }
+
+    try {
+      debug('Loading dynamic schemas from storage...');
+      await this.loadSchemasFromStorage();
+      this.initialized = true;
+      debug(`Schema registry initialized with ${this.schemas.size} schemas`);
+    } catch (error) {
+      console.error('Error initializing schema registry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load all schemas from storage
+   * Queries for entities that match the schema:* pattern
+   */
+  private async loadSchemasFromStorage(): Promise<void> {
+    if (!this.storage || !this.hyperview) {
+      return;
+    }
+
+    try {
+      // Query for all schema entities
+      // In a real implementation, we'd query for entities with a specific pattern
+      // For now, this is a placeholder that will be implemented when we have
+      // proper query capabilities for entity patterns
+      
+      // TODO: Implement entity pattern query (e.g., findEntitiesByPrefix('schema:'))
+      debug('Dynamic schema loading not yet fully implemented - requires entity pattern queries');
+      
+    } catch (error) {
+      console.error('Error loading schemas from storage:', error);
+    }
+  }
+
+  /**
+   * Save a schema to storage as deltas
+   * This makes the schema persistent and available to other nodes
+   */
+  async persistSchema(schema: ObjectSchema, creator: string): Promise<void> {
+    if (!this.storage) {
+      debug('No storage available, schema will only exist in memory');
+      return;
+    }
+
+    try {
+      const deltas = SchemaFactory.toDeltas(schema, creator);
+      for (const delta of deltas) {
+        await this.storage.storeDelta(delta);
+      }
+      debug(`Persisted schema ${schema.id} to storage (${deltas.length} deltas)`);
+    } catch (error) {
+      console.error(`Error persisting schema ${schema.id}:`, error);
+      throw error;
+    }
+  }
 
   register(schema: ObjectSchema): void {
     this.validateSchemaStructure(schema);

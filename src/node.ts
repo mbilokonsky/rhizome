@@ -65,16 +65,19 @@ export class RhizomeNode {
       this.config.publishBindHost,
       this.config.publishBindPort
     );
+    // Initialize storage backend first
+    this.deltaStorage = StorageFactory.create(this.config.storage!);
+    
     this.pubSub = new PubSub(this);
     this.requestReply = new RequestReply(this);
     this.httpServer = new HttpServer(this);
     this.deltaStream = new DeltaStream(this);
     this.peers = new Peers(this);
     this.hyperview = new Hyperview(this);
-    this.schemaRegistry = new DefaultSchemaRegistry();
     
-    // Initialize storage backend
-    this.deltaStorage = StorageFactory.create(this.config.storage!);
+    // Create schema registry with storage and hyperview references
+    // This allows it to load schemas from storage dynamically
+    this.schemaRegistry = new DefaultSchemaRegistry(this.deltaStorage, this.hyperview);
     
     // Initialize query engines (both hyperview-based and storage-based)
     this.queryEngine = new QueryEngine(this.hyperview, this.schemaRegistry);
@@ -90,6 +93,9 @@ export class RhizomeNode {
     syncOnStart = false
   }: { syncOnStart?: boolean } = {}): Promise<void> {
     debug(`[${this.config.peerId}]`, 'Starting node (waiting for ready)...');
+    
+    // Initialize schema registry (loads dynamic schemas from storage)
+    await this.schemaRegistry.initialize();
     
     // Connect our hyperview to the delta stream
     this.deltaStream.subscribeDeltas(async (delta) => {
