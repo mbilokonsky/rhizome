@@ -11,6 +11,7 @@ import { CommonSchemas } from '../../util/schemas';
 import { TypedCollectionImpl, SchemaValidationError } from '@src/collections';
 import { RhizomeNode } from '@src/node';
 import { createDelta } from '@src/core/delta-builder';
+import { findAvailablePortRange } from '../../util/test-port-finder';
 import Debug from 'debug';
 const debug = Debug('rz:schema-test');
 
@@ -18,9 +19,26 @@ describe('Schema System', () => {
   let schemaRegistry: DefaultSchemaRegistry;
   let node: RhizomeNode;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     schemaRegistry = new DefaultSchemaRegistry();
-    node = new RhizomeNode();
+    
+    // Find 3 consecutive available ports to avoid conflicts
+    const [requestPort, publishPort, httpPort] = await findAvailablePortRange(3);
+    
+    node = new RhizomeNode({
+      requestBindPort: requestPort,
+      publishBindPort: publishPort,
+      httpPort: httpPort,
+      httpEnable: false, // Disable HTTP for faster tests
+      peerId: `test-schema-${Date.now()}-${Math.random()}`,
+      creator: `creator-schema-${Date.now()}`
+    });
+  });
+
+  afterEach(async () => {
+    if (node) {
+      await node.stop();
+    }
   });
   
 
@@ -304,6 +322,7 @@ describe('Schema System', () => {
         email?: string;
       }>('users', userSchema, schemaRegistry, { strictValidation: true });
 
+      await node.start();
       collection.rhizomeConnect(node);
 
       // Valid put should succeed
@@ -320,6 +339,7 @@ describe('Schema System', () => {
         email?: string;
       }>('users', userSchema, schemaRegistry);
 
+      await node.start();
       collection.rhizomeConnect(node);
 
       // Add some entities
@@ -346,6 +366,7 @@ describe('Schema System', () => {
         email?: string;
       }>('users', userSchema, schemaRegistry);
 
+      await node.start();
       collection.rhizomeConnect(node);
 
       await collection.put('user1', { name: 'Alice' });
@@ -378,6 +399,7 @@ describe('Schema System', () => {
         age?: number;
       }>('users', userSchema, schemaRegistry);
 
+      await node.start();
       collection.rhizomeConnect(node);
 
       await collection.put('user1', { name: 'Alice', age: 25 });
